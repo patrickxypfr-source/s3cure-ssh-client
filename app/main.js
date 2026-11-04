@@ -1,5 +1,5 @@
 // S3cure SSH Client – Hauptprozess: Fenster, gespeicherte Verbindungen und SSH-Sitzungen
-const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, safeStorage, Menu, powerMonitor } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, safeStorage, Menu, powerMonitor, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -588,10 +588,14 @@ function titleBarColors() {
   return { color: dark ? '#0f0f11' : '#f7f7f8', symbolColor: dark ? '#ededef' : '#18181b', height: 40 };
 }
 
+// Offene Tabs und Fenster beim nächsten Start wiederherstellen (app/lib/session.js)
+const session = require('./lib/session').register({ ipcMain, configDir: CONFIG_DIR });
+
 function createWindow() {
   win = new BrowserWindow({
     // Mindestgröße: Werkzeugleiste und Dateibrowser passen auch mit aufgeklappter Seitenleiste (siehe src/layout.js)
     width: 1100, height: 700, minWidth: 720, minHeight: 460,
+    ...session.windowOptions(screen, { width: 720, height: 460 }), // zuletzt benutzte Größe/Position
     title: 'S3cure SSH Client',
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#0f0f11' : '#f7f7f8',
     // macOS: Ampelknöpfe im Fenster; Windows: eigene Titelleiste mit Windows-Knöpfen oben rechts
@@ -604,6 +608,7 @@ function createWindow() {
   win.loadFile(path.join(__dirname, 'src', appLock.isLocked() ? 'lock.html' : 'index.html'));
   // Links aus dem Terminal im normalen Browser öffnen, nicht in der App
   win.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
+  session.track(win);
   win.on('closed', () => { for (const id of [...sessions.keys()]) closeSession(id); win = null; });
 }
 

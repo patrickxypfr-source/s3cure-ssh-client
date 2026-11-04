@@ -78,7 +78,7 @@ window.LocalPane = (() => {
     toggle.innerHTML = `${icon('computer')}Mein Computer`;
     f.el.querySelector('.files-actions').appendChild(toggle);
 
-    const pref = lsGet(prefKey(tab), {});
+    const pref = { ...lsGet(prefKey(tab), {}), ...(tab.restore?.local || {}) }; // tab.restore: session.js
     const p = {
       tab, el, divider, toggle, open: false, w: Number(pref.w) || DEFAULT_W,
       path: null, parent: null, entries: [], selected: new Set(), anchor: null, loaded: false, error: null,
@@ -689,5 +689,11 @@ window.LocalPane = (() => {
     modal.querySelector('[data-c=skip]').focus();
   }
 
-  return { attach, detach, serverDragOver, serverDrop, isOpen: tab => !!panes.get(tab.id)?.open };
+  // Für session.js: Zustand dieses Tabs (offen, Ordner, Breite)
+  function state(tab) {
+    const p = panes.get(tab.id);
+    return p ? { open: p.open, path: p.path || p.startPath || null, w: Math.round(p.w * 10) / 10 } : null;
+  }
+
+  return { attach, detach, serverDragOver, serverDrop, isOpen: tab => !!panes.get(tab.id)?.open, state };
 })();

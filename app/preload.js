@@ -126,3 +126,9 @@ contextBridge.exposeInMainWorld('localFs', {
   onConflict: cb => ipcRenderer.on('xfer:conflict', (_e, info) => cb(info)),
   answerConflict: (reqId, answer) => ipcRenderer.send('xfer:conflict-answer', reqId, answer),
 });
+
+// Sitzung wiederherstellen (app/lib/session.js, Oberfläche: src/session.js)
+contextBridge.exposeInMainWorld('s3session', {
+  take: () => ipcRenderer.invoke('session:take'),
+  update: snapshot => ipcRenderer.send('session:update', snapshot),
+});
