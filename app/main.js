@@ -694,6 +694,10 @@ function createWindow() {
   win.on('closed', () => { for (const id of [...sessions.keys()]) closeSession(id); win = null; });
 }
 
+// Einstellungen und Terminal-Extras (eigene Dateien in lib/)
+require('./lib/settings').register({ app, ipcMain, nativeTheme, configDir: CONFIG_DIR });
+require('./lib/term-extra').register({ app, ipcMain, dialog, shell, sessions, getWin: () => win, platform: PLATFORM });
+
 app.setName('S3cure SSH Client');
 app.whenReady().then(() => {
   // Windows: keine Menüleiste (Kopieren/Einfügen in Feldern geht trotzdem)

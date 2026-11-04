@@ -53,3 +53,25 @@ contextBridge.exposeInMainWorld('s3update', {
   disable: () => ipcRenderer.invoke('update:disable'),
   open: () => ipcRenderer.invoke('update:open'),
 });
+
+// Einstellungen (src/settings.js)
+contextBridge.exposeInMainWorld('mysshSettings', {
+  get: () => ipcRenderer.invoke('settings:get'),
+  set: patch => ipcRenderer.invoke('settings:set', patch),
+});
+
+// Terminal-Extras (src/term-extra.js)
+contextBridge.exposeInMainWorld('mysshTerm', {
+  splitOpen: (tabId, splitId, cols, rows) => ipcRenderer.invoke('split:open', tabId, splitId, cols, rows),
+  splitWrite: (id, data) => ipcRenderer.send('split:write', id, data),
+  splitResize: (id, cols, rows) => ipcRenderer.send('split:resize', id, cols, rows),
+  splitClose: id => ipcRenderer.send('split:close', id),
+  onSplitData: cb => ipcRenderer.on('split:data', (_e, id, data) => cb(id, data)),
+  onSplitClosed: cb => ipcRenderer.on('split:closed', (_e, id) => cb(id)),
+  logStart: (id, title) => ipcRenderer.invoke('log:start', id, title),
+  logStop: id => ipcRenderer.invoke('log:stop', id),
+  onLogStopped: cb => ipcRenderer.on('log:stopped', (_e, id, file) => cb(id, file)),
+  onLogError: cb => ipcRenderer.on('log:error', (_e, id, msg) => cb(id, msg)),
+  openLink: url => ipcRenderer.send('term:open-link', url),
+  onZoom: cb => ipcRenderer.on('term:zoom', (_e, step) => cb(step)),
+});

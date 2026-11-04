@@ -184,6 +184,7 @@ function openTab(spec, title, view = 'terminal') {
   const tab = { id, spec, title, term, fit, el, tabEl, state: 'connecting', view };
   tab.files = buildFilesView(tab);
   tabs.set(id, tab);
+  window.TermExtra?.attach(tab); // Suche, Links, geteilte Ansicht … (term-extra.js)
   activate(id);
   connect(tab);
 }
@@ -217,6 +218,7 @@ function updateToolbar() {
   const tab = tabs.get(activeId);
   $('#toolbar').hidden = !tab;
   window.tunnelUi?.setTab(tab || null);
+  window.TermExtra?.update(tab);
   if (!tab) return;
   const texts = {
     connecting: 'Verbinde …',
@@ -406,6 +408,7 @@ function closeTab(id) {
   const tab = tabs.get(id);
   if (!tab) return;
   api.close(id);
+  window.TermExtra?.detach(tab);
   tab.term.dispose();
   tab.el.remove();
   tab.files.el.remove();
