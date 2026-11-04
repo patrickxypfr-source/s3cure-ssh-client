@@ -49,6 +49,7 @@ Fertige Versionen gibt es unter **[Releases](../../releases/latest)**:
 ### Dateien (SFTP)
 - Dateibrowser mit Hochladen, Herunterladen, Umbenennen, Löschen
 - **„Mein Computer“** daneben: eigene Dateien und Server-Dateien nebeneinander, per Ziehen & Ablegen in beide Richtungen kopieren
+- Mehrere Dateien auf einmal: Rahmen mit der Maus aufziehen, Cmd/Strg-Klick, Umschalt-Klick oder Cmd/Strg+A
 - **Geteilte Ansicht „Mein Computer“** wie bei FileZilla: eigene Dateien links, Server rechts – Dateien und ganze Ordner einfach hin- und herziehen, mit Rückfrage vor dem Überschreiben
 - **Eingebauter Editor** – Dateien direkt auf dem Server bearbeiten, Cmd/Strg+S speichert
 - Vorschau für Bilder und Text (Leertaste)

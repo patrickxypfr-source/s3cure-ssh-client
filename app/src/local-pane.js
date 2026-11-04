@@ -273,7 +273,7 @@ window.LocalPane = (() => {
     const items = visible(p);
     const hiddenCount = p.entries.length - items.length;
     p.el.querySelector('.files-status').textContent = p.loaded
-      ? `${items.length} Elemente${n ? ` · ${n} ausgewählt` : ''}${hiddenCount ? ` · ${hiddenCount} versteckt` : ''}`
+      ? `${items.length} Elemente${n ? ` · ${n} ausgewählt` : ''}${hiddenCount ? ` · ${hiddenCount} versteckt` : ''}${items.length > 1 ? Lasso.hint(n) : ''}`
       : '';
     p.el.querySelector('[data-l=up]').disabled = !p.parent;
     updateButtons(p);
@@ -326,8 +326,11 @@ window.LocalPane = (() => {
     });
     body.addEventListener('dblclick', e => { const it = rowItem(e.target.closest('tr')); if (it) openItem(p, it); });
     list.addEventListener('mousedown', e => {
+      if (modKey(e) || e.shiftKey) return; // Auswahl bleibt, Rahmen ergänzt sie (lasso.js)
       if (!e.target.closest('tbody tr')) { p.selected.clear(); refreshSel(p); }
     });
+    // Rahmen-Auswahl mit der Maus
+    Lasso.attach({ list, body, getSelected: () => p.selected, setSelected: sel => { p.selected = sel; refreshSel(p); } });
     list.addEventListener('contextmenu', e => {
       e.preventDefault();
       const tr = e.target.closest('tbody tr');

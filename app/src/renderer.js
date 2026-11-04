@@ -589,8 +589,11 @@ function buildFilesView(tab) {
 
   // Klick ins Leere hebt die Auswahl auf
   f.list.addEventListener('mousedown', e => {
+    if (modKey(e) || e.shiftKey) return; // Auswahl bleibt, Rahmen ergänzt sie (lasso.js)
     if (!e.target.closest('tr') || e.target.closest('thead')) { f.selected.clear(); updateSelection(tab); }
   });
+  // Rahmen-Auswahl mit der Maus
+  Lasso.attach({ list: f.list, body: f.body, getSelected: () => f.selected, setSelected: sel => { f.selected = sel; updateSelection(tab); } });
 
   // Tastatur
   f.list.addEventListener('keydown', e => {
@@ -677,7 +680,7 @@ function updateSelection(tab) {
   f.pathInput.disabled = !connected;
 
   f.el.querySelector('.files-status').textContent = connected && f.loaded
-    ? `${items.length} Elemente${n ? ` · ${n} ausgewählt` : ''}`
+    ? `${items.length} Elemente${n ? ` · ${n} ausgewählt` : ''}${items.length > 1 && window.LocalPane?.isOpen?.(tab) ? Lasso.hint(n) : ''}`
     : '';
 }
 
