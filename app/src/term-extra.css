@@ -1,0 +1,80 @@
+/* ---------- Terminal-Extras (term-extra.js) ---------- */
+
+/* Rahmen für ein bzw. zwei Terminals nebeneinander */
+.term.xt { display: flex; }
+.xt-pane { position: relative; flex: 1 1 0; min-width: 0; height: 100%; }
+.term.xt-split > .xt-main { flex: 0 0 calc(var(--xt-split, 50%) - 7px); }
+.xt-divider { flex: 0 0 14px; cursor: col-resize; position: relative; touch-action: none; }
+.xt-divider::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 6px; width: 2px; border-radius: 1px;
+  background: var(--border); transition: background .12s;
+}
+.xt-divider:hover::after, .xt-divider.drag::after { background: var(--accent); }
+/* Im geteilten Modus zeigt ein feiner Strich, welches Terminal die Eingaben bekommt */
+.term.xt-split > .xt-pane::before {
+  content: ''; position: absolute; left: 0; right: 0; top: -8px; height: 2px; border-radius: 1px;
+  background: transparent; transition: background .12s;
+}
+.term.xt-split > .xt-pane.xt-focus::before { background: var(--accent); }
+
+/* Werkzeugleiste */
+#term-tools { display: flex; gap: 2px; }
+#term-tools .btn.rec { color: var(--accent); background: var(--accent-soft); }
+#term-tools .btn.rec svg.ic { animation: xt-pulse 1.2s ease-in-out infinite; }
+#term-tools .btn.alert { background: var(--accent); color: #fff; }
+#term-tools .btn.alert:hover { background: var(--accent-hover); color: #fff; }
+@keyframes xt-pulse { 50% { opacity: .35; } }
+
+/* Tab, der gerade mitgeschrieben wird */
+.tab.xt-rec .title::before { content: '● '; color: var(--accent); }
+
+/* Suchleiste */
+.xt-search {
+  position: absolute; top: 0; right: 14px; z-index: 5;
+  display: flex; align-items: center; gap: 2px;
+  padding: 4px 4px 4px 10px; border-radius: 10px;
+  background: var(--surface); border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg);
+  animation: pop .1s ease;
+}
+.xt-search-ic { display: flex; color: var(--faint); }
+.xt-search-ic svg.ic { width: 14px; height: 14px; }
+.xt-search input { width: 200px; height: 28px !important; border: none !important; box-shadow: none !important; padding: 0 8px !important; background: transparent !important; }
+.xt-search.none input { color: var(--accent); }
+.xt-count { min-width: 64px; text-align: right; padding-right: 6px; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* An alle senden: roter Rahmen um die Terminals */
+body.xt-broadcast #terminals { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), 0 0 0 6px var(--accent-ring); }
+.xt-broadcast-badge {
+  position: absolute; z-index: 6; left: 50%; bottom: 10px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px; white-space: nowrap;
+  padding: 5px 5px 5px 12px; border-radius: 999px;
+  background: var(--accent); color: #fff; font-weight: 600; font-size: 12px;
+  box-shadow: var(--shadow-lg);
+}
+.xt-broadcast-badge svg.ic { width: 15px; height: 15px; }
+.xt-broadcast-badge button {
+  height: 24px; padding: 0 10px; border: none; border-radius: 999px;
+  background: rgba(255, 255, 255, .22); color: #fff; font: 600 11.5px/1 inherit; font-family: inherit; cursor: pointer;
+}
+.xt-broadcast-badge button:hover { background: rgba(255, 255, 255, .34); }
+
+/* Kurze Hinweise (Schriftgröße, Mitschnitt) */
+.xt-toast {
+  position: absolute; z-index: 7; left: 50%; top: 14px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px; max-width: calc(100% - 40px);
+  padding: 7px 8px 7px 14px; border-radius: 10px;
+  background: var(--text); color: var(--surface); font-size: 12px; font-weight: 500;
+  box-shadow: var(--shadow-lg); animation: pop .12s ease;
+}
+.xt-toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.xt-toast button {
+  flex-shrink: 0; height: 24px; padding: 0 10px; border: none; border-radius: 6px;
+  background: color-mix(in srgb, var(--surface) 20%, transparent); color: var(--surface);
+  font: 600 11.5px/1 inherit; font-family: inherit; cursor: pointer;
+}
+.xt-toast:not(:has(button)) { padding-right: 14px; }
+
+/* Schmales Fenster: nur Symbole (Text steht im Tooltip) */
+@media (max-width: 1080px) {
+  #term-tools .btn { font-size: 0; gap: 0; padding: 0 8px; }
+}
