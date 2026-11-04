@@ -1,7 +1,6 @@
-// Windows: aus dem fertigen Build (build:win) zwei Dateien machen:
-//   S3cure-SSH-Client-Setup.exe            – Installer mit Installationsfenster, Startmenü/Desktop,
-//                                            Deinstallation; darüber laufen später die Updates
-//   S3cure-SSH-Client-Windows-Portable.exe – eine Datei, ohne Installation
+// Windows: aus dem fertigen Build (build:win) den Installer machen:
+//   S3cure-SSH-Client-Setup.exe – Installationsfenster, Startmenü/Desktop, Deinstallation;
+//                                 darüber laufen später auch die automatischen Updates
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -15,7 +14,7 @@ const OUT = path.join(DIST, 'win-installers');
 const pkg = JSON.parse(fs.readFileSync(path.join(APP_DIR, 'package.json'), 'utf8'));
 
 await build({
-  targets: Platform.WINDOWS.createTarget(['nsis', 'portable'], 1 /* x64 */),
+  targets: Platform.WINDOWS.createTarget('nsis', 1 /* x64 */),
   prepackaged: PREPACKAGED,
   projectDir: APP_DIR,
   publish: 'never',
@@ -43,11 +42,9 @@ await build({
       language: '1031',
       installerLanguages: ['de_DE'],
     },
-    portable: { artifactName: 'portable.exe' },
     extraMetadata: { version: pkg.version },
   },
 });
 const move = (from, to) => { fs.renameSync(path.join(OUT, from), path.join(DIST, to)); console.log(`${to} (${Math.round(fs.statSync(path.join(DIST, to)).size / 1e6)} MB)`); };
 move('nsis-installer.exe', 'S3cure-SSH-Client-Setup.exe');
-move('portable.exe', 'S3cure-SSH-Client-Windows-Portable.exe');
 fs.rmSync(OUT, { recursive: true, force: true });

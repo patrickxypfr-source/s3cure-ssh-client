@@ -2,7 +2,7 @@
 //
 // Ablauf (Knopf „Update“ unten links):
 //   1. passende Datei aus dem neuesten GitHub-Release wählen
-//        macOS:   S3cure-SSH-Client-Mac-AppleSilicon.zip / -Mac-Intel.zip
+//        macOS:   S3cure-SSH-Client-Mac-AppleSilicon.dmg / -Mac-Intel.dmg (dieselbe Datei wie zum Installieren)
 //        Windows: S3cure-SSH-Client-Setup.exe (installiert) oder -Windows-Portable.exe (portable)
 //   2. mit Fortschritt herunterladen (Update-Fenster, src/update.html)
 //   3. prüfen (Größe, macOS: Signatur und Versionsnummer im Paket)
@@ -38,7 +38,7 @@ function setupUpdater({ ipcMain, app, getMainWin, latestRelease, preload, platfo
     if (platform === 'darwin') {
       const bundle = path.resolve(exe, '..', '..', '..');
       if (!bundle.endsWith('.app')) return { kind: 'unknown' };
-      return { kind: 'mac', bundle, asset: process.arch === 'arm64' ? 'S3cure-SSH-Client-Mac-AppleSilicon.zip' : 'S3cure-SSH-Client-Mac-Intel.zip' };
+      return { kind: 'mac', bundle, asset: process.arch === 'arm64' ? 'S3cure-SSH-Client-Mac-AppleSilicon.dmg' : 'S3cure-SSH-Client-Mac-Intel.dmg' };
     }
     if (platform === 'win32') {
       if (process.env.PORTABLE_EXECUTABLE_FILE) return { kind: 'win-portable', target: process.env.PORTABLE_EXECUTABLE_FILE, asset: 'S3cure-SSH-Client-Windows-Portable.exe' };
@@ -107,11 +107,19 @@ function setupUpdater({ ipcMain, app, getMainWin, latestRelease, preload, platfo
   // ---------- Installieren ----------
 
   // macOS: neues .app-Paket prüfen, nach dem Beenden austauschen und neu starten
-  async function installMac(kind, zip, dir, version) {
+  async function installMac(kind, dmg, dir, version) {
     send({ phase: 'verify' });
-    const x = path.join(dir, 'x');
-    fs.mkdirSync(x);
-    await run('ditto', ['-x', '-k', zip, x]);
+    // DMG unsichtbar einhängen, App herauskopieren, wieder aushängen
+    const mnt = path.join(dir, 'mnt'), x = path.join(dir, 'x');
+    fs.mkdirSync(mnt); fs.mkdirSync(x);
+    await run('hdiutil', ['attach', '-nobrowse', '-readonly', '-noautoopen', '-mountpoint', mnt, dmg]);
+    try {
+      if (!fs.existsSync(path.join(mnt, `${NAME}.app`))) throw new Error('Das Update-Paket ist unvollständig.');
+      await run('ditto', [path.join(mnt, `${NAME}.app`), path.join(x, `${NAME}.app`)]);
+    } finally {
+      await run('hdiutil', ['detach', mnt, '-force']).catch(() => {});
+    }
+    fs.rmSync(dmg, { force: true });
     const app2 = path.join(x, `${NAME}.app`);
     if (!fs.existsSync(app2)) throw new Error('Das Update-Paket ist unvollständig.');
     await run('codesign', ['--verify', '--deep', '--strict', app2]).catch(() => { throw new Error('Das Update-Paket ist beschädigt (Signatur ungültig).'); });

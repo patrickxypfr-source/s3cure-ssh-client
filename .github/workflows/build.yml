@@ -77,9 +77,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: S3cure SSH Client – ${{ matrix.name }}
-          # Mac: ZIP (für Updates) + DMG (Installationsfenster); Windows: Setup.exe + portable .exe
+          # Nur die Installer: Mac-DMG (auch für die automatischen Updates) und Windows-Setup.exe
           path: |
-            dist/*.zip
             dist/*.dmg
             dist/*.exe
           if-no-files-found: error
@@ -105,8 +104,8 @@ jobs:
         run: |
           ls -la dist
           if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" dist/*.zip dist/*.dmg dist/*.exe --clobber --repo "$GITHUB_REPOSITORY"
+            gh release upload "$GITHUB_REF_NAME" dist/*.dmg dist/*.exe --clobber --repo "$GITHUB_REPOSITORY"
           else
-            gh release create "$GITHUB_REF_NAME" dist/*.zip dist/*.dmg dist/*.exe --repo "$GITHUB_REPOSITORY" \
+            gh release create "$GITHUB_REF_NAME" dist/*.dmg dist/*.exe --repo "$GITHUB_REPOSITORY" \
               --title "S3cure SSH Client ${GITHUB_REF_NAME#v}" --generate-notes
           fi

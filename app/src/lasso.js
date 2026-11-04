@@ -56,7 +56,12 @@ const Lasso = (() => {
       setSelected(sel);
     }
 
-    window.addEventListener('mousemove', e => { if (st) update(e); });
+    window.addEventListener('mousemove', e => {
+      if (!st) return;
+      // Maustaste wurde außerhalb losgelassen (kein mouseup bekommen) – Rahmen beenden
+      if (e.buttons === 0) { window.dispatchEvent(new MouseEvent('mouseup')); return; }
+      update(e);
+    });
     window.addEventListener('mouseup', () => {
       if (!st) return;
       // Nach einem Rahmen kein „Klick“ hinterher, der die Auswahl wieder auf eine Zeile setzt

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="app/src/logo.png" alt="S3cure Logo" width="96">
+  <img src="app/assets/icon-1024.png" alt="S3cure SSH Client" width="128">
 </p>
 
 <h1 align="center">S3cure SSH Client</h1>
@@ -14,21 +14,23 @@
   <a href="#selbst-bauen">Selbst bauen</a>
 </p>
 
+<p align="center">
+  <img src="docs/screenshots/terminal.png" alt="Terminal mit eigenen Befehlsknöpfen" width="900">
+</p>
+
 ---
 
 ## Download
 
 Fertige Versionen gibt es unter **[Releases](../../releases/latest)**:
 
-| System | Datei | |
-|---|---|---|
-| **Mac mit Apple-Chip** (M1–M4) | `S3cure-SSH-Client-Mac-AppleSilicon.dmg` | Installationsfenster |
-| Mac mit Intel-Chip | `S3cure-SSH-Client-Mac-Intel.dmg` | Installationsfenster |
-| **Windows 10/11** | `S3cure-SSH-Client-Setup.exe` | Installer mit Startmenü & Desktop-Verknüpfung |
-| Windows ohne Installation | `S3cure-SSH-Client-Windows-Portable.exe` | eine Datei, einfach starten |
+| System | Datei |
+|---|---|
+| **Mac mit Apple-Chip** (M1–M4) | `S3cure-SSH-Client-Mac-AppleSilicon.dmg` |
+| Mac mit Intel-Chip | `S3cure-SSH-Client-Mac-Intel.dmg` |
+| **Windows 10/11** | `S3cure-SSH-Client-Setup.exe` |
 
-> ⚠️ Bitte **nicht** den grünen Knopf „Code → Download ZIP“ benutzen – das ist der Quellcode, kein fertiges Programm.
-> Die `…Mac-*.zip`-Dateien braucht die App für ihre automatischen Updates.
+> ⚠️ Bitte **nicht** „Source code“ bzw. den grünen Knopf „Code → Download ZIP“ benutzen – das ist der Quellcode, kein fertiges Programm.
 
 ### Installieren
 - **macOS:** `.dmg` öffnen und die App im Fenster auf **Programme** ziehen. Beim ersten Öffnen meldet macOS, dass der Entwickler nicht verifiziert ist (die App ist nicht von Apple signiert): **Systemeinstellungen → Datenschutz & Sicherheit** → ganz unten **Dennoch öffnen**. Startest du die App außerhalb von „Programme“, bietet sie an, sich selbst dorthin zu verschieben.
@@ -36,6 +38,14 @@ Fertige Versionen gibt es unter **[Releases](../../releases/latest)**:
 
 ### Updates
 Beim Start prüft die App, ob es auf GitHub eine neuere Version gibt. Unten links steht dann **„Veraltet“** mit deiner und der neuesten Version – ein Klick auf **Update** lädt die neue Version herunter (Fenster mit Fortschrittsbalken), installiert sie und startet die App neu. Nichts selbst herunterladen nötig.
+
+## So sieht es aus
+
+| Dateien: Server und eigener PC nebeneinander | Dateien direkt auf dem Server bearbeiten |
+|---|---|
+| <img src="docs/screenshots/dateien.png" alt="Dateibrowser mit Mein Computer"> | <img src="docs/screenshots/editor.png" alt="Eingebauter Editor"> |
+| **Port-Weiterleitung (Tunnel)** | **Terminal mit eigenen Befehlsknöpfen** |
+| <img src="docs/screenshots/tunnel.png" alt="Tunnel"> | <img src="docs/screenshots/terminal.png" alt="Terminal"> |
 
 ## Funktionen
 
