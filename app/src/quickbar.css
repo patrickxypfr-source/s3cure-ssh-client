@@ -76,3 +76,43 @@
 .snip-delete { color: var(--accent); }
 .snip-delete svg.ic { color: var(--accent); }
 .snip-message { margin: 0 0 4px; color: var(--muted); line-height: 1.55; white-space: pre-wrap; }
+
+/* ---------- Icons auf den Knöpfen ---------- */
+
+.qbtn svg.qicon, .qmenu-head svg.qicon { width: 14px; height: 14px; color: var(--muted); margin: 0 2px 0 -2px; flex-shrink: 0; transition: color .12s; }
+.qbtn:hover:not(:disabled) svg.qicon, .qmenu-head:hover svg.qicon { color: var(--text); }
+/* Gefährliche Knöpfe (Stop, Rollback): Icon rot wie die Kennzeichnung im Menü */
+.qbtn.danger svg.qicon, .qmenu.danger .qmenu-head svg.qicon,
+.qbtn.danger:hover:not(:disabled) svg.qicon { color: var(--accent); }
+.qbtn svg.qarrow { margin: 0 -3px 0 0; }
+.qbtn.qentry svg.qicon { width: 13px; height: 13px; }
+
+/* Schmale Leiste: nur Icons (Name steht im Tooltip). Klasse .compact setzt z. B. ein ResizeObserver. */
+#quickbar.compact:not(.editing) .qbtn.has-icon .qtext {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+#quickbar.compact:not(.editing) .qbtn.has-icon { padding: 0 8px; gap: 2px; }
+#quickbar.compact:not(.editing) .qbtn.has-icon svg.qicon { margin: 0; }
+
+/* Icon-Auswahl im Knopf-Dialog */
+.snip-icons { margin: 0 0 14px; }
+.snip-icons-head { display: flex; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 500; }
+.snip-icons-head > span { flex-shrink: 0; }
+.snip-dialog .snip-icons-head input { margin: 0; height: 28px; font-size: 12px; flex: 1; }
+.snip-icon-grid {
+  position: relative; display: grid; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); gap: 4px;
+  max-height: 118px; overflow-y: auto; margin-top: 6px; padding: 6px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+}
+.snip-icon {
+  height: 34px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--muted); cursor: pointer;
+}
+.snip-icon svg.ic { width: 18px; height: 18px; }
+.snip-icon:hover { background: var(--hover); color: var(--text); }
+.snip-icon:focus-visible { outline: none; border-color: var(--accent); }
+.snip-icon.sel { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+/* „kein Icon“: durchgestrichener Kreis */
+.snip-noicon { width: 16px; height: 16px; border: 1.8px solid currentColor; border-radius: 50%; position: relative; }
+.snip-noicon::after { content: ''; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1.8px; margin-left: -.9px; background: currentColor; transform: rotate(45deg); }
+.snip-icon-empty { grid-column: 1 / -1; padding: 8px 4px; color: var(--muted); font-size: 12px; }

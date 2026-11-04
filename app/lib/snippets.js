@@ -1,9 +1,10 @@
 // Eigene Befehlsknöpfe pro Verbindung – gespeichert in ~/.myssh/snippets.json
 //
 // Aufbau der Datei:
-// { version: 1, migrated: true, profiles: { "<Verbindung>": { groups: [ { id, items: [...] } ] } } }
-// Eintrag:  { id, type: 'button', label, cmd, tip, confirm, danger, live, inputs: { name: { prompt, kind, value } } }
-// Menü:     { id, type: 'menu', label, tip, confirm, danger, items: [Einträge] }
+// { version: 1, migrated: true, iconsMigrated: true, profiles: { "<Verbindung>": { groups: [ { id, items: [...] } ] } } }
+// Eintrag:  { id, type: 'button', label, icon, cmd, tip, confirm, danger, live, inputs: { name: { prompt, kind, value } } }
+// Menü:     { id, type: 'menu', label, icon, tip, confirm, danger, items: [Einträge] }
+// icon: Name aus app/src/icons.js oder '' (kein Icon)
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -11,6 +12,10 @@ const crypto = require('crypto');
 const FORMAT = 's3cure-befehle';
 const KINDS = ['ref', 'number', 'text'];
 const PLACEHOLDER = /(?<!\$)\{([\p{L}_][\p{L}\p{N}_-]*)\}/gu;
+
+// Icon-Name: nur die Form wird hier geprüft. Die Icons selbst liegen in der Oberfläche
+// (icons.js und weitere Dateien); dort werden unbekannte Namen ignoriert.
+const cleanIcon = v => (typeof v === 'string' && /^[a-zA-Z][a-zA-Z0-9]{0,39}$/.test(v) ? v : '');
 
 const str = (v, max) => (typeof v === 'string' ? v : v == null ? '' : String(v)).slice(0, max);
 const id = v => (typeof v === 'string' && /^[\w-]{1,64}$/.test(v) ? v : crypto.randomUUID());
@@ -37,7 +42,7 @@ function cleanButton(b) {
     };
   }
   return {
-    id: id(b.id), type: 'button', label: label || cmd.trim().slice(0, 30), cmd,
+    id: id(b.id), type: 'button', label: label || cmd.trim().slice(0, 30), icon: cleanIcon(b.icon), cmd,
     tip: str(b.tip, 300), confirm: cleanConfirm(b.confirm), danger: !!b.danger, live: !!b.live, inputs,
   };
 }
@@ -45,7 +50,7 @@ function cleanButton(b) {
 function cleanItem(it) {
   if (it && it.type === 'menu') {
     return {
-      id: id(it.id), type: 'menu', label: str(it.label, 80).trim() || 'Menü',
+      id: id(it.id), type: 'menu', label: str(it.label, 80).trim() || 'Menü', icon: cleanIcon(it.icon),
       tip: str(it.tip, 300), confirm: cleanConfirm(it.confirm), danger: !!it.danger,
       items: (Array.isArray(it.items) ? it.items : []).slice(0, 100).map(cleanButton).filter(Boolean),
     };
@@ -81,6 +86,37 @@ function parseImport(text) {
   return clean;
 }
 
+// Einmalige Nachrüstung: Knöpfe aus der Vorlage „s3cure“ (vor den Icons angelegt) bekommen ihr Icon.
+// Erkannt am Befehl; Knöpfe, die schon ein Icon haben, bleiben unverändert.
+const TEMPLATE_ICONS = {
+  's3 status': 'pulse', 's3 check': 'checkCircle', 's3 update': 'sync', 's3 update-all': 'layers',
+  's3 log': 'gitBranch', 's3 build': 'hammer', 's3 backup': 'archive', 's3 env': 'key',
+};
+// Menüs (alle Einträge mit demselben s3-Befehl) und einzelne Knöpfe wie „s3 restart bot“
+const TEMPLATE_MENU_ICONS = {
+  's3 restart': 'restart', 's3 start': 'play', 's3 stop': 'stop',
+  's3 logs': 'logs', 's3 live': 'radio', 's3 rollback': 'undo',
+};
+const cmdKey = cmd => String(cmd || '').trim().split(/\s+/).slice(0, 2).join(' ');
+
+function addTemplateIcons(groups) {
+  let changed = 0;
+  for (const g of groups) {
+    for (const it of g.items) {
+      if (it.icon) continue;
+      let name = '';
+      if (it.type === 'menu') {
+        const keys = new Set(it.items.map(sub => cmdKey(sub.cmd)));
+        if (keys.size === 1) name = TEMPLATE_MENU_ICONS[[...keys][0]] || '';
+      } else if (!/\n/.test(it.cmd.trim())) {
+        name = TEMPLATE_ICONS[it.cmd.trim().replace(/\s+/g, ' ')] || TEMPLATE_MENU_ICONS[cmdKey(it.cmd)] || '';
+      }
+      if (name) { it.icon = name; changed++; }
+    }
+  }
+  return changed;
+}
+
 function createStore(configDir) {
   const file = path.join(configDir, 'snippets.json');
   let backedUp = false;
@@ -93,12 +129,17 @@ function createStore(configDir) {
       try { data = JSON.parse(text); } catch {
         // Beschädigt: Kopie behalten statt beim nächsten Speichern zu überschreiben
         if (!backedUp) { try { fs.copyFileSync(file, `${file}.defekt-${Date.now()}`); backedUp = true; } catch {} }
-        data = { migrated: true, profiles: {} };
+        data = { migrated: true, iconsMigrated: true, profiles: {} };
       }
     }
-    const out = { version: 1, migrated: !!(data && data.migrated), profiles: {} };
+    const out = { version: 1, migrated: !!(data && data.migrated), iconsMigrated: true, profiles: {} };
     const profiles = data && data.profiles && typeof data.profiles === 'object' ? data.profiles : {};
     for (const [key, prof] of Object.entries(profiles)) out.profiles[key] = { groups: cleanGroups(prof && prof.groups) };
+    // Datei von vor den Icons: einmal nachrüsten und gleich speichern (danach nie wieder)
+    if (data && !data.iconsMigrated) {
+      for (const prof of Object.values(out.profiles)) addTemplateIcons(prof.groups);
+      try { save(out); } catch (err) { console.error('snippets.json: Icons nicht gespeichert', err); }
+    }
     return out;
   }
 
@@ -175,4 +216,4 @@ function register(ipcMain, { configDir, dialog, getWin }) {
   return store;
 }
 
-module.exports = { register, createStore, cleanGroups, parseImport, PLACEHOLDER };
+module.exports = { register, createStore, cleanGroups, parseImport, addTemplateIcons, PLACEHOLDER };
