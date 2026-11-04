@@ -1019,7 +1019,8 @@ function nextAsk() {
   $('#ask-ok').textContent = req.okLabel || 'OK';
   $('#ask-ok').className = 'btn ' + (req.danger ? 'danger' : 'primary');
   $('#ask-modal').hidden = false;
-  (input.hidden ? $('#ask-ok') : input).focus();
+  // focusCancel: bei riskanten Fragen ist „Abbrechen“ vorausgewählt (Enter bricht ab)
+  (input.hidden ? $(req.focusCancel ? '#ask-cancel' : '#ask-ok') : input).focus();
 
   const finish = value => {
     $('#ask-modal').hidden = true;

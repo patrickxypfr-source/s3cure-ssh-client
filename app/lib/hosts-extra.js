@@ -1,14 +1,23 @@
-// Zusatzfelder für gespeicherte Verbindungen: Gruppe, Farbe, Sprung-Server.
+// Zusatzfelder für gespeicherte Verbindungen: Gruppe, Farbe, Sprung-Server, Agent-Weiterleitung, Proxy.
 // Alte Einträge ohne diese Felder funktionieren unverändert.
+const { hostProxyField } = require('./proxy');
+
 const COLORS = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'gray'];
 
+// Mitgeschickte, aber leere Felder kommen als undefined zurück, damit beim Speichern alte Werte
+// wirklich verschwinden. Nicht mitgeschickte Felder bleiben unverändert.
 function hostExtras(host) {
-  const out = {};
+  const all = {};
   const group = String(host.group || '').trim();
-  if (group) out.group = group.slice(0, 60);
-  if (COLORS.includes(host.color)) out.color = host.color;
+  all.group = group ? group.slice(0, 60) : undefined;
+  all.color = COLORS.includes(host.color) ? host.color : undefined;
   const jump = String(host.jump || '').trim();
-  if (jump) out.jump = jump;
+  all.jump = jump || undefined;
+  // Agent-Weiterleitung und Proxy: app/lib/connection.js, app/lib/proxy.js
+  all.agentForward = host.agentForward === true ? true : undefined;
+  all.proxy = hostProxyField(host.proxy);
+  const out = {};
+  for (const k of Object.keys(all)) if (k in host) out[k] = all[k];
   return out;
 }
 

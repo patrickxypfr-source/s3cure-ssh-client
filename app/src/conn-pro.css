@@ -1,0 +1,48 @@
+/* Verbindungen-Pro: Bekannte Server, SSH-Schlüssel, Proxy (src/conn-pro.js) */
+
+.cp-pane { padding-top: 6px; }
+.cp-top { display: flex; align-items: center; gap: 8px; margin: 6px 0 10px; }
+.cp-top .spacer { flex: 1; }
+.cp-top .btn svg.ic { margin-right: 2px; }
+.cp-search { flex: 1; height: 32px; }
+.cp-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 10px; max-height: 330px; overflow-y: auto; }
+.cp-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent); }
+.cp-item:last-child { border-bottom: none; }
+.cp-item:hover { background: color-mix(in srgb, var(--hover) 50%, transparent); }
+.cp-main { flex: 1; min-width: 0; }
+.cp-title { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cp-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.cp-badge {
+  padding: 1px 6px; border-radius: 5px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--muted); font-size: 10.5px; font-weight: 500;
+}
+.cp-badge.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 35%, var(--border)); }
+.cp-badge.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 35%, var(--border)); }
+.cp-fp { margin-top: 3px; font: 11.5px/1.4 var(--mono); color: var(--text); word-break: break-all; user-select: text; }
+.cp-meta { margin-top: 2px; color: var(--muted); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-btns { display: flex; gap: 2px; flex-shrink: 0; }
+.cp-ro { display: inline-flex; padding: 6px; color: var(--faint); }
+.cp-ro svg.ic { width: 14px; height: 14px; }
+.cp-empty { padding: 18px 14px; color: var(--muted); text-align: center; line-height: 1.5; }
+.cp-note { margin: 10px 0 0; color: var(--muted); font-size: 11.5px; line-height: 1.5; }
+
+/* Proxy-Formular (Einstellungen und Host-Dialog) */
+.cp-proxy select { margin-top: 0; margin-bottom: 12px; }
+.cp-proxy .row { margin-bottom: 12px; }
+.cp-proxy .row label { flex: 1; }
+.cp-proxy .row label.port { flex: 0 0 90px; }
+.cp-proxy-details[hidden] { display: none; }
+
+/* Host-Dialog: aufklappbarer Bereich „Erweitert“ */
+.cp-host { margin: 4px 0 12px; border: 1px solid var(--border); border-radius: 10px; padding: 0 12px; }
+.cp-host > summary { padding: 10px 0; cursor: pointer; color: var(--muted); font-size: 12.5px; font-weight: 500; user-select: none; }
+.cp-host > summary:hover { color: var(--text); }
+.cp-host[open] > summary { margin-bottom: 2px; }
+.cp-agent { margin-bottom: 12px; }
+.dialog .cp-agent label.toggle { margin: 0; color: var(--text); font-weight: 500; }
+.cp-hint { margin: 6px 0 0; color: var(--muted); font-size: 11.5px; line-height: 1.5; }
+.cp-label { margin-bottom: 6px; font-size: 12.5px; font-weight: 500; }
+/* Mit aufgeklapptem Bereich wird der Dialog höher – dann scrollen statt abschneiden */
+#host-form { max-height: calc(100vh - 48px); overflow-y: auto; }
+/* Längere Bereichsnamen („Bekannte Server“) einzeilig halten */
+.settings-nav button { white-space: nowrap; }

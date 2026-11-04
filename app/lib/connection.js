@@ -11,15 +11,15 @@ const WIN_AGENT_PIPE = '\\\\.\\pipe\\openssh-ssh-agent';
 
 function createConnection(deps) {
   const { loadHosts, parseTarget, expandHome, ask, verifyHostKey, friendlyError,
-    passwords, passphrases, defaultKeys, sessions, send } = deps;
+    passwords, passphrases, defaultKeys, sessions, send, proxies } = deps;
 
   // Pro Tab: Anmeldedaten nur im Arbeitsspeicher, damit das automatische Neuverbinden nicht erneut fragt
   const caches = new Map();
   const cacheFor = id => {
-    if (!caches.has(id)) caches.set(id, { passwords: new Map(), passphrases: new Map() });
+    if (!caches.has(id)) caches.set(id, newCache());
     return caches.get(id);
   };
-  const newCache = () => ({ passwords: new Map(), passphrases: new Map() });
+  const newCache = () => ({ passwords: new Map(), passphrases: new Map(), proxy: new Map() });
   const credKey = (target, hostName) => hostName || `${target.user}@${target.host}:${target.port}`;
   const label = hop => hop.hostName || `${hop.target.user}@${hop.target.host}`;
 
@@ -187,12 +187,15 @@ function createConnection(deps) {
       });
       client.on('error', fail); // bleibt auch nach „ready“ dran, damit Fehler nicht die App beenden
       client.on('close', () => fail(new Error('Verbindung geschlossen')));
+      // Agent-Weiterleitung (pro Verbindung, Standard aus): der Server darf den lokalen SSH-Agent benutzen
+      const agent = target.agentForward ? agentPath() : null;
       client.connect({
         host: target.host,
         port: target.port,
         username: target.user,
         sock: sock || undefined,
         readyTimeout: 20000,
+        ...(agent ? { agent, agentForward: true } : {}),
         keepaliveInterval: KEEPALIVE_INTERVAL,
         keepaliveCountMax: KEEPALIVE_COUNT_MAX,
         hostVerifier: (rawKey, verify) => {
@@ -238,6 +241,9 @@ function createConnection(deps) {
     const clients = [];
     try {
       let sock = null;
+      // Proxy (SOCKS5/HTTP) nur für den ersten Server – die weiteren laufen durch den Sprung-Server
+      const proxy = proxies && proxies.proxyFor(hops[0].target);
+      if (proxy) sock = await proxies.connectVia(proxy, hops[0].target.host, hops[0].target.port, cache.proxy);
       for (let i = 0; i < hops.length; i++) {
         if (i > 0) sock = await forward(clients[i - 1], hops[i - 1], hops[i].target);
         try {

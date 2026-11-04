@@ -205,10 +205,14 @@ Das Update-Fenster zeigt dabei, **was neu** ist, und nach dem ersten Start einer
 - Gespeicherte Verbindungen mit **Gruppen, Farben und Suche**
 - Passwort, SSH-Schlüssel (auch mit Passphrase) oder SSH-Agent
 - **SSH-Schlüssel erzeugen** und mit einem Klick auf den Server übertragen
+- **Schlüssel verwalten:** alle SSH-Schlüssel aus `~/.ssh` mit Typ, Fingerprint und Passphrase-Status – öffentlichen Schlüssel kopieren, im Finder/Explorer zeigen, neuen erzeugen, auf einen Server übertragen
 - Sprung-Server (ProxyJump)
+- **Verbindung über Proxy:** SOCKS5 oder HTTP (CONNECT), mit Anmeldung, global oder pro Verbindung – auch zusammen mit Sprung-Server
+- **Agent-Weiterleitung** pro Verbindung (z. B. `git pull` auf dem Server mit dem Schlüssel vom eigenen Rechner)
 - Import aus `~/.ssh/config`
 - **Port-Weiterleitung:** lokal, remote und SOCKS-Proxy – auf Wunsch automatisch beim Verbinden
-- Host-Schlüssel werden beim ersten Verbinden gemerkt und danach geprüft (wie bei OpenSSH)
+- Host-Schlüssel werden beim ersten Verbinden gemerkt und danach geprüft (wie bei OpenSSH); bei einem **geänderten Schlüssel** klare Warnung mit altem und neuem Fingerprint
+- **Bekannte Server verwalten:** alle gespeicherten Host-Schlüssel (auch aus `~/.ssh/known_hosts`) ansehen, durchsuchen und einzeln entfernen
 - Optionale **App-Sperre** mit Passwort oder Touch ID
 
 </details>

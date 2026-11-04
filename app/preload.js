@@ -130,3 +130,20 @@ contextBridge.exposeInMainWorld('localFs', {
   onConflict: cb => ipcRenderer.on('xfer:conflict', (_e, info) => cb(info)),
   answerConflict: (reqId, answer) => ipcRenderer.send('xfer:conflict-answer', reqId, answer),
 });
+
+// Verbindungen-Pro: bekannte Server, Schlüssel, Proxy (app/lib/knownhosts.js, keyring.js, proxy.js; Oberfläche: src/conn-pro.js)
+contextBridge.exposeInMainWorld('s3conn', {
+  knownList: () => ipcRenderer.invoke('knownhosts:list'),
+  knownMatch: query => ipcRenderer.invoke('knownhosts:match', query),
+  knownRemove: (id, key) => ipcRenderer.invoke('knownhosts:remove', id, key),
+  keysList: () => ipcRenderer.invoke('keyring:list'),
+  keyCopy: file => ipcRenderer.invoke('keyring:copy', file),
+  keyShow: file => ipcRenderer.invoke('keyring:show', file),
+  keyGenerate: (name, passphrase, remember) => ipcRenderer.invoke('keyring:generate', name, passphrase, remember),
+  keyInstall: (file, hostName) => ipcRenderer.invoke('keyring:install', file, hostName),
+  proxyGet: () => ipcRenderer.invoke('proxy:get'),
+  proxySet: (proxy, password) => ipcRenderer.invoke('proxy:set', proxy, password),
+  proxyHasPassword: proxy => ipcRenderer.invoke('proxy:hasPassword', proxy),
+  proxyForgetPassword: proxy => ipcRenderer.invoke('proxy:forgetPassword', proxy),
+  proxyTest: (proxy, password, host, port) => ipcRenderer.invoke('proxy:test', proxy, password, host, port),
+});
