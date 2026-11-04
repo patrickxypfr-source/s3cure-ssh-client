@@ -1,0 +1,39 @@
+/* ---------- Server-Übersicht (monitor.js) ---------- */
+
+#monitor {
+  display: inline-flex; align-items: center; gap: 12px;
+  height: 28px; padding: 0 10px; margin-left: 4px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: transparent; color: var(--muted);
+  font: 500 12px/1 inherit; font-family: inherit; font-variant-numeric: tabular-nums;
+  cursor: pointer; white-space: nowrap; min-width: 0; overflow: hidden;
+}
+#monitor:hover, #monitor.open { background: var(--hover); color: var(--text); }
+#monitor:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-ring); }
+.mon-item { display: inline-flex; align-items: center; gap: 5px; }
+.mon-k { color: var(--faint); font-weight: 600; font-size: 11px; }
+.mon-bar { width: 28px; height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.mon-bar i, .mon-rbar i { display: block; height: 100%; background: var(--ok); border-radius: inherit; }
+.mon-item.warn .mon-bar i, .mon-rbar.warn i { background: var(--warn); }
+.mon-item.crit .mon-bar i, .mon-rbar.crit i { background: var(--accent); }
+.mon-item.crit .mon-v { color: var(--accent); }
+
+/* Schmale Fenster: erst Balken, dann Laufzeit weglassen */
+@media (max-width: 1150px) { .mon-bar { display: none; } }
+@media (max-width: 980px) { .mon-up { display: none; } }
+@media (max-width: 860px) { #monitor { display: none !important; } }
+
+#monitor-pop {
+  position: fixed; z-index: 15; width: 300px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px 16px 12px; box-shadow: var(--shadow-lg);
+  font-variant-numeric: tabular-nums; user-select: text;
+  animation: pop .1s ease;
+}
+.mon-title { font-weight: 650; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mon-sub { color: var(--muted); font-size: 11.5px; margin-top: 1px; }
+.mon-row { display: flex; justify-content: space-between; gap: 12px; margin-top: 12px; font-size: 12.5px; }
+.mon-rk { color: var(--muted); white-space: nowrap; }
+.mon-rv { text-align: right; }
+.mon-rbar { height: 5px; margin-top: 5px; border-radius: 3px; background: var(--border); overflow: hidden; }
+.mon-foot { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border); color: var(--faint); font-size: 11px; }

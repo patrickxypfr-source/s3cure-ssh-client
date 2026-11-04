@@ -6,6 +6,8 @@
   <title>S3cure SSH Client</title>
   <link rel="stylesheet" href="../node_modules/@xterm/xterm/css/xterm.css">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="quickbar.css">
+  <link rel="stylesheet" href="monitor.css">
 </head>
 <body>
   <aside id="sidebar">
@@ -39,6 +41,7 @@
 
     <div id="toolbar" hidden>
       <span id="tab-status"><span class="status-dot"></span><span id="tab-status-text"></span></span>
+      <button id="monitor" type="button" hidden title="Server-Übersicht – klicken für Details"></button>
       <div class="spacer"></div>
       <button id="btn-reconnect" class="btn" hidden data-icon="refresh">Neu verbinden</button>
       <button id="btn-quick" class="btn ghost" data-icon="bolt" title="Schnellbefehle für diese Verbindung ein- oder ausblenden">Befehle</button>
@@ -118,6 +121,8 @@
   <script src="../node_modules/@xterm/xterm/lib/xterm.js"></script>
   <script src="../node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
   <script src="icons.js"></script>
+  <script src="quickbar.js"></script>
+  <script src="monitor.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>
