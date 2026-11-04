@@ -28,9 +28,20 @@ contextBridge.exposeInMainWorld('myssh', {
   onSearchResults: cb => ipcRenderer.on('search:results', (_e, id, searchId, results) => cb(id, searchId, results)),
   onSearchDone: cb => ipcRenderer.on('search:done', (_e, id, searchId, info) => cb(id, searchId, info)),
 
+  // Editor, Vorschau, Rechte, ZIP, Übertragungen (app/lib/sftp-extra.js, app/lib/transfers.js)
+  sftpReadText: (id, file) => ipcRenderer.invoke('sftp:readText', id, file),
+  sftpWriteText: (id, file, text, opts) => ipcRenderer.invoke('sftp:writeText', id, file, text, opts),
+  sftpPreview: (id, file) => ipcRenderer.invoke('sftp:preview', id, file),
+  sftpStat: (id, file) => ipcRenderer.invoke('sftp:stat', id, file),
+  sftpChmod: (id, files, mode) => ipcRenderer.invoke('sftp:chmod', id, files, mode),
+  archiveExists: (id, file) => ipcRenderer.invoke('archive:exists', id, file),
+  archivePack: (id, dir, names, archive, overwrite) => ipcRenderer.invoke('archive:pack', id, dir, names, archive, overwrite),
+  archiveUnpack: (id, file) => ipcRenderer.invoke('archive:unpack', id, file),
+  transferCancel: jobId => ipcRenderer.send('transfer:cancel', jobId),
+  onTransfer: cb => ipcRenderer.on('transfer:update', (_e, info) => cb(info)),
+
   onData: cb => ipcRenderer.on('ssh:data', (_e, id, data) => cb(id, data)),
   onClosed: cb => ipcRenderer.on('ssh:closed', (_e, id) => cb(id)),
-  onProgress: cb => ipcRenderer.on('sftp:progress', (_e, id, label, pct) => cb(id, label, pct)),
   onAsk: cb => ipcRenderer.on('ask', (_e, req) => cb(req)),
   answer: (reqId, value) => ipcRenderer.send('ask-answer', reqId, value),
 });
