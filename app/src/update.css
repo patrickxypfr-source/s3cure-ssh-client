@@ -1,0 +1,28 @@
+/* Update-Fenster (src/update.html) */
+body.update-page {
+  display: block; height: 100vh; margin: 0; overflow: hidden;
+  background: var(--bg); color: var(--text); user-select: none;
+}
+.up-drag { position: fixed; inset: 0 0 auto 0; height: 34px; -webkit-app-region: drag; }
+.up-card { padding: 42px 26px 22px; display: flex; flex-direction: column; gap: 14px; }
+.up-head { display: flex; align-items: center; gap: 14px; }
+.up-logo { width: 44px; height: 44px; flex-shrink: 0; }
+.up-title { font-size: 15px; font-weight: 650; }
+.up-versions { font-size: 12.5px; color: var(--muted); margin-top: 3px; font-variant-numeric: tabular-nums; }
+.up-versions b { color: var(--text); font-weight: 600; }
+
+.up-bar { height: 8px; border-radius: 4px; background: var(--hover); overflow: hidden; border: 1px solid var(--border); }
+.up-fill { height: 100%; width: 0; border-radius: inherit; background: var(--accent); transition: width .15s linear; }
+.up-bar.busy .up-fill {
+  width: 35% !important; animation: up-busy 1.1s ease-in-out infinite;
+}
+@keyframes up-busy { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
+.up-bar.done .up-fill { width: 100% !important; background: var(--ok); }
+.up-bar.error .up-fill { width: 100% !important; background: var(--faint); }
+
+.up-row { display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px; min-height: 17px; }
+.up-status { color: var(--text); }
+.up-status.err { color: var(--accent); user-select: text; }
+.up-detail { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.up-actions { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+.up-actions .spacer { flex: 1; }

@@ -46,16 +46,21 @@ function setupUpdateCheck({ ipcMain, shell, app, configDir }) {
     const version = String(data.tag_name || '').replace(/^v/, '');
     if (!parseVersion(version)) return null;
     const url = /^https:\/\/github\.com\//.test(data.html_url || '') ? data.html_url : `https://github.com/${REPO}/releases/latest`;
-    return { version, url, name: String(data.name || '') };
+    // Download-Dateien für das automatische Update (nur aus diesem Repo; im Test auch lokal)
+    const okAsset = u => u.startsWith(`https://github.com/${REPO}/releases/download/`) || (process.env.S3CURE_UPDATE_URL && /^http:\/\/127\.0\.0\.1:\d+\//.test(u));
+    const assets = (Array.isArray(data.assets) ? data.assets : [])
+      .map(a => ({ name: String(a.name || ''), url: String(a.browser_download_url || ''), size: Number(a.size) || 0 }))
+      .filter(a => a.name && okAsset(a.url));
+    return { version, url, name: String(data.name || ''), assets };
   }
 
   // Ergebnis für die Oberfläche – immer mit der eigenen Version:
   // { current, latest (oder null, wenn unbekannt), outdated }
   // GitHub wird höchstens einmal pro Stunde gefragt (ohne Anmeldung erlaubt GitHub 60 Abfragen/Stunde).
-  async function check() {
+  async function check(force = false) {
     const st = load();
     const current = app.getVersion();
-    if (!st.lastCheck || Date.now() - st.lastCheck > HOUR || st.lastCheck > Date.now()) {
+    if (force || !st.lastCheck || Date.now() - st.lastCheck > HOUR || st.lastCheck > Date.now()) {
       let latest = null;
       try { latest = await fetchLatest(process.env.S3CURE_UPDATE_TOKEN || st.token || null); } catch { latest = null; }
       // Keine Antwort (offline, Limit): letzten bekannten Stand behalten
@@ -66,14 +71,22 @@ function setupUpdateCheck({ ipcMain, shell, app, configDir }) {
     return { current, latest, outdated: !!latest && isNewer(latest, current) };
   }
 
-  ipcMain.handle('update:check', () => check().catch(() => ({ current: app.getVersion(), latest: null, outdated: false })));
+  ipcMain.handle('update:check', (_e, force) => check(!!force).catch(() => ({ current: app.getVersion(), latest: null, outdated: false })));
   // Früher: Hinweis wegklicken/abschalten. Die Versionsanzeige ist jetzt immer da – Aufrufe ignorieren.
   ipcMain.handle('update:dismiss', () => {});
   ipcMain.handle('update:disable', () => {});
+  // Für lib/updater.js: frische Release-Infos inkl. Download-Dateien
+  async function latestRelease() {
+    await check(true);
+    return load().latest || null;
+  }
+
   ipcMain.handle('update:open', () => {
     const url = load().latest?.url;
     if (url && /^https:\/\/github\.com\//.test(url)) return shell.openExternal(url);
   });
+
+  return { latestRelease };
 }
 
 module.exports = { setupUpdateCheck, isNewer, parseVersion };

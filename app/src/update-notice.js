@@ -1,7 +1,8 @@
 // S3cure SSH Client – Versionsanzeige unten in der Seitenleiste.
 // Immer sichtbar: die eigene Version. Gibt es auf GitHub eine neuere, steht dort deutlich
 // „Veraltet“ mit beiden Versionsnummern und einem Knopf zum Herunterladen.
-// Die Abfrage macht app/lib/update-check.js (höchstens einmal pro Stunde bei GitHub).
+// Die Abfrage macht app/lib/update-check.js (beim Start immer, sonst höchstens stündlich).
+// Der Knopf „Update“ startet das automatische Update (app/lib/updater.js).
 (() => {
   const api = window.s3update;
   if (!api) return;
@@ -23,10 +24,12 @@
           <span>Deine Version <b class="un-cur"></b></span>
           <span>Neueste <b class="un-new"></b></span>
         </div>
-        <button type="button" class="un-get">Neue Version herunterladen</button>`;
+        <button type="button" class="un-get">Update</button>`;
       box.querySelector('.un-cur').textContent = info.current;
       box.querySelector('.un-new').textContent = info.latest;
-      box.querySelector('.un-get').addEventListener('click', () => api.open());
+      // Lädt und installiert die neue Version selbst (app/lib/updater.js, Update-Fenster)
+      box.querySelector('.un-get').addEventListener('click', () => api.install());
+      box.querySelector('.un-get').title = `Version ${info.latest} herunterladen und installieren – S3cure startet danach neu`;
       box.title = '';
     } else {
       box.id = 'app-version';
@@ -37,9 +40,9 @@
     }
   }
 
-  const refresh = () => api.check().then(render).catch(() => {});
-  // Kurz nach dem Start, dann regelmäßig und wenn das Fenster wieder nach vorne kommt
-  window.addEventListener('load', () => setTimeout(refresh, 1500));
-  setInterval(refresh, RECHECK);
-  window.addEventListener('focus', refresh);
+  const refresh = force => api.check(force).then(render).catch(() => {});
+  // Beim Start immer frisch bei GitHub nachfragen, danach regelmäßig und wenn das Fenster nach vorne kommt
+  window.addEventListener('load', () => setTimeout(() => refresh(true), 1200));
+  setInterval(() => refresh(false), RECHECK);
+  window.addEventListener('focus', () => refresh(false));
 })();

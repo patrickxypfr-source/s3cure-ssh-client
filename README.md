@@ -20,24 +20,28 @@
 
 Fertige Versionen gibt es unter **[Releases](../../releases/latest)**:
 
-| System | Datei |
-|---|---|
-| **Windows 10/11** – einfach starten | `S3cure-SSH-Client-Windows-Portable.exe` (eine Datei, keine Installation) |
-| Windows 10/11 – als Ordner | `S3cure-SSH-Client-Windows-x64.zip` (entpacken, `S3cure SSH Client.exe` starten) |
-| Mac mit Apple-Chip (M1–M4) | `S3cure-SSH-Client-Mac-AppleSilicon.zip` |
-| Mac mit Intel-Chip | `S3cure-SSH-Client-Mac-Intel.zip` |
+| System | Datei | |
+|---|---|---|
+| **Mac mit Apple-Chip** (M1–M4) | `S3cure-SSH-Client-Mac-AppleSilicon.dmg` | Installationsfenster |
+| Mac mit Intel-Chip | `S3cure-SSH-Client-Mac-Intel.dmg` | Installationsfenster |
+| **Windows 10/11** | `S3cure-SSH-Client-Setup.exe` | Installer mit Startmenü & Desktop-Verknüpfung |
+| Windows ohne Installation | `S3cure-SSH-Client-Windows-Portable.exe` | eine Datei, einfach starten |
 
 > ⚠️ Bitte **nicht** den grünen Knopf „Code → Download ZIP“ benutzen – das ist der Quellcode, kein fertiges Programm.
+> Die `…Mac-*.zip`-Dateien braucht die App für ihre automatischen Updates.
 
-**Erster Start** – die App ist nicht von Apple bzw. Microsoft signiert, deshalb fragt das System einmal nach:
-- **macOS:** ZIP doppelklicken, App in den Programme-Ordner ziehen und öffnen. Kommt „kann nicht geöffnet werden, da der Entwickler nicht verifiziert werden kann“: **Systemeinstellungen → Datenschutz & Sicherheit** → ganz unten **Dennoch öffnen** klicken (ältere macOS-Versionen: Rechtsklick auf die App → **Öffnen**).
-- **Windows:** Bei „Der Computer wurde durch Windows geschützt“ auf **Weitere Informationen** → **Trotzdem ausführen** klicken.
+### Installieren
+- **macOS:** `.dmg` öffnen und die App im Fenster auf **Programme** ziehen. Beim ersten Öffnen meldet macOS, dass der Entwickler nicht verifiziert ist (die App ist nicht von Apple signiert): **Systemeinstellungen → Datenschutz & Sicherheit** → ganz unten **Dennoch öffnen**. Startest du die App außerhalb von „Programme“, bietet sie an, sich selbst dorthin zu verschieben.
+- **Windows:** `Setup.exe` starten. Bei „Der Computer wurde durch Windows geschützt“ auf **Weitere Informationen** → **Trotzdem ausführen**, dann dem Installationsfenster folgen.
+
+### Updates
+Beim Start prüft die App, ob es auf GitHub eine neuere Version gibt. Unten links steht dann **„Veraltet“** mit deiner und der neuesten Version – ein Klick auf **Update** lädt die neue Version herunter (Fenster mit Fortschrittsbalken), installiert sie und startet die App neu. Nichts selbst herunterladen nötig.
 
 ## Funktionen
 
 ### Terminal
 - Mehrere Verbindungen in Tabs, helles und dunkles Design, einklappbare Seitenleiste (Cmd/Strg+B)
-- Zeigt unten links die eigene Version – und deutlich „Veraltet“, sobald es eine neuere gibt
+- Zeigt unten links die eigene Version – und „Veraltet“ mit **Update-Knopf**, sobald es eine neuere gibt (automatische Installation)
 - **Automatisch neu verbinden** nach WLAN-Wechsel oder Ruhezustand
 - Suche im Terminal (Cmd/Strg+F), anklickbare Links, Schriftgröße per Cmd/Strg +/−
 - Geteilte Ansicht: zwei Terminals nebeneinander

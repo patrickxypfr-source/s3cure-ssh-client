@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>S3cure SSH Client – Update</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="update.css">
+</head>
+<body class="update-page">
+  <div class="drag-area up-drag"></div>
+  <main class="up-card">
+    <div class="up-head">
+      <img class="up-logo" src="logo.png" alt="">
+      <div>
+        <div class="up-title" id="up-title">Update wird vorbereitet …</div>
+        <div class="up-versions" id="up-versions"></div>
+      </div>
+    </div>
+    <div class="up-bar"><div class="up-fill" id="up-fill"></div></div>
+    <div class="up-row">
+      <span class="up-status" id="up-status">Suche neueste Version …</span>
+      <span class="up-detail" id="up-detail"></span>
+    </div>
+    <div class="up-actions">
+      <button type="button" class="btn" id="up-alt" hidden>Auf GitHub öffnen</button>
+      <div class="spacer"></div>
+      <button type="button" class="btn" id="up-cancel">Abbrechen</button>
+    </div>
+  </main>
+  <script src="update-window.js"></script>
+</body>
+</html>

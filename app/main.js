@@ -565,7 +565,12 @@ ipcMain.handle('pick-key', async () => {
 const tunnels = createTunnelManager({
   ipcMain, shell, getWin: () => win, getSession: id => sessions.get(id), loadHosts, saveHosts,
 });
-setupUpdateCheck({ ipcMain, shell, app, configDir: CONFIG_DIR });
+const updateCheck = setupUpdateCheck({ ipcMain, shell, app, configDir: CONFIG_DIR });
+// Automatisches Update (Knopf „Update“ unten links, Update-Fenster mit Fortschritt)
+require('./lib/updater').setupUpdater({
+  ipcMain, app, platform: PLATFORM, getMainWin: () => win, latestRelease: updateCheck.latestRelease,
+  preload: path.join(__dirname, 'preload.js'),
+});
 
 // ---------- App-Sperre (app/lib/applock.js) ----------
 
@@ -607,9 +612,44 @@ require('./lib/settings').register({ app, ipcMain, nativeTheme, configDir: CONFI
 require('./lib/term-extra').register({ app, ipcMain, dialog, shell, sessions, getWin: () => win, platform: PLATFORM });
 
 app.setName('S3cure SSH Client');
-app.whenReady().then(() => {
+// macOS: Beim Start außerhalb von „Programme“ (z. B. aus Downloads oder der DMG) anbieten,
+// die App dorthin zu verschieben – wie bei richtigen Mac-Programmen. Nur einmal fragen.
+async function offerMoveToApplications() {
+  if (process.platform !== 'darwin' || !app.isPackaged || app.isInApplicationsFolder() || process.env.S3CURE_CONFIG_DIR) return false;
+  const flag = path.join(CONFIG_DIR, 'install.json');
+  let st = {};
+  try { st = JSON.parse(fs.readFileSync(flag, 'utf8')); } catch {}
+  if (st.dontAskMove) return false;
+  const r = await dialog.showMessageBox({
+    type: 'question',
+    message: 'S3cure SSH Client installieren?',
+    detail: 'Die App liegt noch nicht im Ordner „Programme“. Soll sie dorthin verschoben werden? '
+      + 'Dann findest du sie im Launchpad und in Spotlight, und Updates funktionieren automatisch.',
+    buttons: ['In „Programme“ installieren', 'Nicht jetzt'],
+    defaultId: 0, cancelId: 1,
+    checkboxLabel: 'Nicht mehr fragen',
+  });
+  if (r.response !== 0) {
+    if (r.checkboxChecked) { try { fs.mkdirSync(CONFIG_DIR, { recursive: true }); fs.writeFileSync(flag, JSON.stringify({ ...st, dontAskMove: true })); } catch {} }
+    return false;
+  }
+  try {
+    // Verschiebt die App, beendet sie und startet sie aus „Programme“ neu
+    return app.moveToApplicationsFolder({
+      conflictHandler: type => type === 'exists' || type === 'existsAndRunning'
+        ? dialog.showMessageBoxSync({ type: 'question', message: 'In „Programme“ gibt es schon eine S3cure-App.', detail: 'Durch diese Version ersetzen?', buttons: ['Ersetzen', 'Abbrechen'], defaultId: 0, cancelId: 1 }) === 0
+        : true,
+    });
+  } catch (err) {
+    dialog.showErrorBox('Installieren nicht möglich', String(err.message || err));
+    return false;
+  }
+}
+
+app.whenReady().then(async () => {
   // Windows: keine Menüleiste (Kopieren/Einfügen in Feldern geht trotzdem)
   if (!IS_MAC) Menu.setApplicationMenu(null);
+  if (await offerMoveToApplications()) return; // App wird gerade verschoben und neu gestartet
   createWindow();
   // Nach dem Aufwachen: tote Verbindungen sofort erkennen und neu verbinden
   powerMonitor.on('resume', () => { connection.probeAll(); sendToUi('power:resume'); });

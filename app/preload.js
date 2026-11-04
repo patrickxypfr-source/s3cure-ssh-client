@@ -77,10 +77,17 @@ contextBridge.exposeInMainWorld('s3tunnels', {
 
 // Hinweis auf neue Version (app/lib/update-check.js, Oberfläche: src/update-notice.js)
 contextBridge.exposeInMainWorld('s3update', {
-  check: () => ipcRenderer.invoke('update:check'),
+  check: force => ipcRenderer.invoke('update:check', !!force),
   dismiss: version => ipcRenderer.invoke('update:dismiss', version),
   disable: () => ipcRenderer.invoke('update:disable'),
   open: () => ipcRenderer.invoke('update:open'),
+  // Automatisches Update (app/lib/updater.js)
+  install: () => ipcRenderer.invoke('updater:start'),
+  cancel: () => ipcRenderer.invoke('updater:cancel'),
+  close: () => ipcRenderer.invoke('updater:close'),
+  state: () => ipcRenderer.invoke('updater:state'),
+  kind: () => ipcRenderer.invoke('updater:kind'),
+  onState: cb => ipcRenderer.on('updater:state', (_e, st) => cb(st)),
 });
 
 // Einstellungen (src/settings.js)

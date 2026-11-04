@@ -2,21 +2,19 @@
 // 1. icon.ico nehmen (liegt im Repo). Neu erzeugen aus assets/icon-1024.png nur mit
 //    `node tools/win-finish.mjs --new-icon` (braucht `sips`, also macOS)
 // 2. Symbol und Programm-Infos in die .exe schreiben
-// 3. alles als ZIP zum Weitergeben verpacken
+// 3. (Installer und portable .exe: tools/win-installers.mjs)
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import * as ResEdit from 'resedit';
-import { zipDir } from './zip.mjs';
 
 const APP_DIR = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const NAME = 'S3cure SSH Client';
 const BUILD = path.join(APP_DIR, '..', 'dist', `${NAME}-win32-x64`);
 const EXE = path.join(BUILD, `${NAME}.exe`);
 const ICO = path.join(APP_DIR, 'icon.ico');
-const ZIP = path.join(APP_DIR, '..', 'dist', 'S3cure-SSH-Client-Windows-x64.zip');
 const pkg = JSON.parse(fs.readFileSync(path.join(APP_DIR, 'package.json'), 'utf8'));
 
 // --- 1. ICO-Datei (PNG-Bilder in einem ICO-Container) ---
@@ -83,10 +81,7 @@ function patchExe() {
   console.log(`Symbol und Infos eingetragen (Icon-Gruppe ${target.id})`);
 }
 
-// --- 3. ZIP ---
-function zip() {
-  zipDir(BUILD, ZIP);
-}
+// --- 3. Installer ---
 
 if (!fs.existsSync(EXE)) { console.error('Kein Windows-Build gefunden:', EXE); process.exit(1); }
 if (process.argv.includes('--new-icon') || !fs.existsSync(ICO)) {
@@ -96,4 +91,4 @@ if (process.argv.includes('--new-icon') || !fs.existsSync(ICO)) {
   console.log('icon.ico vorhanden – wird verwendet');
 }
 patchExe();
-zip();
+// Keine Windows-ZIP mehr: Installer und portable .exe macht tools/win-installers.mjs
