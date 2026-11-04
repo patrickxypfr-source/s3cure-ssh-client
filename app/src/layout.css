@@ -1,0 +1,107 @@
+/* ---------- Layout (layout.js): Werkzeugleiste passt sich an, Seitenleiste einklappbar ---------- */
+
+/* ===== Werkzeugleiste ===== */
+/* Die Stufen c1 … c7 setzt layout.js je nach verfügbarer Breite */
+#toolbar { overflow: hidden; min-width: 0; }
+#toolbar > #tab-status { min-width: min(var(--status-w, 160px), 240px); }
+#toolbar.c2 > #tab-status { min-width: min(var(--status-w, 160px), 170px); }
+#toolbar.c5 > #tab-status { min-width: min(var(--status-w, 160px), 120px); }
+#toolbar.c7 > #tab-status { min-width: 7px; }
+
+#toolbar.c1 .mon-bar { display: none; }
+#toolbar.c1 #monitor { gap: 10px; padding: 0 9px; }
+#toolbar.c3 { gap: 8px; }
+#toolbar.c2 .mon-up { display: none; }
+
+#toolbar.c3 #btn-tunnels, #toolbar.c3 #btn-quick, #toolbar.c3 #btn-reconnect { font-size: 0; gap: 0; padding: 0 8px; }
+#toolbar.c3 #btn-tunnels #tunnel-count { font-size: 11px; margin-left: 4px; }
+
+/* Server-Übersicht als Symbol: Farbe zeigt den schlechtesten Wert */
+#toolbar.c4 #monitor { gap: 0; padding: 0 7px; margin-left: 0; }
+#toolbar.c4 #monitor .mon-item { display: none; }
+#toolbar.c4 #monitor::before {
+  content: ''; width: 16px; height: 16px; background: var(--ok);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12h4l3-8 4 16 3-8h4'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+#toolbar.c4 #monitor:has(.warn)::before { background: var(--warn); }
+#toolbar.c4 #monitor:has(.crit)::before { background: var(--accent); }
+
+#toolbar.c5 #term-tools:not(.tb-proxy) { display: none !important; }
+#toolbar.c6 #btn-tunnels:not(.tb-proxy), #toolbar.c6 #btn-quick:not(.tb-proxy) { display: none !important; }
+#toolbar.c7 .seg button { font-size: 0; gap: 0; padding: 0 9px; }
+
+#tb-more { padding: 0 8px; }
+#tb-more svg.ic { stroke-width: 3; }
+/* Knopf aus dem „⋯“-Menü wird kurz unsichtbar an dessen Stelle gelegt (für die Position von Fenstern) */
+.tb-proxy { position: fixed !important; display: inline-flex !important; visibility: hidden !important; pointer-events: none; }
+#term-tools.tb-proxy { display: inline-flex !important; }
+
+/* Dateibrowser-Kopfzeile und Befehlsleiste: lieber umbrechen als abschneiden */
+.files-bar { flex-wrap: wrap; row-gap: 8px; }
+.files-bar > .field.grow { min-width: 150px; }
+.files-bar > .search-field { flex: 1 1 200px; max-width: 320px; }
+#quickbar { min-width: 0; }
+#tabbar { min-width: 0; }
+#tabs { min-width: 0; }
+
+/* ===== Seitenleiste ===== */
+
+#sb-toggle {
+  align-self: flex-end; flex-shrink: 0; position: relative;
+  width: 28px; height: 28px; margin: 0 6px 3px -4px;
+  -webkit-app-region: no-drag;
+}
+#sb-toggle svg.ic { width: 16px; height: 16px; }
+#sb-toggle[aria-pressed=true] { color: var(--text); }
+/* Hinweis auf eine neue Version, solange er in der eingeklappten Leiste nicht zu sehen ist */
+body.sb-collapsed:has(#update-notice) #sb-toggle::after {
+  content: ''; position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent); border: 1.5px solid var(--bg);
+}
+
+#sidebar { overflow: hidden; transition: width .2s ease, padding .2s ease; }
+body.sb-no-anim #sidebar { transition: none; }
+/* Text beim Aufklappen abschneiden statt umbrechen */
+#sidebar .brand > div, #sidebar .section-head > span:first-child, #sidebar .host-text, .foot-btn, #app-lock-btn { white-space: nowrap; }
+
+body.sb-collapsed #sidebar { width: 60px; padding: 0 8px 10px; }
+
+body.sb-collapsed .brand { justify-content: center; padding: 6px 0 12px; cursor: pointer; }
+body.sb-collapsed .brand > div,
+body.sb-collapsed #quick,
+body.sb-collapsed #host-search-wrap,
+body.sb-collapsed #import-hosts,
+body.sb-collapsed .section-head > span:first-child,
+body.sb-collapsed #host-empty,
+body.sb-collapsed #update-notice,
+body.sb-collapsed .host-text,
+body.sb-collapsed .host-actions,
+body.sb-collapsed #host-list li.host-nohit { display: none !important; }
+body.sb-collapsed .brand { -webkit-app-region: no-drag; }
+body.sb-collapsed .brand .logo { width: 32px; height: 32px; }
+
+body.sb-collapsed .section-head { justify-content: center; padding: 6px 0 8px; border-top: 1px solid var(--border); }
+body.sb-collapsed .section-head .round-btn { width: 32px; height: 32px; color: var(--muted); }
+body.sb-collapsed .section-head .round-btn svg.ic { width: 17px; height: 17px; }
+
+body.sb-collapsed #host-list { gap: 4px; align-items: center; scrollbar-width: none; }
+body.sb-collapsed #host-list::-webkit-scrollbar { display: none; }
+body.sb-collapsed #host-list li { padding: 5px; justify-content: center; margin-left: 0; }
+body.sb-collapsed #host-list li.in-group { margin-left: 0; }
+body.sb-collapsed .host-avatar { width: 32px; height: 32px; }
+/* Gruppen: nur ein Trennstrich (Klick klappt die Gruppe trotzdem auf/zu) */
+body.sb-collapsed #host-list li.host-group { width: 36px; height: 11px; padding: 0; margin: 2px 0; gap: 0; }
+body.sb-collapsed #host-list li.host-group > * { display: none; }
+body.sb-collapsed #host-list li.host-group::before { content: ''; width: 100%; height: 1px; background: var(--border-strong); }
+body.sb-collapsed #host-list li.host-group.closed::before { height: 3px; border-radius: 2px; background: var(--faint); }
+
+body.sb-collapsed #app-lock-btn,
+body.sb-collapsed .foot-btn { font-size: 0; gap: 0; padding: 0; justify-content: center; }
+body.sb-collapsed #app-lock-btn svg.ic, body.sb-collapsed .foot-btn svg.ic { width: 16px; height: 16px; }
+body.sb-collapsed #app-lock-btn { width: 100%; }
+body.sb-collapsed #app-lock-btn.on { color: var(--accent); }
+
+/* macOS: Die Ampelknöpfe (x 16 – ca. 70 px) ragen über die schmale Leiste hinaus – Tab-Leiste rückt ein */
+body.mac.sb-collapsed #tabbar { padding-left: 26px; }
+#tabbar { transition: padding-left .2s ease; }
+body.sb-no-anim #tabbar { transition: none; }

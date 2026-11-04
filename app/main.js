@@ -581,7 +581,8 @@ function titleBarColors() {
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 1100, height: 700, minWidth: 700, minHeight: 400,
+    // Mindestgröße: Werkzeugleiste und Dateibrowser passen auch mit aufgeklappter Seitenleiste (siehe src/layout.js)
+    width: 1100, height: 700, minWidth: 720, minHeight: 460,
     title: 'S3cure SSH Client',
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#0f0f11' : '#f7f7f8',
     // macOS: Ampelknöpfe im Fenster; Windows: eigene Titelleiste mit Windows-Knöpfen oben rechts

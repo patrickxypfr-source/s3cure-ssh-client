@@ -73,8 +73,3 @@ body.xt-broadcast #terminals { border-color: var(--accent); box-shadow: 0 0 0 2p
   font: 600 11.5px/1 inherit; font-family: inherit; cursor: pointer;
 }
 .xt-toast:not(:has(button)) { padding-right: 14px; }
-
-/* Schmales Fenster: nur Symbole (Text steht im Tooltip) */
-@media (max-width: 1080px) {
-  #term-tools .btn { font-size: 0; gap: 0; padding: 0 8px; }
-}
