@@ -28,6 +28,13 @@ contextBridge.exposeInMainWorld('myssh', {
   onSearchResults: cb => ipcRenderer.on('search:results', (_e, id, searchId, results) => cb(id, searchId, results)),
   onSearchDone: cb => ipcRenderer.on('search:done', (_e, id, searchId, info) => cb(id, searchId, info)),
 
+  snippetsLoad: () => ipcRenderer.invoke('snippets:load'),
+  snippetsSave: (key, profile) => ipcRenderer.invoke('snippets:save', key, profile),
+  snippetsMigrate: profiles => ipcRenderer.invoke('snippets:migrate', profiles),
+  snippetsExport: (name, groups) => ipcRenderer.invoke('snippets:export', name, groups),
+  snippetsImport: () => ipcRenderer.invoke('snippets:import'),
+  monitorStats: id => ipcRenderer.invoke('monitor:stats', id),
+
   onData: cb => ipcRenderer.on('ssh:data', (_e, id, data) => cb(id, data)),
   onClosed: cb => ipcRenderer.on('ssh:closed', (_e, id) => cb(id)),
   onProgress: cb => ipcRenderer.on('sftp:progress', (_e, id, label, pct) => cb(id, label, pct)),
