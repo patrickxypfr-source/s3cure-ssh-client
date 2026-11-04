@@ -188,21 +188,29 @@ function openTab(spec, title, view = 'terminal') {
   connect(tab);
 }
 
-async function connect(tab) {
-  setState(tab, 'connecting');
-  tab.term.reset();
-  tab.term.write(`\x1b[90mVerbinde mit ${tab.title} …\x1b[0m\r\n`);
+// opts.reconnect: automatischer neuer Versuch nach Verbindungsabbruch (reconnect.js) –
+// Terminalinhalt bleibt stehen, Fehler werden nur kurz vermerkt
+async function connect(tab, opts = {}) {
+  setState(tab, opts.reconnect ? 'reconnecting' : 'connecting');
+  if (!opts.reconnect) {
+    tab.term.reset();
+    tab.term.write(`\x1b[90mVerbinde mit ${tab.title} …\x1b[0m\r\n`);
+  }
   try {
     const info = await api.connect(tab.id, tab.spec, tab.term.cols, tab.term.rows);
+    if (!tabs.has(tab.id)) { api.close(tab.id); return false; } // Tab inzwischen geschlossen
     tab.info = info;
     setState(tab, 'open');
     if (tab.spec.name) refreshHosts(); // Schloss-Symbol, falls Passwort gerade gespeichert wurde
-    if (tab.view === 'files') loadDir(tab, tab.files.path || '~');
+    if (tab.view === 'files' || tab.files.loaded) loadDir(tab, tab.files.path || '~');
     else if (tab.id === activeId) tab.term.focus();
+    return true;
   } catch (err) {
     const msg = String(err.message || err).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
+    if (opts.reconnect) { tab.term.write('\x1b[90m' + msg.replace(/\n/g, '\r\n') + '\x1b[0m\r\n'); return false; }
     tab.term.write('\r\n\x1b[31m' + msg.replace(/\n/g, '\r\n') + '\x1b[0m\r\n');
     setState(tab, 'closed');
+    return false;
   }
 }
 
@@ -221,10 +229,11 @@ function updateToolbar() {
     connecting: 'Verbinde …',
     open: tab.info ? `Verbunden mit ${tab.info.user}@${tab.info.host}` : 'Verbunden',
     closed: 'Nicht verbunden',
+    reconnecting: 'Verbindung verloren – verbinde neu …',
   };
   $('#tab-status-text').textContent = texts[tab.state];
   $('#tab-status').className = tab.state;
-  $('#btn-reconnect').hidden = tab.state !== 'closed';
+  $('#btn-reconnect').hidden = tab.state !== 'closed' && tab.state !== 'reconnecting';
   for (const b of document.querySelectorAll('#view-switch button')) b.classList.toggle('on', b.dataset.view === tab.view);
   renderFiles(tab);
   renderQuickbar();
@@ -425,7 +434,7 @@ api.onClosed(id => {
 
 new ResizeObserver(() => tabs.get(activeId)?.fit.fit()).observe($('#terminals'));
 
-$('#btn-reconnect').addEventListener('click', () => { const t = tabs.get(activeId); if (t) connect(t); });
+$('#btn-reconnect').addEventListener('click', () => { const t = tabs.get(activeId); if (t) reconnectNow(t); });
 
 // Windows: Strg+C/V im Terminal wie bei Windows Terminal,
 // App-Kürzel mit Strg+Umschalt, Rechtsklick kopiert bzw. fügt ein
@@ -671,7 +680,8 @@ function renderFiles(tab) {
   }
 
   const empty = f.el.querySelector('.files-empty');
-  empty.textContent = !connected ? 'Nicht verbunden.'
+  empty.textContent = tab.state === 'reconnecting' ? 'Verbindung verloren – verbinde neu …'
+    : !connected ? 'Nicht verbunden.'
     : !f.loaded ? 'Lade Dateien …'
     : items.length ? '' : 'Dieser Ordner ist leer. Zieh Dateien hierher, um sie hochzuladen.';
   empty.hidden = !empty.textContent;

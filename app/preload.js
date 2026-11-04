@@ -30,6 +30,8 @@ contextBridge.exposeInMainWorld('myssh', {
 
   onData: cb => ipcRenderer.on('ssh:data', (_e, id, data) => cb(id, data)),
   onClosed: cb => ipcRenderer.on('ssh:closed', (_e, id) => cb(id)),
+  onLost: cb => ipcRenderer.on('ssh:lost', (_e, id) => cb(id)),
+  onResume: cb => ipcRenderer.on('power:resume', () => cb()),
   onProgress: cb => ipcRenderer.on('sftp:progress', (_e, id, label, pct) => cb(id, label, pct)),
   onAsk: cb => ipcRenderer.on('ask', (_e, req) => cb(req)),
   answer: (reqId, value) => ipcRenderer.send('ask-answer', reqId, value),
