@@ -18,10 +18,7 @@
 .mon-item.crit .mon-bar i, .mon-rbar.crit i { background: var(--accent); }
 .mon-item.crit .mon-v { color: var(--accent); }
 
-/* Schmale Fenster: erst Balken, dann Laufzeit weglassen */
-@media (max-width: 1150px) { .mon-bar { display: none; } }
-@media (max-width: 980px) { .mon-up { display: none; } }
-@media (max-width: 860px) { #monitor { display: none !important; } }
+/* Schmale Fenster: layout.js/layout.css lassen erst Balken, dann Laufzeit weg, dann nur ein Symbol */
 
 #monitor-pop {
   position: fixed; z-index: 15; width: 300px;

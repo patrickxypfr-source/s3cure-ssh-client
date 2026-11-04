@@ -234,8 +234,7 @@ li.connected .host-avatar { color: var(--accent); border-color: color-mix(in srg
 #term-tools { display: inline-flex; gap: 2px; }
 #term-tools .btn { padding: 0 8px; }
 #term-tools .btn .lbl { display: none; }
-/* Schmale Fenster: Tunnel/Befehle nur als Symbol */
-@media (max-width: 1080px) { #btn-tunnels, #btn-quick { font-size: 0; gap: 0; padding: 0 8px; } #btn-tunnels #tunnel-count { font-size: 11px; margin-left: 4px; } }
+/* Schmale Fenster: siehe layout.css (Stufen je nach verfügbarer Breite) */
 #tab-status .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); }
 #tab-status.open .status-dot { background: var(--ok); }
 #tab-status.closed .status-dot { background: var(--faint); }
