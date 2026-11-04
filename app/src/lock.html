@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>S3cure SSH Client</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="connections.css">
+</head>
+<body class="lock-page">
+  <div class="drag-area lock-drag"></div>
+  <form id="unlock-form" class="dialog lock-card">
+    <img class="welcome-logo" src="logo.png" alt="S3cure Logo">
+    <h2>S3cure SSH Client ist gesperrt</h2>
+    <p class="lock-sub">Bitte entsperren, um deine Verbindungen zu sehen.</p>
+    <input id="unlock-pw" type="password" placeholder="App-Passwort" autocomplete="current-password">
+    <p id="unlock-error" class="lock-error" hidden>Falsches Passwort.</p>
+    <div class="actions">
+      <button type="button" id="unlock-touch" class="btn" data-icon="lock" hidden>Touch ID</button>
+      <button type="submit" class="btn primary">Entsperren</button>
+    </div>
+  </form>
+  <script src="icons.js"></script>
+  <script src="lock.js"></script>
+</body>
+</html>

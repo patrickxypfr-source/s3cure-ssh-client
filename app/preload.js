@@ -8,6 +8,11 @@ contextBridge.exposeInMainWorld('myssh', {
   saveHost: (name, host, oldName) => ipcRenderer.invoke('hosts:save', name, host, oldName),
   deleteHost: name => ipcRenderer.invoke('hosts:delete', name),
   pickKey: () => ipcRenderer.invoke('pick-key'),
+  sshConfigScan: () => ipcRenderer.invoke('sshconfig:scan'),
+  sshConfigImport: () => ipcRenderer.invoke('sshconfig:import'),
+  keyStatus: () => ipcRenderer.invoke('keys:status'),
+  keyGenerate: (passphrase, remember) => ipcRenderer.invoke('keys:generate', passphrase, remember),
+  keyInstall: name => ipcRenderer.invoke('keys:install', name),
 
   connect: (id, spec, cols, rows) => ipcRenderer.invoke('ssh:connect', id, spec, cols, rows),
   write: (id, data) => ipcRenderer.send('ssh:write', id, data),
@@ -48,8 +53,15 @@ contextBridge.exposeInMainWorld('myssh', {
 
   onData: cb => ipcRenderer.on('ssh:data', (_e, id, data) => cb(id, data)),
   onClosed: cb => ipcRenderer.on('ssh:closed', (_e, id) => cb(id)),
+  onLost: cb => ipcRenderer.on('ssh:lost', (_e, id) => cb(id)),
+  onResume: cb => ipcRenderer.on('power:resume', () => cb()),
   onAsk: cb => ipcRenderer.on('ask', (_e, req) => cb(req)),
   answer: (reqId, value) => ipcRenderer.send('ask-answer', reqId, value),
+
+  lockStatus: () => ipcRenderer.invoke('lock:status'),
+  unlock: password => ipcRenderer.invoke('lock:unlock', password),
+  unlockTouchId: () => ipcRenderer.invoke('lock:touchid'),
+  configureLock: opts => ipcRenderer.invoke('lock:configure', opts),
 });
 
 // Tunnel (app/lib/tunnels.js, Oberfläche: src/tunnels.js)

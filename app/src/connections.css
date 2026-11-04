@@ -1,0 +1,67 @@
+/* Verbindungen: Neuverbinden, Gruppen, Farben, Suche, Host-Dialog-Zusatzfelder, App-Sperre */
+
+/* Tab und Statuszeile während des Neuverbindens */
+.tab .state.reconnecting, #tab-status.reconnecting .status-dot { background: var(--warn); animation: s3-pulse 1.2s ease-in-out infinite; }
+@keyframes s3-pulse { 50% { opacity: .3; } }
+#tab-status.reconnecting { color: var(--warn); }
+
+/* Farbiger Punkt am Tab */
+.tab .tab-color { width: 3px; height: 14px; border-radius: 2px; flex-shrink: 0; margin-left: -2px; }
+
+/* Seitenleiste */
+.section-btns { display: inline-flex; gap: 2px; }
+#host-search-wrap { margin: 0 0 6px; }
+#host-search-wrap input { height: 30px; font-size: 12.5px; }
+
+#host-list li.host-group {
+  gap: 6px; padding: 10px 6px 4px; margin-top: 4px;
+  color: var(--muted); font-size: 11.5px; font-weight: 600; cursor: pointer; user-select: none;
+}
+#host-list li.host-group:hover { background: transparent; color: var(--text); }
+#host-list li.host-group svg.ic { width: 13px; height: 13px; transition: transform .12s; }
+#host-list li.host-group.closed svg.ic { transform: rotate(-90deg); }
+.host-group .g-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.host-group .g-count { color: var(--faint); font-weight: 500; }
+#host-list li.in-group { margin-left: 8px; }
+#host-list li.host-nohit { color: var(--muted); font-size: 12px; padding: 8px 6px; }
+
+/* Farbige Verbindungen: Avatar in der Farbe */
+#host-list li.has-color .host-avatar {
+  color: var(--host-color);
+  border-color: color-mix(in srgb, var(--host-color) 45%, var(--border));
+  background: color-mix(in srgb, var(--host-color) 10%, var(--surface));
+}
+
+/* Host-Dialog */
+.dialog select {
+  width: 100%; height: 34px; margin-top: 6px; padding: 0 8px;
+  border: 1px solid var(--border-strong); border-radius: 8px;
+  background: var(--surface); color: var(--text); font: inherit; outline: none;
+}
+.dialog select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+.dialog .color-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; font-size: 12.5px; font-weight: 500; }
+#color-pick { display: flex; gap: 6px; flex-wrap: wrap; }
+.swatch {
+  width: 20px; height: 20px; border-radius: 50%; cursor: pointer;
+  border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--border-strong);
+}
+.swatch.none { background: linear-gradient(135deg, transparent 45%, var(--faint) 45%, var(--faint) 55%, transparent 55%), var(--surface); }
+.swatch.on { box-shadow: 0 0 0 2px var(--text); }
+#setup-key { margin: -4px 0 14px; }
+
+/* App-Sperre */
+#app-lock-btn { margin-top: 8px; justify-content: flex-start; }
+#app-lock-btn svg.ic { width: 14px; height: 14px; }
+#lock-modal .toggle { display: flex; margin: 0 0 14px; }
+#lock-modal .lock-fields[hidden] { display: none; }
+
+/* Sperrbildschirm (lock.html) */
+body.lock-page { align-items: center; justify-content: center; }
+.lock-drag { position: fixed; inset: 0 0 auto; height: 40px; }
+.lock-card { width: 340px; text-align: center; }
+.lock-card .welcome-logo { width: 64px; height: 64px; margin: 0 auto 10px; }
+.lock-card h2 { margin-bottom: 6px; }
+.lock-sub { color: var(--muted); margin: 0 0 16px; }
+.lock-error { color: var(--accent); margin: 8px 0 0; text-align: left; }
+.lock-card .actions { justify-content: center; }
+#lock-form .muted-text { color: var(--muted); margin: -8px 0 16px; }
