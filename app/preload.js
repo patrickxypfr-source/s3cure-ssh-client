@@ -88,6 +88,10 @@ contextBridge.exposeInMainWorld('s3update', {
   state: () => ipcRenderer.invoke('updater:state'),
   kind: () => ipcRenderer.invoke('updater:kind'),
   onState: cb => ipcRenderer.on('updater:state', (_e, st) => cb(st)),
+  fit: height => ipcRenderer.invoke('updater:fit', height),
+  // „Was ist neu?“ nach dem ersten Start einer neuen Version (src/whats-new.js)
+  whatsNew: () => ipcRenderer.invoke('update:whatsnew'),
+  whatsNewSeen: () => ipcRenderer.invoke('update:whatsnew-seen'),
 });
 
 // Einstellungen (src/settings.js)

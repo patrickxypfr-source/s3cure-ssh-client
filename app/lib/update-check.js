@@ -3,11 +3,13 @@
 // Fragt höchstens einmal pro Stunde die neueste GitHub-Release-Version ab.
 // Ohne Antwort (offline, Limit) bleibt der letzte bekannte Stand.
 // Einstellungen in ~/.myssh/update-check.json:
-//   { "lastCheck": <ms>, "latest": {…}, "token": "<optional>" }
+//   { "lastCheck": <ms>, "latest": {…}, "seenVersion": "1.2.0", "token": "<optional>" }
+// seenVersion: zuletzt gestartete Version – ist die laufende neuer, zeigt die App einmal „Was ist neu?“
 // Token alternativ über die Umgebungsvariable S3CURE_UPDATE_TOKEN (nur Lesezugriff nötig).
 const fs = require('fs');
 const path = require('path');
 const { net } = require('electron');
+const { parseNotes } = require('./release-notes');
 
 const REPO = process.env.S3CURE_UPDATE_REPO || 'patrickxypfr-source/s3cure-ssh-client';
 // S3CURE_UPDATE_URL nur für Tests (lokaler Server statt GitHub)
@@ -51,7 +53,9 @@ function setupUpdateCheck({ ipcMain, shell, app, configDir }) {
     const assets = (Array.isArray(data.assets) ? data.assets : [])
       .map(a => ({ name: String(a.name || ''), url: String(a.browser_download_url || ''), size: Number(a.size) || 0 }))
       .filter(a => a.name && okAsset(a.url));
-    return { version, url, name: String(data.name || ''), assets };
+    // Release-Text (Markdown) für „Was ist neu?“ – wird erst bei der Anzeige in reine Text-Bausteine zerlegt
+    const notes = String(data.body || '').slice(0, 20000);
+    return { version, url, name: String(data.name || ''), notes, assets };
   }
 
   // Ergebnis für die Oberfläche – immer mit der eigenen Version:
@@ -63,9 +67,12 @@ function setupUpdateCheck({ ipcMain, shell, app, configDir }) {
     if (force || !st.lastCheck || Date.now() - st.lastCheck > HOUR || st.lastCheck > Date.now()) {
       let latest = null;
       try { latest = await fetchLatest(process.env.S3CURE_UPDATE_TOKEN || st.token || null); } catch { latest = null; }
-      // Keine Antwort (offline, Limit): letzten bekannten Stand behalten
-      Object.assign(st, { lastCheck: Date.now(), latest: latest || st.latest || null });
-      try { save(st); } catch {}
+      // Keine Antwort (offline, Limit): letzten bekannten Stand behalten.
+      // Frisch laden: während der Abfrage kann sich die Datei geändert haben (seenVersion)
+      const fresh = load();
+      Object.assign(fresh, { lastCheck: Date.now(), latest: latest || fresh.latest || st.latest || null });
+      Object.assign(st, fresh);
+      try { save(fresh); } catch {}
     }
     const latest = st.latest && parseVersion(st.latest.version) ? st.latest.version : null;
     return { current, latest, outdated: !!latest && isNewer(latest, current) };
@@ -81,12 +88,53 @@ function setupUpdateCheck({ ipcMain, shell, app, configDir }) {
     return load().latest || null;
   }
 
+  // ---------- „Was ist neu?“ ----------
+
+  // Nach dem ersten Start einer neuen Version: { version, notes: [Bausteine], url } – sonst null.
+  // Bei einer frischen Installation (noch nie gestartet) wird nichts gezeigt.
+  // Ohne Release-Text (offline) wird beim nächsten Start nochmal versucht.
+  async function whatsNew() {
+    const st = load();
+    const current = app.getVersion();
+    if (!st.seenVersion) {
+      // Ältere Versionen kannten seenVersion noch nicht: lastCheck zeigt, dass die App schon lief
+      if (!st.lastCheck) { markSeen(); return null; }
+    } else if (!isNewer(current, st.seenVersion)) {
+      if (st.seenVersion !== current) markSeen(); // ältere Version installiert – nichts zeigen
+      return null;
+    }
+    let rel = st.latest && st.latest.version === current ? st.latest : null;
+    if (!rel || !rel.notes) {
+      await check(true).catch(() => {});
+      const latest = load().latest;
+      rel = latest && latest.version === current ? latest : null;
+    }
+    const notes = rel ? parseNotes(rel.notes) : [];
+    if (!notes.length) return null;
+    return { version: current, notes, url: rel.url };
+  }
+
+  function markSeen() {
+    const st = load();
+    st.seenVersion = app.getVersion();
+    try { save(st); } catch {}
+  }
+
+  // Für das Update-Fenster: Bausteine zum Release-Text einer Version (falls bekannt)
+  function notesFor(version) {
+    const latest = load().latest;
+    return latest && latest.version === version ? parseNotes(latest.notes) : [];
+  }
+
+  ipcMain.handle('update:whatsnew', () => whatsNew().catch(() => null));
+  ipcMain.handle('update:whatsnew-seen', () => markSeen());
+
   ipcMain.handle('update:open', () => {
     const url = load().latest?.url;
     if (url && /^https:\/\/github\.com\//.test(url)) return shell.openExternal(url);
   });
 
-  return { latestRelease };
+  return { latestRelease, notesFor };
 }
 
 module.exports = { setupUpdateCheck, isNewer, parseVersion };

@@ -4,8 +4,9 @@
 //   1. passende Datei aus dem neuesten GitHub-Release wählen
 //        macOS:   S3cure-SSH-Client-Mac-AppleSilicon.dmg / -Mac-Intel.dmg (ersatzweise .zip)
 //        Windows: S3cure-SSH-Client-Setup.exe (installiert) oder -Windows-Portable.exe (portable)
+//        Linux:   S3cure-SSH-Client-Linux-x64.AppImage (ersetzt die laufende AppImage-Datei)
 //   2. mit Fortschritt herunterladen (Update-Fenster, src/update.html)
-//   3. prüfen (Größe, macOS: Signatur und Versionsnummer im Paket)
+//   3. prüfen (Größe, macOS: Signatur und Versionsnummer im Paket, Linux: AppImage-Kennung)
 //   4. App beenden, kleines Hilfsskript tauscht die Dateien aus und startet die neue Version
 //   Fehlt eine Datei oder geht der Austausch nicht (z. B. keine Schreibrechte), wird stattdessen
 //   der Installer heruntergeladen und geöffnet – der Nutzer bekommt nie nur eine Fehlermeldung.
@@ -17,8 +18,22 @@ const os = require('os');
 const path = require('path');
 const { spawn, execFile } = require('child_process');
 const { net, BrowserWindow } = require('electron');
+const { parseNotes } = require('./release-notes');
 
 const NAME = 'S3cure SSH Client';
+const APPIMAGE = 'S3cure-SSH-Client-Linux-x64.AppImage';
+
+// Ist die Datei ein AppImage (Typ 2)? ELF-Kopf und „AI\x02“ an Stelle 8
+function isAppImage(file) {
+  let fd;
+  try {
+    fd = fs.openSync(file, 'r');
+    const head = Buffer.alloc(11);
+    fs.readSync(fd, head, 0, 11, 0);
+    return head.subarray(0, 4).equals(Buffer.from([0x7f, 0x45, 0x4c, 0x46])) && head.subarray(8, 11).equals(Buffer.from([0x41, 0x49, 0x02]));
+  } catch { return false; } finally { if (fd != null) fs.closeSync(fd); }
+}
+
 const run = (cmd, args) => new Promise((resolve, reject) =>
   execFile(cmd, args, { maxBuffer: 1 << 20 }, (err, stdout, stderr) => (err ? reject(new Error(String(stderr || err.message).trim())) : resolve(String(stdout).trim()))));
 
@@ -54,6 +69,12 @@ function setupUpdater({ ipcMain, app, getMainWin, latestRelease, preload, platfo
       if (fs.existsSync(path.join(path.dirname(exe), `Uninstall ${NAME}.exe`))) return { kind: 'win-setup', files: [setup], fallback: setup };
       return { kind: 'handoff', files: [setup] }; // aus einer ZIP entpackt: Installer öffnen
     }
+    if (platform === 'linux') {
+      // Das AppImage setzt APPIMAGE auf den Pfad der laufenden Datei
+      const target = process.env.APPIMAGE;
+      if (target && path.isAbsolute(target)) return { kind: 'linux-appimage', target, files: [APPIMAGE], fallback: APPIMAGE };
+      return { kind: 'handoff', files: [APPIMAGE] }; // anders gestartet: neue Datei in Downloads legen
+    }
     return { kind: 'unknown' };
   }
 
@@ -67,7 +88,10 @@ function setupUpdater({ ipcMain, app, getMainWin, latestRelease, preload, platfo
 
   function send(state) {
     // Versionen in jeder Meldung mitschicken – das Fenster kann jederzeit dazukommen
-    if (job) { state = { current: app.getVersion(), ...(job.version ? { version: job.version } : {}), ...state }; job.state = state; }
+    if (job) {
+      state = { current: app.getVersion(), ...(job.version ? { version: job.version } : {}), ...(job.notes ? { notes: job.notes } : {}), ...state };
+      job.state = state;
+    }
     lastState = state;
     if (upWin && !upWin.isDestroyed()) upWin.webContents.send('updater:state', state);
   }
@@ -191,6 +215,25 @@ rm -rf "$TMP"
     return () => spawn('cmd.exe', ['/c', script], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
   }
 
+  // Linux: neue AppImage-Datei liegt schon neben der alten (gleicher Ordner, gleiche Platte).
+  // Nach dem Beenden wird sie an die Stelle der alten geschoben und gestartet.
+  function installAppImage(kind, file, dir) {
+    send({ phase: 'verify' });
+    if (!isAppImage(file)) throw new Error('Das Update-Paket ist beschädigt (kein AppImage).');
+    fs.chmodSync(file, 0o755);
+    const script = path.join(dir, 'install.sh');
+    fs.writeFileSync(script, `#!/bin/sh
+# Wartet, bis die alte App beendet ist, ersetzt das AppImage und startet die neue Version
+while kill -0 ${process.pid} 2>/dev/null; do sleep 0.2; done
+NEW="$1"; OLD="$2"; TMP="$3"
+if mv -f "$NEW" "$OLD"; then :; else rm -f "$NEW"; fi
+unset APPDIR APPIMAGE ARGV0 OWD
+nohup "$OLD" >/dev/null 2>&1 &
+rm -rf "$TMP"
+`, { mode: 0o755 });
+    return () => spawn('/bin/sh', [script, file, kind.target, dir], { detached: true, stdio: 'ignore' }).unref();
+  }
+
   // ---------- Ablauf ----------
 
   // Download mit bis zu 3 Versuchen (z. B. kurz kein Netz)
@@ -208,13 +251,21 @@ rm -rf "$TMP"
   async function handoff(rel, names, dir, signal) {
     const asset = pickAsset(rel, names);
     if (!asset) throw new Error('Im neuesten Release wurde kein passender Installer gefunden.');
-    const target = path.join(platform === 'darwin' ? app.getPath('downloads') : dir, asset.name);
+    const target = path.join(platform === 'win32' ? dir : app.getPath('downloads'), asset.name);
     const already = path.join(dir, asset.name); // schon für das Update geladen? Dann nicht nochmal
     if (fs.existsSync(already) && fs.statSync(already).size === asset.size) {
       if (already !== target) fs.copyFileSync(already, target);
     } else {
       send({ phase: 'download', received: 0, total: asset.size, speed: 0 });
       await downloadRetry(asset, target, signal);
+    }
+    if (platform === 'linux') {
+      // Kein Installer: neue Datei ausführbar in „Downloads“ legen und den Ordner zeigen; die App läuft weiter
+      fs.chmodSync(target, 0o755);
+      send({ phase: 'handoff', platform, file: target });
+      spawn('xdg-open', [path.dirname(target)], { detached: true, stdio: 'ignore' }).on('error', () => {}).unref();
+      job = null;
+      return;
     }
     job.installing = true;
     send({ phase: 'handoff', platform });
@@ -235,7 +286,7 @@ rm -rf "$TMP"
     job = { ctrl, installing: false, state: { phase: 'check' } };
     lastState = null;
     openWindow();
-    let dir = null, rel = null;
+    let dir = null, rel = null, staged = null;
     try {
       send({ phase: 'check' });
       if (kind.kind === 'dev') throw new Error('Im Entwicklungsmodus (npm start) gibt es keine automatischen Updates.');
@@ -244,14 +295,22 @@ rm -rf "$TMP"
       for (let i = 0; i < 3 && !rel; i++) { rel = await latestRelease(); if (!rel) await new Promise(r => setTimeout(r, 1500)); }
       if (!rel) throw new Error('GitHub ist gerade nicht erreichbar. Bitte später nochmal versuchen.');
       job.version = rel.version;
+      const notes = parseNotes(rel.notes);
+      if (notes.length) job.notes = notes;
       dir = fs.mkdtempSync(path.join(os.tmpdir(), 's3cure-update-'));
 
       if (kind.kind === 'handoff') { await handoff(rel, kind.files, dir, ctrl.signal); return; }
 
       const asset = pickAsset(rel, kind.files);
       if (!asset) { await handoff(rel, [kind.fallback], dir, ctrl.signal); return; }
+      let file = path.join(dir, asset.name);
+      if (kind.kind === 'linux-appimage') {
+        // Direkt neben die laufende Datei laden – kein Schreibrecht dort: in „Downloads“ legen
+        try { fs.accessSync(path.dirname(kind.target), fs.constants.W_OK); } catch { await handoff(rel, [kind.fallback], dir, ctrl.signal); return; }
+        file = path.join(path.dirname(kind.target), `.${path.basename(kind.target)}.update`);
+        staged = file;
+      }
       send({ phase: 'download', received: 0, total: asset.size, speed: 0 });
-      const file = path.join(dir, asset.name);
       await downloadRetry(asset, file, ctrl.signal);
       if (ctrl.signal.aborted) throw new Error('abgebrochen');
 
@@ -259,6 +318,7 @@ rm -rf "$TMP"
       try {
         if (kind.kind === 'mac') launch = await installMac(kind, file, dir, rel.version);
         else if (kind.kind === 'win-setup') launch = installWinSetup(file);
+        else if (kind.kind === 'linux-appimage') launch = installAppImage(kind, file, dir);
         else launch = installWinPortable(kind, file, dir);
       } catch (err) {
         // Selbst austauschen geht nicht (z. B. keine Schreibrechte) – dann den Installer öffnen
@@ -276,6 +336,7 @@ rm -rf "$TMP"
     } catch (err) {
       const aborted = ctrl.signal.aborted || /abort/i.test(String(err && err.name));
       if (dir && !job?.installing) fs.rm(dir, { recursive: true, force: true }, () => {});
+      if (staged && !job?.installing) fs.rm(staged, { force: true }, () => {});
       if (!aborted) send({ phase: 'error', message: String(err.message || err) });
       job = null;
     }
@@ -293,8 +354,18 @@ rm -rf "$TMP"
   ipcMain.handle('updater:state', () => (job ? job.state : lastState));
   ipcMain.handle('updater:kind', () => installKind().kind);
   ipcMain.handle('updater:close', () => { if (upWin && !upWin.isDestroyed()) upWin.close(); });
+  // Update-Fenster an den Inhalt anpassen (z. B. wenn „Was ist neu?“ dazukommt)
+  ipcMain.handle('updater:fit', (_e, height) => {
+    const h = Math.round(Number(height));
+    if (!upWin || upWin.isDestroyed() || !Number.isFinite(h)) return;
+    const [w] = upWin.getContentSize();
+    // Feste Fenster lassen sich unter Linux sonst nicht vergrößern
+    upWin.setResizable(true);
+    upWin.setContentSize(w, Math.max(268, Math.min(560, h)));
+    upWin.setResizable(false);
+  });
 
   return { installKind, start };
 }
 
-module.exports = { setupUpdater };
+module.exports = { setupUpdater, isAppImage };

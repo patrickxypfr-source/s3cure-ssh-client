@@ -48,6 +48,8 @@ before(async () => {
   fs.writeFileSync(path.join(config, 'hosts.json'), JSON.stringify({
     Testserver: { user: (await import('node:os')).userInfo().username, host: '127.0.0.1', port, key: clientKey },
   }, null, 2));
+  // „Erster Start nach einem Update“: zuletzt gesehene Version ist älter als die laufende
+  fs.writeFileSync(path.join(config, 'update-check.json'), JSON.stringify({ seenVersion: '0.0.1' }));
 
   // Gefälschte GitHub-API: Release mit Änderungstext (für „Was ist neu?“)
   const version = JSON.parse(fs.readFileSync(path.join(APP_DIR, 'package.json'), 'utf8')).version;
@@ -100,6 +102,20 @@ const t = (name, fn) => test(name, { skip: missing }, async () => {
 });
 const page = expr => ctx.page.eval(expr);
 const remoteFile = name => path.join(ctx.remote, name);
+
+t('„Was ist neu?“ erscheint nach dem ersten Start einer neuen Version – als Text, ohne HTML', async () => {
+  const info = await waitFor(() => page(`(() => {
+    const d = document.querySelector('#whats-new');
+    return d && !d.hidden && { title: d.querySelector('h2').textContent, items: [...d.querySelectorAll('li')].map(li => li.textContent), imgs: d.querySelectorAll('.wn-body *:not(ul):not(li):not(h3):not(p)').length };
+  })()`), '„Was ist neu?“-Fenster');
+  assert.equal(info.title, `Was ist neu in ${ctx.version}`);
+  assert.deepEqual(info.items, ['Schneller verbinden', '<img src=x onerror=alert(1)> bleibt Text']);
+  assert.equal(info.imgs, 0);
+  await page(`document.querySelector('#whats-new [data-close]').click()`);
+  await waitFor(() => page(`document.querySelector('#whats-new').hidden`), 'Fenster geschlossen');
+  const st = JSON.parse(fs.readFileSync(path.join(ctx.config, 'update-check.json'), 'utf8'));
+  assert.equal(st.seenVersion, ctx.version);
+});
 
 t('Verbinden per Doppelklick auf die gespeicherte Verbindung', async () => {
   await page(`document.querySelector('#host-list li').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`);

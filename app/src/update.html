@@ -6,6 +6,7 @@
   <title>S3cure SSH Client – Update</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="update.css">
+  <link rel="stylesheet" href="whats-new.css">
 </head>
 <body class="update-page">
   <div class="drag-area up-drag"></div>
@@ -22,12 +23,17 @@
       <span class="up-status" id="up-status">Suche neueste Version …</span>
       <span class="up-detail" id="up-detail"></span>
     </div>
+    <section class="up-notes" id="up-notes" hidden>
+      <div class="up-notes-title" id="up-notes-title"></div>
+      <div class="up-notes-body release-notes" id="up-notes-body"></div>
+    </section>
     <div class="up-actions">
       <button type="button" class="btn" id="up-alt" hidden>Auf GitHub öffnen</button>
       <div class="spacer"></div>
       <button type="button" class="btn" id="up-cancel">Abbrechen</button>
     </div>
   </main>
+  <script src="release-notes-view.js"></script>
   <script src="update-window.js"></script>
 </body>
 </html>

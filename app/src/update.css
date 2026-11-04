@@ -26,3 +26,8 @@ body.update-page {
 .up-detail { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .up-actions { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
 .up-actions .spacer { flex: 1; }
+
+/* „Was ist neu in x.y.z“ unter dem Fortschritt (Fenster wird dafür höher, siehe update-window.js) */
+.up-notes { border-top: 1px solid var(--border); padding-top: 12px; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.up-notes-title { font-size: 12.5px; font-weight: 650; }
+.up-notes-body { max-height: 190px; overflow-y: auto; font-size: 12.5px; }

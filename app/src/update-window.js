@@ -5,15 +5,29 @@
   const bar = document.querySelector('.up-bar');
   const mb = n => (n / 1e6).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   let versions = null;
+  let notesShown = false;
+
+  // „Was ist neu in x.y.z“ – einmal anzeigen, sobald der Release-Text bekannt ist
+  function showNotes(st) {
+    if (notesShown || !st.version || !Array.isArray(st.notes) || !st.notes.length) return;
+    if (!window.renderReleaseNotes($('up-notes-body'), st.notes)) return;
+    notesShown = true;
+    $('up-notes-title').textContent = `Was ist neu in ${st.version}`;
+    $('up-notes').hidden = false;
+    requestAnimationFrame(() => api.fit?.(Math.ceil(document.querySelector('.up-card').getBoundingClientRect().height) + 4));
+  }
 
   function setVersions(st) {
     if (st.version && st.current) versions = { from: st.current, to: st.version };
-    if (versions) $('up-versions').innerHTML = `Von <b>${versions.from}</b> auf <b>${versions.to}</b>`;
+    if (!versions) return;
+    const b = t => { const el = document.createElement('b'); el.textContent = t; return el; };
+    $('up-versions').replaceChildren('Von ', b(versions.from), ' auf ', b(versions.to));
   }
 
   function render(st) {
     if (!st) return;
     setVersions(st);
+    showNotes(st);
     bar.classList.remove('busy', 'done', 'error');
     $('up-status').classList.remove('err');
     $('up-alt').hidden = true;
@@ -56,6 +70,15 @@
         bar.classList.add('busy');
         break;
       case 'handoff':
+        if (st.platform === 'linux') {
+          // Linux: neue Datei liegt in „Downloads“, die App läuft weiter
+          $('up-title').textContent = 'Neue Version heruntergeladen';
+          $('up-status').textContent = `Liegt in „Downloads“: ${String(st.file || '').split('/').pop()} – S3cure beenden und die neue Datei starten.`;
+          $('up-detail').textContent = '';
+          bar.classList.add('done');
+          $('up-cancel').textContent = 'Schließen';
+          break;
+        }
         $('up-title').textContent = 'Installer wird geöffnet';
         $('up-status').textContent = st.platform === 'darwin'
           ? 'Im Fenster die App auf „Programme“ ziehen und „Ersetzen“ wählen.'
