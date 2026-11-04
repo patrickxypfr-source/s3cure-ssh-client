@@ -44,3 +44,5 @@
 .cp-label { margin-bottom: 6px; font-size: 12.5px; font-weight: 500; }
 /* Mit aufgeklapptem Bereich wird der Dialog höher – dann scrollen statt abschneiden */
 #host-form { max-height: calc(100vh - 48px); overflow-y: auto; }
+/* Längere Bereichsnamen („Bekannte Server“) einzeilig halten */
+.settings-nav button { white-space: nowrap; }

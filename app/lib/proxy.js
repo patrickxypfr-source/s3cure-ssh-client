@@ -233,6 +233,7 @@ function createProxyManager({ configDir, secrets, ask }) {
       if (!proxy) throw new Error('Bitte Art, Adresse und Port des Proxys angeben.');
       const pw = password || (proxy.user ? secrets.read(secretKey(proxy)) : null);
       const sock = await openProxySocket(proxy, host, Number(port) || 22, pw ?? undefined);
+      sock.resume();
       const banner = await new Promise(resolve => {
         const t = setTimeout(() => resolve(''), 4000);
         sock.once('data', d => { clearTimeout(t); resolve(d.toString('latin1').split('\n')[0].trim()); });

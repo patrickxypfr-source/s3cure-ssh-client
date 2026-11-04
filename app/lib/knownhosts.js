@@ -102,12 +102,11 @@ function createKnownHosts({ configDir, ask, systemFile = path.join(os.homedir(),
       const accept = await ask({
         kind: 'confirm',
         title: 'Achtung: Server-Schlüssel hat sich geändert',
-        message: `Der Server ${name} meldet sich mit einem anderen Schlüssel als beim letzten Mal.`,
-        detail: 'Das passiert, wenn der Server neu installiert wurde oder einen neuen Schlüssel bekommen hat.\n'
-          + 'Es kann aber auch bedeuten, dass sich jemand dazwischenschaltet und mitlesen will.\n'
-          + 'Frag im Zweifel beim Betreiber des Servers nach, bevor du weitermachst.\n\n'
-          + `Bisher (${old.label}):\n${old.type} ${fingerprint(old.b64)}\n\n`
-          + `Jetzt:\n${type} ${fp}`,
+        message: `Der Server ${name} meldet sich mit einem anderen Schlüssel als beim letzten Mal.\n\n`
+          + 'Das passiert, wenn der Server neu installiert wurde oder einen neuen Schlüssel bekommen hat. '
+          + 'Es kann aber auch bedeuten, dass sich jemand dazwischenschaltet und mitlesen will. '
+          + 'Frag im Zweifel beim Betreiber des Servers nach, bevor du weitermachst.',
+        detail: `Bisher (${old.label}):\n${old.type} ${fingerprint(old.b64)}\n\nJetzt:\n${type} ${fp}`,
         okLabel: 'Neuen Schlüssel annehmen',
         danger: true,
         focusCancel: true,
