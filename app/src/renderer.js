@@ -195,6 +195,7 @@ function openTab(spec, title, view = 'terminal', opts = {}) {
   window.LocalPane?.attach(tab); // „Mein Computer“ neben den Server-Dateien (local-pane.js)
   window.FileNav?.attachRemote(tab); // Verlauf zurück/vor und Lesezeichen (file-nav.js)
   window.FileColumns?.attach(tab); // Spalten: sortieren, ein-/ausblenden, Breiten (file-columns.js)
+  window.SyncTools?.attach(tab); // Synchronisieren, aktuell halten, extern bearbeiten (sync.js)
   activate(id);
   if (opts.connect !== false) connect(tab);
   return tab;
@@ -391,6 +392,7 @@ function closeTab(id, force = false) {
   window.LocalPane?.detach(tab);
   window.FileColumns?.detach(tab);
   tab.files.nav?.detach();
+  window.SyncTools?.detach(tab);
   tab.term.dispose();
   tab.el.remove();
   tab.files.el.remove();
@@ -959,6 +961,7 @@ function showContextMenu(tab, x, y) {
   entries.push(['Herunterladen', () => downloadItems(tab, sel), '', 'download']);
   if (sel.length === 1) entries.push(['Umbenennen', () => renameSelected(tab), '', 'rename']);
   FilesExtra.addMenuEntries(tab, sel, entries); // files-extra.js
+  window.SyncTools?.addMenuEntries(tab, sel, entries); // extern bearbeiten, vergleichen (sync.js)
   entries.push(null);
   entries.push(['Löschen', () => deleteSelected(tab), 'danger', 'trash']);
   openMenu(entries, x, y);

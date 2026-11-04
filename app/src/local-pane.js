@@ -417,6 +417,7 @@ window.LocalPane = (() => {
       if (one) entries.push(['Pfad kopieren', () => { navigator.clipboard.writeText(one.path); flash('Pfad kopiert'); }, '', 'copy']);
       entries.push(null);
     }
+    window.SyncTools?.addLocalMenuEntries(p.tab, sel, entries); // vergleichen (sync.js)
     entries.push(['Neuer Ordner', () => makeDir(p), '', 'folderPlus']);
     if (!sel.length && p.path) {
       entries.push([`Im ${FINDER} öffnen`, () => L.open(p.path).catch(showError), '', 'folder']);
@@ -699,16 +700,21 @@ window.LocalPane = (() => {
     modal.querySelector('[data-c=skip]').focus();
   }
 
-  // Für session.js: Zustand dieses Tabs (offen, Ordner, Breite)
+  // Zustand dieses Tabs – für session.js (offen, Ordner, Breite) und sync.js (Auswahl, Einträge)
   function state(tab) {
     const p = panes.get(tab.id);
-    return p ? { open: p.open, path: p.path || p.startPath || null, w: Math.round(p.w * 10) / 10 } : null;
+    if (!p) return null;
+    return {
+      open: p.open, path: p.path || p.startPath || null, w: Math.round(p.w * 10) / 10,
+      sep: places.sep, selected: selectedItems(p), entries: p.entries,
+    };
   }
 
-  // Lokale Liste neu laden, wenn sie gerade `dir` zeigt (z. B. nach „Erneut versuchen“ in transfers.js)
+  // Lokale Liste neu laden – ohne `dir` immer (sync.js), mit `dir` nur wenn sie gerade diesen Ordner zeigt (transfers.js)
   function refresh(tab, dir) {
     const p = panes.get(tab.id);
-    if (p && p.loaded && p.path === dir) go(p, p.path, { keep: true, silent: true });
+    if (!p || !p.path) return;
+    if (dir === undefined || (p.loaded && p.path === dir)) return go(p, p.path, { keep: true, silent: true });
   }
 
   return { attach, detach, serverDragOver, serverDrop, refresh, state, isOpen: tab => !!panes.get(tab.id)?.open };

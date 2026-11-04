@@ -82,8 +82,8 @@ const Transfers = (() => {
     const i = it.info;
     const el = it.el;
     el.className = `transfer ${i.state}${i.busy ? ' busy' : ''}`;
-    el.querySelector('.t-ico').innerHTML = icon(i.kind === 'upload' ? 'upload' : i.kind === 'download' ? 'download' : i.icon || 'zip');
-    const verb = i.kind === 'upload' ? 'Hochladen' : i.kind === 'download' ? 'Herunterladen' : '';
+    el.querySelector('.t-ico').innerHTML = icon(i.kind === 'upload' ? 'upload' : i.kind === 'download' ? 'download' : i.kind === 'sync' ? 'refresh' : i.icon || 'zip');
+    const verb = i.kind === 'upload' ? 'Hochladen' : i.kind === 'download' ? 'Herunterladen' : ''; // 'sync': Titel sagt es (sync.js)
     el.querySelector('.t-title').textContent = verb ? `${verb}: ${i.title}` : i.title;
     const sub = subText(i);
     el.querySelector('.t-sub').textContent = sub;

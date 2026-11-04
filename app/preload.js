@@ -187,3 +187,27 @@ contextBridge.exposeInMainWorld('s3backup', {
   syncSecrets: on => ipcRenderer.invoke('sync:secrets', on),
   onSyncStatus: cb => ipcRenderer.on('sync:status', (_e, st) => cb(st)),
 });
+
+// Synchronisieren, aktuell halten, extern bearbeiten, vergleichen (app/lib/sync.js, ext-edit.js, compare.js; Oberfläche: src/sync.js, src/ext-edit.js, src/compare.js)
+contextBridge.exposeInMainWorld('s3sync', {
+  compare: (tabId, opts) => ipcRenderer.invoke('sync:compare', tabId, opts),
+  cancel: compareId => ipcRenderer.send('sync:cancel', compareId),
+  run: (tabId, opts) => ipcRenderer.invoke('sync:run', tabId, opts),
+  onProgress: cb => ipcRenderer.on('sync:progress', (_e, info) => cb(info)),
+  watchStart: (tabId, opts) => ipcRenderer.invoke('watch:start', tabId, opts),
+  watchStop: id => ipcRenderer.invoke('watch:stop', id),
+  watchList: () => ipcRenderer.invoke('watch:list'),
+  onWatch: cb => ipcRenderer.on('watch:status', (_e, list) => cb(list)),
+  editors: () => ipcRenderer.invoke('extedit:editors'),
+  pickApp: () => ipcRenderer.invoke('extedit:pick-app'),
+  extOpen: (tabId, remote, opts) => ipcRenderer.invoke('extedit:open', tabId, remote, opts),
+  extClose: id => ipcRenderer.invoke('extedit:close', id),
+  extUpload: id => ipcRenderer.invoke('extedit:upload', id),
+  extShow: id => ipcRenderer.invoke('extedit:show', id),
+  extList: () => ipcRenderer.invoke('extedit:list'),
+  onExt: cb => ipcRenderer.on('extedit:status', (_e, list) => cb(list)),
+  onExtAsk: cb => ipcRenderer.on('extedit:ask', (_e, req) => cb(req)),
+  extAnswer: (reqId, value) => ipcRenderer.send('extedit:answer', reqId, value),
+  readLocal: file => ipcRenderer.invoke('compare:readLocal', file),
+  pickLocal: defaultPath => ipcRenderer.invoke('compare:pickLocal', defaultPath),
+});
