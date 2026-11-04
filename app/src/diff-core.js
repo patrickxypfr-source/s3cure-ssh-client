@@ -153,11 +153,14 @@
       const last = out[out.length - 1];
       if (last && last.type === type) last.text += ch; else out.push({ type, text: ch });
     };
+    let same = 0;
     for (const [t, i, j] of ops) {
-      if (t === 0) push('eq', charsA[i]);
+      if (t === 0) { push('eq', charsA[i]); same++; }
       else if (t === 1) push('del', charsA[i]);
       else push('ins', charsB[j]);
     }
+    // Kaum Gemeinsames: ganze Zeile markieren statt vieler kleiner Schnipsel
+    if (same < 0.4 * Math.max(charsA.length, charsB.length) && charsA.length && charsB.length) return [{ type: 'del', text: a }, { type: 'ins', text: b }];
     return out;
   }
 

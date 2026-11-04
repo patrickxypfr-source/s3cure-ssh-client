@@ -146,7 +146,7 @@
 .sync-list td.name .nm { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .sync-list td.name .ico { display: inline-flex; color: var(--faint); flex-shrink: 0; }
 .sync-list td.name .ico.dir { color: var(--accent); }
-.sync-list td.name .n { font: 12px/1.4 var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; min-width: 40px; }
+.sync-list td.name .n { font: 12px/1.4 var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 0 auto; max-width: 75%; }
 .sync-list td.name .w { font-size: 11.5px; color: var(--warn); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 100 auto; min-width: 0; }
 .sync-list td.name .w:empty { display: none; }
 .sync-list input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; cursor: pointer; }

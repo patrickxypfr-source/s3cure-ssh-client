@@ -61,8 +61,8 @@ window.SyncTools = (() => {
     colPath: 'Pfad', colLocal: 'Dieser Computer', colRemote: 'Server', colAction: 'Aktion',
     delConfirmTitle: 'Wirklich löschen?',
     delConfirm: (r, l) => [
-      r && `${r} Element${r === 1 ? '' : 'e'} werden auf dem Server endgültig gelöscht. Das lässt sich nicht rückgängig machen.`,
-      l && `${l} Element${l === 1 ? '' : 'e'} auf diesem Computer kommen in den Papierkorb.`,
+      r && `${r === 1 ? '1 Element wird' : `${r} Elemente werden`} auf dem Server endgültig gelöscht. Das lässt sich nicht rückgängig machen.`,
+      l && `${l === 1 ? '1 Element' : `${l} Elemente`} auf diesem Computer ${l === 1 ? 'kommt' : 'kommen'} in den Papierkorb.`,
     ].filter(Boolean).join('\n'),
     delOk: 'Löschen und synchronisieren',
     done: r => {
