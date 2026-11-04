@@ -22,6 +22,8 @@ const posix = path.posix;
 const p = fn => new Promise((res, rej) => fn((e, r) => e ? rej(e) : res(r)));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const isCancel = err => String(err?.message || err).includes(CANCEL_TEXT);
+// Aufräumen auf einer toten Verbindung bekommt nie eine Antwort – nicht ewig warten
+const atMost = (promise, ms = 4000) => Promise.race([Promise.resolve(promise).catch(() => {}), sleep(ms)]);
 
 const CHUNK = 32 * 1024;    // Blockgröße pro Lese-/Schreibanfrage
 const PARALLEL = 16;        // gleichzeitige Anfragen pro Datei (wie fastGet/fastPut, nur mit Versatz)
@@ -136,14 +138,14 @@ async function copyFile(sftp, file, limiter, shouldStop, onBytes) {
   let dh;
   try {
     dh = await dst.open(file.to, offset > 0 ? 'r+' : 'w');
-  } catch (err) { await src.close(sh).catch(() => {}); throw err; }
+  } catch (err) { await atMost(src.close(sh)); throw err; }
   file.started = true;
 
   let contig = offset; // bis hierhin ist das Ziel lückenlos geschrieben
   let failure = null;
   let stopped = false;
   try {
-    if (offset > 0) await dst.truncate(dh, offset); // evtl. angehängter Rest weg
+    if (offset > 0) await dst.truncate(dh, offset); // evtl. alter Rest hinter dem Versatz weg
     const chunk = limiter.rate ? Math.max(4096, Math.min(CHUNK, Math.floor(limiter.rate / 8))) : CHUNK;
     const parallel = limiter.rate ? 4 : PARALLEL;
     const blocks = []; // offene Blöcke in Reihenfolge
@@ -191,13 +193,13 @@ async function copyFile(sftp, file, limiter, shouldStop, onBytes) {
   try {
     if (failure || stopped) {
       // Teil-Datei auf den lückenlosen Teil kürzen, damit Fortsetzen sicher passt
-      await dst.truncate(dh, contig).catch(() => {});
+      await atMost(dst.truncate(dh, contig));
       const lost = file.done - contig;
       if (lost) { onBytes(-lost); file.done = contig; }
     }
   } finally {
-    await dst.close(dh).catch(() => {});
-    await src.close(sh).catch(() => {});
+    await atMost(dst.close(dh));
+    await atMost(src.close(sh));
   }
   if (failure) throw failure;
   if (stopped) throw STOP;
@@ -214,6 +216,9 @@ function create(getWin, { getSftp, isConnected = () => true, sftpError = e => e 
   const cfg = { concurrency: 3 };
   const limits = { put: createLimiter(), get: createLimiter() };
   let active = 0;
+  const seen = new WeakSet(); // SFTP-Kanäle, deren Ende wir beobachten
+  const dead = new WeakSet(); // … und die schon geschlossen sind (Verbindung weg)
+  const LOST = /No response from server|ECONNRESET|EPIPE|Not connected|Keine aktive Verbindung|channel|closed/i;
 
   const fileCount = job => job.list.length;
   const cleanMsg = err => String(sftpError(err)?.message || err?.message || err);
@@ -305,27 +310,32 @@ function create(getWin, { getSftp, isConnected = () => true, sftpError = e => e 
     file.status = 'running';
     if (job.running === 1) { job.sampleAt = Date.now(); job.sampleBytes = job.doneBytes; }
     update(job, true);
-    const stop = () => job.cancelled || job.paused || job.waiting;
+    let sftp = null;
+    const stop = () => job.cancelled || job.paused || job.waiting || (sftp && dead.has(sftp));
     try {
-      const sftp = await getSftp(job.tabId);
+      sftp = await getSftp(job.tabId);
+      if (!seen.has(sftp)) { seen.add(sftp); sftp.once('close', () => dead.add(sftp)); }
       await copyFile(sftp, file, limits[file.dir], stop, n => {
         job.doneBytes += n;
         measure(job);
         update(job);
       });
       file.status = 'done';
+      file.lost = 0;
       job.files++;
     } catch (err) {
+      const lost = (sftp && dead.has(sftp)) || !isConnected(job.tabId) || LOST.test(String(err?.message || ''));
       if (job.cancelled) file.status = 'cancelled';
-      else if (err === STOP && (job.paused || job.waiting)) { file.status = 'pending'; job.pending.unshift(file); }
-      else if (job.waiting || !isConnected(job.tabId)) {
-        // Verbindung weg: warten und nach dem Neuverbinden weitermachen
-        job.waiting = true;
+      else if (err === STOP && (job.paused || job.waiting) && !lost) { file.status = 'pending'; job.pending.unshift(file); }
+      else if (job.waiting || (lost && (file.lost = (file.lost || 0) + 1) <= 5)) {
+        // Verbindung weg: Datei zurück in die Schlange. Ist schon neu verbunden, geht es gleich
+        // weiter, sonst wartet der Auftrag aufs Neuverbinden (resumeTab).
+        if (!isConnected(job.tabId)) job.waiting = true;
         file.status = 'pending';
         job.pending.unshift(file);
       } else {
         file.status = 'error';
-        file.error = err === STOP ? 'Angehalten.' : cleanMsg(err);
+        file.error = err === STOP ? 'Verbindung getrennt.' : cleanMsg(err);
         job.failed.push(file);
       }
     } finally {
@@ -341,7 +351,7 @@ function create(getWin, { getSftp, isConnected = () => true, sftpError = e => e 
     if (!file.started) return;
     try {
       if (file.dir === 'get') await fsp.unlink(file.to);
-      else if (isConnected(job.tabId)) { const sftp = await getSftp(job.tabId); await p(cb => sftp.unlink(file.to, cb)); }
+      else if (isConnected(job.tabId)) { const sftp = await getSftp(job.tabId); await atMost(p(cb => sftp.unlink(file.to, cb))); }
     } catch {}
     file.started = false;
   }
