@@ -190,6 +190,7 @@ function openTab(spec, title, view = 'terminal') {
   tab.files = buildFilesView(tab);
   tabs.set(id, tab);
   window.TermExtra?.attach(tab); // Suche, Links, geteilte Ansicht … (term-extra.js)
+  window.LocalPane?.attach(tab); // „Mein Computer“ neben den Server-Dateien (local-pane.js)
   activate(id);
   connect(tab);
 }
@@ -382,6 +383,7 @@ function closeTab(id, force = false) {
   }
   api.close(id);
   window.TermExtra?.detach(tab);
+  window.LocalPane?.detach(tab);
   tab.term.dispose();
   tab.el.remove();
   tab.files.el.remove();
@@ -574,12 +576,13 @@ function buildFilesView(tab) {
     }
   });
 
-  // Drag & Drop aus dem Finder
-  f.list.addEventListener('dragover', e => { e.preventDefault(); if (tab.state === 'open') f.list.classList.add('dragging'); });
+  // Drag & Drop aus dem Finder (und aus „Mein Computer“, auch auf Ordner: local-pane.js)
+  f.list.addEventListener('dragover', e => { e.preventDefault(); if (window.LocalPane?.serverDragOver(tab, e)) return; if (tab.state === 'open') f.list.classList.add('dragging'); });
   f.list.addEventListener('dragleave', e => { if (!f.list.contains(e.relatedTarget)) f.list.classList.remove('dragging'); });
   f.list.addEventListener('drop', e => {
     e.preventDefault();
     f.list.classList.remove('dragging');
+    if (window.LocalPane?.serverDrop(tab, e)) return;
     const paths = [...e.dataTransfer.files].map(file => api.pathForFile(file)).filter(Boolean);
     if (paths.length && tab.state === 'open') uploadPaths(tab, paths);
   });

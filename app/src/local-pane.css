@@ -1,0 +1,92 @@
+/* ---------- Geteilte Dateiansicht: „Mein Computer“ links, Server rechts (local-pane.js) ---------- */
+
+.lp {
+  position: absolute; top: 0; bottom: 0; left: 0; width: var(--lp-w, 42%);
+  display: flex; flex-direction: column; background: var(--surface); min-width: 0;
+}
+.lp[hidden], .lp-divider[hidden] { display: none; }
+.files.lp-on { left: calc(var(--lp-w, 42%) + 44px); container-type: inline-size; }
+
+/* Trenner mit den Knöpfen → und ← */
+.lp-divider {
+  position: absolute; top: 0; bottom: 0; left: var(--lp-w, 42%); width: 44px; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  cursor: col-resize; touch-action: none;
+  background: var(--bg); border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+}
+.lp-divider::before {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 21px; width: 2px; border-radius: 1px;
+  background: transparent; transition: background .12s;
+}
+.lp-divider:hover::before, .lp-divider.drag::before { background: var(--border-strong); }
+.lp-divider.drag::before { background: var(--accent); }
+.lp-divider .round-btn { position: relative; width: 30px; height: 30px; cursor: pointer; }
+.lp-divider .round-btn:not(:disabled):hover { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--border-strong)); }
+
+/* Knopf „Mein Computer“ in der Aktionsleiste der Server-Dateien (offen: Schließen über × links) */
+.lp-toggle { margin-left: auto; }
+.files.lp-on .lp-toggle { display: none; }
+/* Geteilt: Suchfeld schmaler, damit der Pfad lesbar bleibt */
+.files.lp-on .search-field { width: 230px; min-width: 150px; }
+.lp-toggle.on { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, var(--border-strong)); color: var(--accent); }
+.lp-toggle.on:hover { background: var(--accent-soft); }
+
+/* Orte: Schreibtisch, Downloads, Dokumente, Laufwerke */
+.lp-actions { flex-wrap: nowrap; }
+.lp-places { flex: 1; min-width: 0; display: flex; gap: 6px; overflow: hidden; }
+.lp-chip {
+  flex: 0 1 auto; min-width: 34px; overflow: hidden; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 11px;
+  border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--muted);
+  font: 500 12.5px/1 inherit; font-family: inherit; cursor: pointer; white-space: nowrap;
+}
+.lp-chip svg.ic { width: 15px; height: 15px; flex-shrink: 0; }
+.lp-chip .lbl { overflow: hidden; text-overflow: ellipsis; }
+.lp-chip:hover { background: var(--hover); color: var(--text); }
+.lp-chip.on { background: var(--accent-soft); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); }
+.lp-chip:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-ring); }
+
+/* Sortieren per Klick auf die Spaltenköpfe */
+.lp-list th[data-sort] { cursor: pointer; user-select: none; }
+.lp-list th[data-sort]:hover { color: var(--text); }
+.lp-list th.sorted { color: var(--text); }
+.lp-list th.sorted::after { content: ' ↑'; color: var(--accent); }
+.lp-list th.sorted.desc::after { content: ' ↓'; }
+.lp-list tr.lp-hidden td { opacity: .55; }
+
+/* Ablegen auf einen Ordner in der Liste (beide Seiten) */
+.files-list tbody tr.lp-drop td { background: var(--accent-soft); box-shadow: inset 0 1px 0 var(--accent), inset 0 -1px 0 var(--accent); }
+.files-list tbody tr.lp-drop td:first-child { box-shadow: inset 2px 0 0 var(--accent), inset 0 1px 0 var(--accent), inset 0 -1px 0 var(--accent); }
+.files-list tbody tr.lp-drop .ico.dir { color: var(--accent); }
+
+/* Bild beim Ziehen */
+.lp-ghost {
+  position: fixed; top: -100px; left: -400px; z-index: -1;
+  display: inline-flex; align-items: center; gap: 8px; max-width: 280px; padding: 7px 12px;
+  border-radius: 8px; background: var(--surface); color: var(--text); border: 1px solid var(--border-strong);
+  font-size: 12.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lp-ghost svg.ic { width: 15px; height: 15px; color: var(--accent); flex-shrink: 0; }
+
+/* Rückfrage „Datei gibt es schon“ */
+.lp-conflict { width: 470px; }
+.lp-conflict .choose-msg { word-break: break-word; }
+.lp-cmp { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; }
+.lp-cmp-col {
+  flex: 1; display: flex; flex-direction: column; gap: 3px; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--bg); font-variant-numeric: tabular-nums;
+}
+.lp-cmp-k { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: var(--faint); }
+.lp-cmp-col b { font-weight: 600; }
+.lp-cmp-col span:last-child { font-size: 12px; color: var(--muted); }
+.lp-cmp-arrow { display: inline-flex; color: var(--faint); }
+.lp-conflict .actions .spacer { flex: 1; }
+.lp-all[hidden] { display: none; }
+
+/* Wenig Platz: Rechte-Spalte und Beschriftungen ausblenden */
+@container (max-width: 560px) {
+  .files.lp-on .files-list .mode { display: none; }
+  .files.lp-on .search-field { width: 205px; min-width: 190px; }
+}
+@container (max-width: 470px) {
+  .files.lp-on .files-actions > .btn { font-size: 0; gap: 0; padding: 0 9px; }
+}
