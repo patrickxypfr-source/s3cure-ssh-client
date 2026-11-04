@@ -5,12 +5,12 @@
 # S3cure SSH Client
 
 **Terminal, Dateien, Editor und Tunnel – alles für deine Server in einem Fenster.**<br>
-Ein moderner SSH- & SFTP-Client für macOS und Windows. Kostenlos, Open Source, ohne Konto.
+Ein moderner SSH- & SFTP-Client für macOS, Windows und Linux. Kostenlos, Open Source, ohne Konto.
 
 [![Neueste Version](https://img.shields.io/github/v/release/patrickxypfr-source/s3cure-ssh-client?label=Version&color=e11d2a&style=flat-square)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest)
 [![Build](https://img.shields.io/github/actions/workflow/status/patrickxypfr-source/s3cure-ssh-client/build.yml?branch=main&label=Build&style=flat-square)](https://github.com/patrickxypfr-source/s3cure-ssh-client/actions/workflows/build.yml)
 [![Downloads](https://img.shields.io/github/downloads/patrickxypfr-source/s3cure-ssh-client/total?label=Downloads&color=555&style=flat-square)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases)
-[![Plattformen](https://img.shields.io/badge/macOS%20%7C%20Windows-555?style=flat-square&logo=apple&logoColor=white)](#systemanforderungen)
+[![Plattformen](https://img.shields.io/badge/macOS%20%7C%20Windows%20%7C%20Linux-555?style=flat-square&logo=apple&logoColor=white)](#systemanforderungen)
 [![Lizenz: MIT](https://img.shields.io/badge/Lizenz-MIT-555?style=flat-square)](LICENSE)
 
 <br>
@@ -18,6 +18,7 @@ Ein moderner SSH- & SFTP-Client für macOS und Windows. Kostenlos, Open Source, 
 [![Download für Mac (Apple-Chip)](https://img.shields.io/badge/Download-Mac%20%C2%B7%20Apple%20Chip-e11d2a?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Mac-AppleSilicon.dmg)
 [![Download für Mac (Intel)](https://img.shields.io/badge/Download-Mac%20%C2%B7%20Intel-3a3a3c?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Mac-Intel.dmg)
 [![Download für Windows](https://img.shields.io/badge/Download-Windows%2010%2F11-3a3a3c?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Setup.exe)
+[![Download für Linux](https://img.shields.io/badge/Download-Linux%20%C2%B7%20AppImage-3a3a3c?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Linux-x64.AppImage)
 
 <sub>Ein Klick lädt direkt den Installer der neuesten Version. Alle Versionen: <a href="https://github.com/patrickxypfr-source/s3cure-ssh-client/releases">Releases</a></sub>
 
@@ -35,6 +36,7 @@ Ein moderner SSH- & SFTP-Client für macOS und Windows. Kostenlos, Open Source, 
 - [Screenshots](#screenshots)
 - [Installation](#installation)
 - [Automatische Updates](#automatische-updates)
+- [Was ist neu?](CHANGELOG.md)
 - [Alle Funktionen](#alle-funktionen)
 - [Tastenkürzel](#tastenkürzel)
 - [Sicherheit & Datenschutz](#sicherheit--datenschutz)
@@ -81,7 +83,7 @@ Passwörter verschlüsselt im Schlüsselbund, SSH-Schlüssel erzeugen und übert
 <td valign="top">
 
 ### 🔄 Immer aktuell
-Die App zeigt neue Versionen selbst an – **ein Klick auf „Update“** lädt, prüft und installiert sie. Mit richtigem Installer für Mac und Windows.
+Die App zeigt neue Versionen selbst an – **ein Klick auf „Update“** lädt, prüft und installiert sie. Mit richtigem Installer für Mac und Windows, unter Linux als AppImage.
 
 </td>
 </tr>
@@ -104,6 +106,7 @@ Die App zeigt neue Versionen selbst an – **ein Klick auf „Update“** lädt,
 | **Mac mit Apple-Chip** (M1–M4) | [`S3cure-SSH-Client-Mac-AppleSilicon.dmg`](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Mac-AppleSilicon.dmg) | Installationsfenster |
 | **Mac mit Intel-Chip** | [`S3cure-SSH-Client-Mac-Intel.dmg`](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Mac-Intel.dmg) | Installationsfenster |
 | **Windows 10/11** (64 Bit) | [`S3cure-SSH-Client-Setup.exe`](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Setup.exe) | Installer mit Startmenü & Desktop-Verknüpfung |
+| **Linux** (64 Bit, x86) | [`S3cure-SSH-Client-Linux-x64.AppImage`](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Linux-x64.AppImage) | Eine Datei – ausführbar machen und starten |
 
 > [!IMPORTANT]
 > Bitte **nicht** „Source code“ bzw. den grünen Knopf „Code → Download ZIP“ benutzen – das ist der Quellcode, kein fertiges Programm.
@@ -129,12 +132,27 @@ Die App zeigt neue Versionen selbst an – **ein Klick auf „Update“** lädt,
 
 </details>
 
+<details>
+<summary><b>🐧 Linux – Schritt für Schritt</b></summary>
+
+1. `S3cure-SSH-Client-Linux-x64.AppImage` herunterladen und an einen festen Ort legen, z. B. `~/Programme`.
+2. Ausführbar machen: Rechtsklick → **Eigenschaften → Als Programm ausführen erlauben**, oder im Terminal:
+   `chmod +x S3cure-SSH-Client-Linux-x64.AppImage`
+3. Doppelklick bzw. `./S3cure-SSH-Client-Linux-x64.AppImage` startet die App.
+4. Startet sie nicht und es erscheint etwas mit **FUSE**: `sudo apt install libfuse2` (Ubuntu 24.04: `libfuse2t64`).
+   Meldet sie etwas mit **sandbox** (z. B. unter Ubuntu 24.04): einmal mit `--no-sandbox` starten.
+
+Updates ersetzen die AppImage-Datei an ihrem Ort – dafür braucht der Ordner Schreibrechte. Sonst legt die App die neue Version in **Downloads**.
+
+</details>
+
 ### Systemanforderungen
 
 | | Mindestens |
 |---|---|
 | macOS | 13 Ventura oder neuer – Apple-Chip oder Intel |
 | Windows | Windows 10 oder 11, 64 Bit |
+| Linux | 64 Bit (x86), z. B. Ubuntu 22.04 / Debian 12 / Fedora 38 oder neuer, mit grafischer Oberfläche |
 | Server | jeder SSH-Server (OpenSSH u. a.), SFTP für die Dateiansicht |
 
 ## Automatische Updates
@@ -145,7 +163,9 @@ Beim Start fragt S3cure bei GitHub nach der neuesten Version. Gibt es eine neuer
 2. prüft sie (Größe, Signatur, Versionsnummer),
 3. tauscht die App aus und startet sie neu.
 
-Fehlt etwas oder kann sich die App nicht selbst ersetzen (z. B. fehlende Schreibrechte), lädt sie automatisch den Installer und öffnet ihn. Ein beschädigtes Paket wird nie installiert – die alte Version bleibt dann erhalten.
+Fehlt etwas oder kann sich die App nicht selbst ersetzen (z. B. fehlende Schreibrechte), lädt sie automatisch den Installer und öffnet ihn (Linux: neue AppImage-Datei in **Downloads**). Ein beschädigtes Paket wird nie installiert – die alte Version bleibt dann erhalten.
+
+Das Update-Fenster zeigt dabei, **was neu** ist, und nach dem ersten Start einer neuen Version erscheint einmal kurz „Was ist neu in x.y.z“. Alle Änderungen stehen in [CHANGELOG.md](CHANGELOG.md).
 
 ## Alle Funktionen
 
@@ -208,7 +228,7 @@ Fehlt etwas oder kann sich die App nicht selbst ersetzen (z. B. fehlende Schreib
 ## Sicherheit & Datenschutz
 
 - **Alles bleibt auf deinem Rechner.** Kein Konto, keine Cloud, keine Statistik.
-- Verbindungen und Einstellungen liegen in `~/.myssh`, **Passwörter verschlüsselt** im macOS-Schlüsselbund bzw. per Windows-DPAPI.
+- Verbindungen und Einstellungen liegen in `~/.myssh`, **Passwörter verschlüsselt** im macOS-Schlüsselbund, per Windows-DPAPI bzw. unter Linux über den Schlüsselbund der Oberfläche (GNOME Schlüsselbund, KWallet).
 - Die App spricht nur mit deinen Servern – und mit GitHub, um nach neuen Versionen zu schauen.
 - Updates werden nur aus diesem Repository geladen und vor der Installation geprüft.
 - Tunnel-Ports lauschen nur auf `127.0.0.1` und sind von außen nicht erreichbar.
@@ -242,6 +262,7 @@ Ja – mit allem, was SSH spricht. Für die Dateiansicht braucht der Server SFTP
 
 **macOS:** App aus **Programme** in den Papierkorb ziehen, optional den Ordner `~/.myssh` löschen.
 **Windows:** **Einstellungen → Apps → S3cure SSH Client → Deinstallieren**.
+**Linux:** Die AppImage-Datei löschen, optional den Ordner `~/.myssh`.
 
 </details>
 
@@ -262,9 +283,17 @@ Installer bauen (landen in `dist/`):
 npm run build            # macOS Apple Silicon – .dmg
 npm run build:mac-intel  # macOS Intel – .dmg
 npm run build:win        # Windows – Setup.exe
+npm run build:linux      # Linux – AppImage (x64)
 ```
 
-GitHub Actions baut bei jedem Push alle drei Versionen und startet die Windows-App zur Probe. Ein Tag `v*` (z. B. `v1.2.0`) veröffentlicht automatisch ein Release mit den Installern – die Apps bieten es dann selbst als Update an.
+Tests (Anleitung in [CONTRIBUTING.md](CONTRIBUTING.md)):
+
+```bash
+npm test                              # Einheitentests, dauern ein paar Sekunden
+xvfb-run -a npm run test:integration  # echte App gegen einen lokalen SSH-Server (Linux)
+```
+
+GitHub Actions testet bei jedem Push zuerst (Einheitentests + Integrationstest), baut danach alle vier Versionen und startet Windows-, Mac- und Linux-App zur Probe. Ein Tag `v*` (z. B. `v1.2.0`) veröffentlicht automatisch ein Release mit den Installern und dem passenden Abschnitt aus [CHANGELOG.md](CHANGELOG.md) als Text – die Apps bieten es dann selbst als Update an.
 
 ## Aufbau & Technik
 
@@ -273,7 +302,9 @@ GitHub Actions baut bei jedem Push alle drei Versionen und startet die Windows-A
 | `app/main.js`, `app/lib/` | Hauptprozess: SSH & SFTP, Tunnel, Updater, Einstellungen |
 | `app/src/` | Oberfläche ohne Framework, Terminal mit xterm.js |
 | `app/preload.js` | Sichere Brücke zwischen Oberfläche und Hauptprozess |
-| `app/tools/` | Build-Skripte (DMG, Windows-Installer, Icons) |
+| `app/tools/` | Build-Skripte (DMG, Windows-Installer, Linux-AppImage, Icons, Release-Text) |
+| `app/test/` | Einheitentests (`unit/`) und Integrationstest (`integration/`) mit `node:test` |
+| `CHANGELOG.md` | Was ist neu – pro Version, wird zum Release-Text |
 | `.github/workflows/` | Automatische Builds und Releases |
 | `myssh.py` | Kleines Kommandozeilen-Werkzeug (Python) |
 

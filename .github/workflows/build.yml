@@ -1,6 +1,9 @@
-# Baut S3cure SSH Client für macOS (Apple Silicon + Intel) und Windows.
-# - Push auf main, Pull Requests gegen main und manuell: Builds als Artefakte (ZIPs)
-# - Tag v* (z. B. v1.2.0): zusätzlich ein GitHub-Release mit den ZIPs; die Version kommt aus dem Tag
+# Testet und baut S3cure SSH Client für macOS (Apple Silicon + Intel), Windows und Linux.
+# - Zuerst laufen die Tests (Einheitentests + Integrationstest gegen einen lokalen sshd); nur wenn sie
+#   grün sind, wird gebaut.
+# - Push auf main, Pull Requests gegen main und manuell: Installer als Artefakte
+# - Tag v* (z. B. v1.2.0): zusätzlich ein GitHub-Release mit den Installern; die Version kommt aus dem Tag,
+#   der Release-Text aus dem passenden Abschnitt in CHANGELOG.md
 # Ohne Code-Signierung (macOS: Rechtsklick > Öffnen; Windows: „Trotzdem ausführen“).
 name: Build
 
@@ -20,8 +23,50 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Abhängigkeiten installieren
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          # Electron selbst wird für den Integrationstest gebraucht (sonst lädt es nur der Packager)
+          node node_modules/electron/install.js
+
+      - name: sshd und virtueller Bildschirm
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq openssh-server xvfb >/dev/null
+
+      - name: Syntax prüfen
+        run: for f in main.js preload.js lib/*.js src/*.js tools/*.mjs test/*/*.js test/*/*.mjs; do node --check "$f"; done
+
+      - name: Einheitentests
+        run: npm test
+
+      - name: Integrationstest (Electron gegen lokalen sshd)
+        run: xvfb-run -a npm run test:integration
+
+      - name: Release-Text vorhanden? (nur bei Tags)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: node tools/release-notes.mjs "$GITHUB_REF_NAME" >/dev/null || echo "::warning::CHANGELOG.md hat keinen Abschnitt für $GITHUB_REF_NAME – das Release bekommt automatische Notizen."
+
   build:
     name: ${{ matrix.name }}
+    needs: test
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -43,6 +88,10 @@ jobs:
             os: windows-latest
             script: build:win
             smoke: "../dist/S3cure SSH Client-win32-x64/S3cure SSH Client.exe"
+          - name: Linux x64
+            os: ubuntu-latest
+            script: build:linux
+            smoke: ''
     defaults:
       run:
         shell: bash
@@ -74,13 +123,25 @@ jobs:
         if: matrix.smoke != ''
         run: node tools/smoke-test.mjs "${{ matrix.smoke }}"
 
+      # Linux: fertiges AppImage starten (ohne FUSE: selbst entpacken) und prüfen,
+      # dass der Updater es als AppImage erkennt
+      - name: Start-Rauchtest (AppImage)
+        if: runner.os == 'Linux'
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
+          S3CURE_EXPECT_KIND: linux-appimage
+        run: |
+          sudo apt-get install -y -qq xvfb >/dev/null
+          xvfb-run -a node tools/smoke-test.mjs ../dist/S3cure-SSH-Client-Linux-x64.AppImage --no-sandbox
+
       - uses: actions/upload-artifact@v4
         with:
           name: S3cure SSH Client – ${{ matrix.name }}
-          # Nur die Installer: Mac-DMG (auch für die automatischen Updates) und Windows-Setup.exe
+          # Nur die Installer: Mac-DMG (auch für die automatischen Updates), Windows-Setup.exe, Linux-AppImage
           path: |
             dist/*.dmg
             dist/*.exe
+            dist/*.AppImage
           if-no-files-found: error
           compression-level: 0
           retention-days: 30
@@ -93,6 +154,9 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Nur für CHANGELOG.md und das Skript, das den Release-Text daraus holt
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           path: dist
@@ -103,9 +167,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           ls -la dist
-          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" dist/*.dmg dist/*.exe --clobber --repo "$GITHUB_REPOSITORY"
+          FILES=(dist/*.dmg dist/*.exe dist/*.AppImage)
+          # Release-Text: Abschnitt der Version aus CHANGELOG.md (die App zeigt ihn als „Was ist neu?“)
+          if node app/tools/release-notes.mjs "$GITHUB_REF_NAME" > release-notes.md; then
+            NOTES=(--notes-file release-notes.md)
           else
-            gh release create "$GITHUB_REF_NAME" dist/*.dmg dist/*.exe --repo "$GITHUB_REPOSITORY" \
-              --title "S3cure SSH Client ${GITHUB_REF_NAME#v}" --generate-notes
+            echo "::warning::Kein Abschnitt für ${GITHUB_REF_NAME#v} in CHANGELOG.md – automatische Notizen"
+            NOTES=(--generate-notes)
+          fi
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${FILES[@]}" --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$GITHUB_REF_NAME" "${FILES[@]}" --repo "$GITHUB_REPOSITORY" \
+              --title "S3cure SSH Client ${GITHUB_REF_NAME#v}" "${NOTES[@]}"
           fi
