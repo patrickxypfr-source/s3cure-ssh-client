@@ -109,6 +109,11 @@ window.LocalPane = (() => {
     }
     setupLocalList(p);
     setupServerList(p);
+    // Verlauf zurück/vor und Lesezeichen (file-nav.js)
+    p.nav = window.FileNav?.attach({
+      bar: el.querySelector('.files-bar'), scope: 'local', root: el, list: p.list,
+      getPath: () => p.path, go: dir => go(p, dir),
+    });
     dragDivider(p);
 
     // Sichtbar genau dann, wenn die Server-Dateiansicht dieses Tabs sichtbar ist
@@ -219,6 +224,7 @@ window.LocalPane = (() => {
       if (!before) p.anchor = select ? select[0] : null;
       p.loaded = true;
       p.error = null;
+      p.nav?.visited(p.path);
       savePref(p);
       render(p);
       return true;

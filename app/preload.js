@@ -123,6 +123,12 @@ contextBridge.exposeInMainWorld('mysshTerm', {
   onZoom: cb => ipcRenderer.on('term:zoom', (_e, step) => cb(step)),
 });
 
+// Lesezeichen für Ordner (app/lib/bookmarks.js, src/file-nav.js)
+contextBridge.exposeInMainWorld('s3bookmarks', {
+  get: () => ipcRenderer.invoke('bookmarks:get'),
+  set: (scope, key, list) => ipcRenderer.invoke('bookmarks:set', scope, key, list),
+});
+
 // Geteilte Dateiansicht „Mein Computer“ (app/lib/localfs.js, app/lib/pane-transfer.js, src/local-pane.js)
 contextBridge.exposeInMainWorld('localFs', {
   places: () => ipcRenderer.invoke('localfs:places'),

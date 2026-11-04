@@ -191,6 +191,7 @@ function openTab(spec, title, view = 'terminal') {
   tabs.set(id, tab);
   window.TermExtra?.attach(tab); // Suche, Links, geteilte Ansicht … (term-extra.js)
   window.LocalPane?.attach(tab); // „Mein Computer“ neben den Server-Dateien (local-pane.js)
+  window.FileNav?.attachRemote(tab); // Verlauf zurück/vor und Lesezeichen (file-nav.js)
   activate(id);
   connect(tab);
 }
@@ -709,6 +710,7 @@ async function loadDir(tab, dir) {
     f.selected.clear();
     f.anchor = null;
     f.loaded = true;
+    f.nav?.visited(f.path); // Verlauf (file-nav.js)
   } catch (err) {
     showError(err);
   }

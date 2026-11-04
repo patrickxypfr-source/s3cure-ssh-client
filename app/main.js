@@ -35,6 +35,8 @@ const sessions = new Map(); // Tab-ID -> { client, stream }
 
 // Eigene Befehlsknöpfe (snippets.json) und Server-Übersicht
 const snippetStore = snippets.register(ipcMain, { configDir: CONFIG_DIR, dialog, getWin: () => win });
+// Lesezeichen für Ordner (app/lib/bookmarks.js, Oberfläche: src/file-nav.js)
+const bookmarks = require('./lib/bookmarks').register({ ipcMain, configDir: CONFIG_DIR });
 monitor.register(ipcMain, sessions);
 
 // ---------- gespeicherte Verbindungen ----------
@@ -536,7 +538,7 @@ ipcMain.handle('hosts:list', () => hostsForUi());
 ipcMain.handle('hosts:save', (_e, name, host, oldName) => {
   const hosts = loadHosts();
   const prev = hosts[oldName || name] || {}; // weitere Felder (z. B. Tunnel) behalten
-  if (oldName && oldName !== name) { delete hosts[oldName]; renamePassword(oldName, name); snippetStore.rename(oldName, name); updateJumpRefs(hosts, oldName, name); }
+  if (oldName && oldName !== name) { delete hosts[oldName]; renamePassword(oldName, name); snippetStore.rename(oldName, name); updateJumpRefs(hosts, oldName, name); bookmarks.rename(oldName, name); }
   hosts[name] = { ...prev, user: host.user || os.userInfo().username, host: host.host, port: Number(host.port) || 22, key: host.key || null, ...hostExtras(host) };
   saveHosts(hosts);
   if (host.forgetPassword) removePassword(name);
@@ -551,6 +553,7 @@ ipcMain.handle('hosts:delete', (_e, name) => {
   updateJumpRefs(hosts, name, null);
   saveHosts(hosts);
   removePassword(name);
+  bookmarks.remove(name);
   return hostsForUi();
 });
 // Import aus ~/.ssh/config und SSH-Schlüssel: app/lib/sshconfig.js, app/lib/keys.js
