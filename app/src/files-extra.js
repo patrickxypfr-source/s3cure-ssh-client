@@ -310,12 +310,13 @@ const FilesExtra = (() => {
       extra.push(['Vorschau', () => preview(tab, one), '', 'eye']);
       if (!isImage(one.name)) extra.push(['Bearbeiten', () => edit(tab, one), '', 'edit']);
     }
-    if (one && ARCHIVE_RE.test(one.name) && !one.isDir) extra.push(['Entpacken', () => unpack(tab, one), '', 'unzip']);
-    extra.push(['Als ZIP packen …', () => pack(tab, sel), '', 'zip']);
+    const ftp = !!window.FtpUi?.isFtpTab(tab); // FTP: keine Befehle auf dem Server (kein ZIP, kein Terminal)
+    if (!ftp && one && ARCHIVE_RE.test(one.name) && !one.isDir) extra.push(['Entpacken', () => unpack(tab, one), '', 'unzip']);
+    if (!ftp) extra.push(['Als ZIP packen …', () => pack(tab, sel), '', 'zip']);
     extra.push(['Rechte ändern …', () => chmodDialog(tab, sel), '', 'key']);
     extra.push(null);
     const termDir = one && one.isDir ? joinPath(dir, one.name) : dir;
-    extra.push(['Terminal hier öffnen', () => terminalHere(tab, termDir), '', 'terminal']);
+    if (!ftp) extra.push(['Terminal hier öffnen', () => terminalHere(tab, termDir), '', 'terminal']);
     if (one) extra.push(['Pfad kopieren', () => { navigator.clipboard.writeText(joinPath(dir, one.name)); flash('Pfad kopiert'); }, '', 'copy']);
     entries.push(null, ...extra);
   }

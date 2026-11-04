@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="connections.css">
   <link rel="stylesheet" href="layout.css">
   <link rel="stylesheet" href="local-pane.css">
+  <link rel="stylesheet" href="ftp.css">
 </head>
 <body>
   <aside id="sidebar">
@@ -91,6 +92,15 @@
     <form class="dialog" id="host-form">
       <h2 id="host-form-title">Neue Verbindung</h2>
       <label>Name<input name="label" required placeholder="z. B. Raspberry Pi" autocomplete="off"></label>
+      <!-- Protokoll und FTP-Optionen: app/src/ftp-ui.js -->
+      <label>Protokoll
+        <select name="protocol">
+          <option value="sftp">SFTP / SSH (Terminal und Dateien)</option>
+          <option value="ftp">FTP (nur Dateien, unverschlüsselt)</option>
+          <option value="ftps">FTPS – explizit (nur Dateien, verschlüsselt)</option>
+          <option value="ftps-implicit">FTPS – implizit (nur Dateien, verschlüsselt)</option>
+        </select>
+      </label>
       <div class="row">
         <label class="grow">Server (Adresse oder IP)<input name="host" required placeholder="192.168.1.20" spellcheck="false" autocomplete="off"></label>
         <label class="port">Port<input name="port" type="number" min="1" max="65535" value="22"></label>
@@ -102,7 +112,15 @@
           <button type="button" id="forget-pw" class="btn" hidden>Vergessen</button>
         </div>
       </label>
-      <label>SSH-Schlüssel <span class="muted">(optional)</span>
+      <div id="ftp-options" hidden>
+        <p id="ftp-plain-note" class="ftp-note" hidden>FTP überträgt Passwort und Dateien unverschlüsselt. Wenn dein Hoster FTPS anbietet, nimm lieber FTPS.</p>
+        <label class="toggle"><input type="checkbox" name="ftpPassive" checked><span class="track"><span class="knob"></span></span><span>Passiver Modus <span class="muted">(empfohlen – nur ausschalten, wenn der Hoster es verlangt)</span></span></label>
+        <div id="ftp-tls-options">
+          <label class="toggle"><input type="checkbox" name="ftpInsecure"><span class="track"><span class="knob"></span></span>Zertifikat trotzdem akzeptieren</label>
+          <p id="ftp-insecure-warn" class="ftp-note warn" hidden>Achtung: Das Zertifikat wird dann gar nicht mehr geprüft. Ein Angreifer im Netz könnte sich unbemerkt als dein Server ausgeben und das Passwort mitlesen. Besser ausgeschaltet lassen – bei einem selbst signierten Zertifikat fragt die App beim ersten Verbinden nach und merkt es sich.</p>
+        </div>
+      </div>
+      <label id="key-field">SSH-Schlüssel <span class="muted">(optional)</span>
         <div class="row">
           <input name="key" class="grow" placeholder="Standard: ~/.ssh oder Passwort" spellcheck="false" autocomplete="off">
           <button type="button" id="pick-key" class="btn">Wählen…</button>
@@ -112,7 +130,7 @@
       <button type="button" id="setup-key" class="btn ghost" data-icon="lock" hidden>Anmeldung ohne Passwort einrichten …</button>
       <div class="row">
         <label class="grow">Gruppe <span class="muted">(optional)</span><input name="group" list="group-list" placeholder="z. B. Zuhause" autocomplete="off"></label>
-        <label class="grow">Sprung-Server <span class="muted">(optional)</span><select name="jump" id="jump-select"></select></label>
+        <label class="grow" id="jump-field">Sprung-Server <span class="muted">(optional)</span><select name="jump" id="jump-select"></select></label>
       </div>
       <div class="color-row"><span>Farbe</span><div id="color-pick"></div></div>
       <datalist id="group-list"></datalist>
@@ -178,6 +196,7 @@
   <script src="files-extra.js"></script>
   <script src="local-pane.js"></script>
   <script src="reconnect.js"></script>
+  <script src="ftp-ui.js"></script>
   <script src="hosts-extra.js"></script>
   <script src="applock.js"></script>
   <script src="layout.js"></script>
