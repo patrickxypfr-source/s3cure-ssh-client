@@ -216,6 +216,7 @@ function setState(tab, state) {
 
 function updateToolbar() {
   const tab = tabs.get(activeId);
+  Monitor.update(tab); // Server-Übersicht (monitor.js)
   $('#toolbar').hidden = !tab;
   window.tunnelUi?.setTab(tab || null);
   window.TermExtra?.update(tab);
@@ -233,38 +234,8 @@ function updateToolbar() {
   renderQuickbar();
 }
 
-// ---------- Schnellbefehle (s3-Skript auf dem Server) ----------
-// cmd: fester Befehl | menu: [[Text, Befehl], …] | confirm: Rückfrage vor dem Ausführen
-const QUICK_GROUPS = [
-  [
-    { label: 'Status', cmd: 's3 status', tip: 'Dienste, Stand, Backup-Timer' },
-    { label: 'Check', cmd: 's3 check', tip: 'Gesundheitscheck: Dienste, Ports, Firewall, RAM, Platte' },
-  ],
-  [
-    { label: 'Update', cmd: 's3 update', tip: 'Code holen, nur Nötiges bauen und neu starten' },
-    { label: 'Update all', cmd: 's3 update-all', tip: 'Alles: pull, install, Panel-Build, beide neu starten',
-      confirm: 'Alles neu installieren, das Panel neu bauen und Bot und Panel neu starten?' },
-  ],
-  [
-    { label: 'Restart', tip: 'Dienste neu starten', menu: [['Alles', 's3 restart all'], ['Bot', 's3 restart bot'], ['Panel', 's3 restart panel']] },
-    { label: 'Start', tip: 'Dienst starten', menu: [['Bot', 's3 start bot'], ['Panel', 's3 start panel']] },
-    { label: 'Stop', tip: 'Dienst stoppen', danger: true, menu: [['Bot', 's3 stop bot'], ['Panel', 's3 stop panel']],
-      confirm: 'Den Dienst wirklich stoppen? Er ist dann offline, bis du ihn wieder startest.' },
-  ],
-  [
-    { label: 'Logs', tip: 'Letzte 60 Zeilen', menu: [['Bot', 's3 logs bot'], ['Panel', 's3 logs panel'], ['Caddy', 's3 logs caddy']] },
-    { label: 'Live-Log', tip: 'Log live mitlesen – endet mit Strg+C oder beim nächsten Knopf', menu: [['Bot', 's3 live bot'], ['Panel', 's3 live panel']] },
-    { label: 'Commits', cmd: 's3 log', tip: 'Letzte 8 Commits' },
-  ],
-  [
-    { label: 'Build', cmd: 's3 build', tip: 'Panel neu bauen und neu starten' },
-    { label: 'Backup', cmd: 's3 backup', tip: 'DB-Sicherung und Drive-Kopie jetzt ausführen' },
-    { label: 'Rollback', tip: 'Auf einen alten Stand zurück', danger: true,
-      menu: [['Ein Commit zurück', 's3 rollback'], ['Bestimmter Commit …', 'ROLLBACK_ASK']],
-      confirm: 'Wirklich auf einen alten Stand zurückgehen? Der Bot wird dabei neu gestartet.' },
-    { label: '.env', cmd: 's3 env', tip: '.env im Editor nano öffnen – speichern: Strg+O, Enter · beenden: Strg+X' },
-  ],
-];
+// ---------- Schnellbefehle ----------
+// Die Knöpfe selbst kommen aus quickbar.js (eigene Knöpfe pro Verbindung, Vorlage „s3cure“)
 
 const quickKey = tab => 'quick:' + (tab.spec.name || tab.spec.text || tab.title);
 function quickPref(tab, key, fallback) {
@@ -286,24 +257,9 @@ function renderQuickbar() {
 
   const connected = tab.state === 'open';
   bar.innerHTML = '';
+  bar.className = '';
   if (connected && tab.term.buffer.active.type === 'alternate') { renderEditorBar(tab, bar); return; }
-  QUICK_GROUPS.forEach((group, gi) => {
-    if (gi) bar.appendChild(Object.assign(document.createElement('span'), { className: 'qsep' }));
-    for (const item of group) {
-      const b = document.createElement('button');
-      b.className = 'qbtn' + (item.danger ? ' danger' : '');
-      b.disabled = !connected;
-      b.textContent = item.label;
-      if (item.menu) b.insertAdjacentHTML('beforeend', icon('down'));
-      b.title = (item.cmd ? `${item.cmd}\n` : '') + (item.tip || '');
-      b.addEventListener('click', e => {
-        if (!item.menu) return runQuick(item.cmd, item.confirm);
-        const r = e.currentTarget.getBoundingClientRect();
-        openMenu(item.menu.map(([text, cmd]) => [`${text}`, () => runQuick(cmd, item.confirm), item.danger ? 'danger' : '', 'terminal']), r.left, r.bottom + 4);
-      });
-      bar.appendChild(b);
-    }
-  });
+  Quickbar.render(tab, bar, connected);
 }
 
 // Knöpfe für nano – damit niemand Tastenkürzel braucht
@@ -338,15 +294,10 @@ function renderEditorBar(tab, bar) {
   bar.appendChild(hint);
 }
 
-async function runQuick(cmd, confirmText) {
+// live: Befehl läuft endlos (Live-Log o. Ä.) und wird vor dem nächsten Knopf mit Strg+C beendet
+async function runQuick(cmd, confirmText, live = Quickbar.isLive(cmd)) {
   const tab = tabs.get(activeId);
   if (!tab || tab.state !== 'open') return;
-  if (cmd === 'ROLLBACK_ASK') {
-    const target = await askLocal({ kind: 'text', title: 'Rollback', message: 'Auf welchen Commit zurück? (Hash aus „Commits“ oder z. B. HEAD~2)', placeholder: 'a1b2c3d', okLabel: 'Weiter' });
-    if (!target || !target.trim()) return;
-    if (!/^[\w~^.\/-]+$/.test(target.trim())) { showError('Ungültiger Commit. Erlaubt sind Buchstaben, Zahlen sowie ~ ^ . / - _'); return; }
-    cmd = 's3 rollback ' + target.trim();
-  }
   if (confirmText) {
     const ok = await askLocal({ kind: 'confirm', title: 'Sicher?', message: confirmText, detail: cmd, okLabel: 'Ausführen', danger: true });
     if (!ok) return;
@@ -358,11 +309,12 @@ async function runQuick(cmd, confirmText) {
     return;
   }
   // Ein Live-Log läuft endlos -> vorher beenden
-  if (tab.lastQuick && tab.lastQuick.startsWith('s3 live')) {
+  if (tab.lastQuick && tab.lastQuickLive) {
     api.write(tab.id, '\x03');
     await new Promise(r => setTimeout(r, 300));
   }
   tab.lastQuick = cmd;
+  tab.lastQuickLive = !!live;
   // Aufgeräumt: Terminal leeren, dann Befehl ausführen (Strg+U leert eine halb getippte Zeile)
   tab.term.clear();
   api.write(tab.id, '\x15' + cmd + '\r');

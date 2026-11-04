@@ -9,6 +9,8 @@ const { createTunnelManager } = require('./lib/tunnels');
 const { setupUpdateCheck } = require('./lib/update-check');
 const sftpExtra = require('./lib/sftp-extra');
 const transfers = require('./lib/transfers').create(() => win);
+const snippets = require('./lib/snippets');
+const monitor = require('./lib/monitor');
 
 // Dieselben Dateien wie das Kommandozeilen-Tool myssh
 // S3CURE_CONFIG_DIR nur für Tests, sonst ~/.myssh
@@ -24,6 +26,10 @@ const DEFAULT_KEYS = ['id_ed25519', 'id_ecdsa', 'id_rsa'].map(k => path.join(os.
 
 let win;
 const sessions = new Map(); // Tab-ID -> { client, stream }
+
+// Eigene Befehlsknöpfe (snippets.json) und Server-Übersicht
+const snippetStore = snippets.register(ipcMain, { configDir: CONFIG_DIR, dialog, getWin: () => win });
+monitor.register(ipcMain, sessions);
 
 // ---------- gespeicherte Verbindungen ----------
 
@@ -652,7 +658,7 @@ ipcMain.handle('hosts:list', () => hostsForUi());
 ipcMain.handle('hosts:save', (_e, name, host, oldName) => {
   const hosts = loadHosts();
   const prev = hosts[oldName || name] || {}; // weitere Felder (z. B. Tunnel) behalten
-  if (oldName && oldName !== name) { delete hosts[oldName]; renamePassword(oldName, name); }
+  if (oldName && oldName !== name) { delete hosts[oldName]; renamePassword(oldName, name); snippetStore.rename(oldName, name); }
   hosts[name] = { ...prev, user: host.user || os.userInfo().username, host: host.host, port: Number(host.port) || 22, key: host.key || null };
   saveHosts(hosts);
   if (host.forgetPassword) removePassword(name);

@@ -39,6 +39,12 @@ contextBridge.exposeInMainWorld('myssh', {
   archiveUnpack: (id, file) => ipcRenderer.invoke('archive:unpack', id, file),
   transferCancel: jobId => ipcRenderer.send('transfer:cancel', jobId),
   onTransfer: cb => ipcRenderer.on('transfer:update', (_e, info) => cb(info)),
+  snippetsLoad: () => ipcRenderer.invoke('snippets:load'),
+  snippetsSave: (key, profile) => ipcRenderer.invoke('snippets:save', key, profile),
+  snippetsMigrate: profiles => ipcRenderer.invoke('snippets:migrate', profiles),
+  snippetsExport: (name, groups) => ipcRenderer.invoke('snippets:export', name, groups),
+  snippetsImport: () => ipcRenderer.invoke('snippets:import'),
+  monitorStats: id => ipcRenderer.invoke('monitor:stats', id),
 
   onData: cb => ipcRenderer.on('ssh:data', (_e, id, data) => cb(id, data)),
   onClosed: cb => ipcRenderer.on('ssh:closed', (_e, id) => cb(id)),

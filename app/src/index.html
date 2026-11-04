@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="settings.css">
   <link rel="stylesheet" href="term-extra.css">
   <link rel="stylesheet" href="files-extra.css">
+  <link rel="stylesheet" href="quickbar.css">
+  <link rel="stylesheet" href="monitor.css">
 </head>
 <body>
   <aside id="sidebar">
@@ -42,6 +44,7 @@
 
     <div id="toolbar" hidden>
       <span id="tab-status"><span class="status-dot"></span><span id="tab-status-text"></span></span>
+      <button id="monitor" type="button" hidden title="Server-Übersicht – klicken für Details"></button>
       <div class="spacer"></div>
       <button id="btn-reconnect" class="btn" hidden data-icon="refresh">Neu verbinden</button>
       <button id="btn-tunnels" class="btn ghost" data-icon="tunnel" title="Port-Weiterleitungen (Tunnel) für diese Verbindung">Tunnel<span id="tunnel-count" hidden></span></button>
@@ -126,6 +129,8 @@
   <script src="icons.js"></script>
   <script src="tunnels.js"></script>
   <script src="update-notice.js"></script>
+  <script src="quickbar.js"></script>
+  <script src="monitor.js"></script>
   <script src="renderer.js"></script>
   <script src="settings.js"></script>
   <script src="term-extra.js"></script>

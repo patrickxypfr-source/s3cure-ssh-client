@@ -1,0 +1,78 @@
+/* ---------- Eigene Befehlsknöpfe (quickbar.js) ---------- */
+
+.qbtn > svg.ic:first-child:not(:last-child) { margin: 0 2px 0 -2px; }
+.qbtn.qghost { border-color: transparent; background: transparent; color: var(--muted); padding: 0 7px; }
+.qbtn.qghost:hover { background: var(--hover); color: var(--text); border-color: transparent; }
+.qbtn.qghost svg.ic { margin: 0; color: currentColor; }
+.qempty { color: var(--muted); font-size: 12.5px; margin-right: 6px; }
+
+/* Bearbeiten-Modus */
+#quickbar.editing {
+  margin: 0 16px 12px; padding: 8px 10px;
+  border: 1px dashed var(--border-strong); border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-soft) 40%, transparent);
+}
+.qedit-label::before { background: var(--accent); }
+.qgroup { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 30px; min-width: 24px; }
+.qgroup.qnew {
+  padding: 0 10px; border: 1px dashed var(--border-strong); border-radius: 7px;
+  color: var(--faint); font-size: 11.5px;
+}
+.qgroup.qnew.over { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.qitem { cursor: grab; }
+.qitem.dragging { opacity: .35; }
+.qdrop { width: 3px; height: 24px; border-radius: 2px; background: var(--accent); flex-shrink: 0; }
+
+.qmenu {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 3px 2px 2px;
+  border: 1px solid var(--border-strong); border-radius: 8px; background: var(--hover);
+}
+.qmenu.danger { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+.qmenu-head {
+  display: inline-flex; align-items: center; gap: 3px; height: 26px; padding: 0 8px;
+  border: none; border-radius: 6px; background: transparent; color: var(--text);
+  font: 600 12.5px/1 inherit; font-family: inherit; cursor: grab;
+}
+.qmenu-head:hover { background: var(--border); }
+.qmenu-head svg.ic { width: 13px; height: 13px; color: var(--muted); }
+.qmenu.danger .qmenu-head { color: var(--accent); }
+.qmenu-items { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-height: 26px; }
+.qbtn.qentry { height: 24px; padding: 0 8px; font-size: 12px; }
+.qadd {
+  width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px dashed var(--border-strong); border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer;
+}
+.qadd:hover { color: var(--accent); border-color: var(--accent); }
+.qadd svg.ic { width: 13px; height: 13px; }
+.qtools { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.qtools .qbtn svg.ic { margin: 0 2px 0 -2px; }
+.qtools .qbtn.primary svg.ic { color: #fff; }
+
+/* Dialog für einen Knopf */
+.modal.snip-modal { z-index: 9; } /* Rückfragen (#ask-modal) liegen darüber */
+.snip-dialog { width: 540px; max-height: calc(100vh - 48px); overflow-y: auto; }
+.snip-dialog textarea {
+  display: block; width: 100%; margin-top: 6px; padding: 8px 11px; resize: vertical; min-height: 60px;
+  border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text);
+  font: 12.5px/1.5 var(--mono); outline: none;
+}
+.snip-dialog textarea:focus, .snip-dialog select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+.snip-dialog label.toggle { display: flex; margin: 0 0 10px; }
+.snip-dialog .snip-sub { margin: -2px 0 12px 40px; width: calc(100% - 40px); }
+.snip-help { margin: -8px 0 14px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.snip-dialog.is-menu .for-button, .snip-dialog:not(.is-menu) .for-menu { display: none; }
+.snip-dialog.is-menu .for-menu { margin: 4px 0 0; }
+.snip-inputs:empty { display: none; }
+.snip-inputs { margin: -4px 0 14px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); }
+.snip-inputs-head { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+.snip-input { display: grid; grid-template-columns: auto 1fr 150px 110px; gap: 6px; align-items: center; }
+.snip-input + .snip-input { margin-top: 6px; }
+.snip-input input { height: 30px; font-size: 12.5px; }
+.snip-dialog select {
+  height: 30px; padding: 0 6px; border: 1px solid var(--border-strong); border-radius: 8px;
+  background: var(--surface); color: var(--text); font: inherit; font-size: 12px; outline: none;
+}
+.snip-dialog .actions { align-items: center; }
+.snip-delete { color: var(--accent); }
+.snip-delete svg.ic { color: var(--accent); }
+.snip-message { margin: 0 0 4px; color: var(--muted); line-height: 1.55; white-space: pre-wrap; }
