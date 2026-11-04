@@ -72,7 +72,8 @@ function parseHead(text) {
   }
   const { N, r, p } = head.kdf;
   // Grenzen, damit eine manipulierte Datei die App nicht lahmlegt
-  if (!Number.isInteger(N) || N < 2 ** 14 || N > 2 ** 20 || (N & (N - 1)) || !Number.isInteger(r) || r < 1 || r > 16 || !Number.isInteger(p) || p < 1 || p > 4) {
+  if (!Number.isInteger(N) || N < 2 ** 14 || N > 2 ** 20 || (N & (N - 1)) || !Number.isInteger(r) || r < 1 || r > 16
+    || !Number.isInteger(p) || p < 1 || p > 4 || 128 * N * r > 256 * 1024 * 1024) {
     throw new BackupError('Die Backup-Datei ist beschädigt.');
   }
   return head;
