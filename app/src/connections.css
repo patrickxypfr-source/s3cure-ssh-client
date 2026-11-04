@@ -51,3 +51,17 @@
 
 /* App-Sperre */
 #app-lock-btn { margin-top: 8px; justify-content: flex-start; }
+#app-lock-btn svg.ic { width: 14px; height: 14px; }
+#lock-modal .toggle { display: flex; margin: 0 0 14px; }
+#lock-modal .lock-fields[hidden] { display: none; }
+
+/* Sperrbildschirm (lock.html) */
+body.lock-page { align-items: center; justify-content: center; }
+.lock-drag { position: fixed; inset: 0 0 auto; height: 40px; }
+.lock-card { width: 340px; text-align: center; }
+.lock-card .welcome-logo { width: 64px; height: 64px; margin: 0 auto 10px; }
+.lock-card h2 { margin-bottom: 6px; }
+.lock-sub { color: var(--muted); margin: 0 0 16px; }
+.lock-error { color: var(--accent); margin: 8px 0 0; text-align: left; }
+.lock-card .actions { justify-content: center; }
+#lock-form .muted-text { color: var(--muted); margin: -8px 0 16px; }

@@ -38,6 +38,7 @@
     </div>
     <ul id="host-list"></ul>
     <div id="host-empty" class="hint">Noch keine Verbindungen.<br>Klick auf ＋, um eine anzulegen.</div>
+    <button id="app-lock-btn" class="btn ghost" data-icon="lock" title="App beim Start mit Passwort oder Touch ID schützen">App-Sperre</button>
   </aside>
 
   <main id="main">
@@ -113,6 +114,25 @@
     </form>
   </div>
 
+  <!-- App-Sperre einstellen: app/src/applock.js -->
+  <div id="lock-modal" class="modal" hidden>
+    <form class="dialog" id="lock-form">
+      <h2>App-Sperre</h2>
+      <p class="muted-text">Beim Start fragt die App nach einem Passwort, bevor deine Verbindungen sichtbar werden.</p>
+      <label class="toggle"><input type="checkbox" name="enabled"><span class="track"><span class="knob"></span></span>Beim Start entsperren</label>
+      <div class="lock-fields">
+        <label class="toggle" id="lock-touch-wrap" hidden><input type="checkbox" name="touchId"><span class="track"><span class="knob"></span></span>Touch ID verwenden</label>
+        <label><span id="lock-pw-label">App-Passwort</span><input name="password" type="password" autocomplete="new-password"></label>
+        <label>Passwort wiederholen<input name="password2" type="password" autocomplete="new-password"></label>
+      </div>
+      <label id="lock-current-wrap" hidden>Bisheriges App-Passwort <span class="muted">(zum Ändern nötig)</span><input name="current" type="password" autocomplete="current-password"></label>
+      <div class="actions">
+        <button type="button" class="btn" data-cancel>Abbrechen</button>
+        <button type="submit" class="btn primary">Speichern</button>
+      </div>
+    </form>
+  </div>
+
   <!-- Allgemeiner Dialog: Passwort, Bestätigung, Texteingabe -->
   <div id="ask-modal" class="modal" hidden>
     <form class="dialog" id="ask-form">
@@ -137,5 +157,6 @@
   <script src="renderer.js"></script>
   <script src="reconnect.js"></script>
   <script src="hosts-extra.js"></script>
+  <script src="applock.js"></script>
 </body>
 </html>
