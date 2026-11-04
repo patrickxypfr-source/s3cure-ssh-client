@@ -192,6 +192,7 @@ function openTab(spec, title, view = 'terminal') {
   window.TermExtra?.attach(tab); // Suche, Links, geteilte Ansicht … (term-extra.js)
   window.LocalPane?.attach(tab); // „Mein Computer“ neben den Server-Dateien (local-pane.js)
   window.FileNav?.attachRemote(tab); // Verlauf zurück/vor und Lesezeichen (file-nav.js)
+  window.FileColumns?.attach(tab); // Spalten: sortieren, ein-/ausblenden, Breiten (file-columns.js)
   activate(id);
   connect(tab);
 }
@@ -385,6 +386,8 @@ function closeTab(id, force = false) {
   api.close(id);
   window.TermExtra?.detach(tab);
   window.LocalPane?.detach(tab);
+  window.FileColumns?.detach(tab);
+  tab.files.nav?.detach();
   tab.term.dispose();
   tab.el.remove();
   tab.files.el.remove();
@@ -495,7 +498,7 @@ function buildFilesView(tab) {
     </div>
     <div class="files-list" tabindex="0">
       <table>
-        <thead><tr><th>Name</th><th class="size">Größe</th><th class="date">Geändert</th><th class="mode">Rechte</th></tr></thead>
+        <thead><tr><th class="name" data-col="name">Name</th><th class="size" data-col="size">Größe</th><th class="date" data-col="mtime">Geändert</th><th class="mode" data-col="mode">Rechte</th><th class="owner" data-col="owner">Besitzer</th><th class="group" data-col="group">Gruppe</th></tr></thead>
         <tbody></tbody>
       </table>
       <div class="files-empty"></div>
@@ -618,9 +621,10 @@ function buildFilesView(tab) {
   return f;
 }
 
-// Es werden immer alle Dateien angezeigt, auch versteckte (mit Punkt am Anfang)
+// Es werden immer alle Dateien angezeigt, auch versteckte (mit Punkt am Anfang).
+// Reihenfolge: gewählte Sortierung (file-columns.js)
 function visibleEntries(f) {
-  return f.entries;
+  return window.FileColumns ? FileColumns.sorted(f) : f.entries;
 }
 
 function selectedEntries(f) {
@@ -638,13 +642,16 @@ function renderFiles(tab) {
   for (const it of items) {
     const tr = document.createElement('tr');
     tr.dataset.name = it.name;
-    tr.innerHTML = '<td class="name"><span class="ico"></span><span class="n"></span></td><td class="size"></td><td class="date"></td><td class="mode"></td>';
+    tr.innerHTML = '<td class="name"><span class="ico"></span><span class="n"></span></td><td class="size"></td><td class="date"></td><td class="mode"></td><td class="owner"></td><td class="group"></td>';
     tr.querySelector('.ico').innerHTML = icon(it.isDir ? 'folder' : it.isLink ? 'link' : 'file');
     tr.querySelector('.ico').classList.add(it.isDir ? 'dir' : 'doc');
     tr.querySelector('.n').textContent = it.name;
     tr.querySelector('.size').textContent = it.isDir ? '–' : formatSize(it.size);
     tr.querySelector('.date').textContent = formatDate(it.mtime);
     tr.querySelector('.mode').textContent = it.mode;
+    tr.querySelector('.owner').textContent = it.owner ?? '';
+    tr.querySelector('.group').textContent = it.group ?? '';
+    if (it.uid != null) { tr.querySelector('.owner').title = `UID ${it.uid}`; tr.querySelector('.group').title = `GID ${it.gid}`; }
     tr.addEventListener('mousedown', e => { if (e.button === 0) selectRow(tab, it.name, e); });
     tr.addEventListener('dblclick', () => openEntry(tab, it));
     tr.addEventListener('contextmenu', e => {

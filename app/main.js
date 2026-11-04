@@ -13,6 +13,7 @@ const transfers = require('./lib/transfers').create(() => win, {
 });
 const snippets = require('./lib/snippets');
 const monitor = require('./lib/monitor');
+const owners = require('./lib/owners');
 
 // Dieselben Dateien wie das Kommandozeilen-Tool myssh
 // S3CURE_CONFIG_DIR nur für Tests, sonst ~/.myssh
@@ -289,9 +290,10 @@ ipcMain.handle('sftp:list', async (_e, tabId, dir) => {
       const isLink = a.isSymbolicLink();
       let isDir = a.isDirectory();
       if (isLink) { try { isDir = (await p(cb => sftp.stat(posix.join(abs, item.filename), cb))).isDirectory(); } catch {} }
-      return { name: item.filename, isDir, isLink, size: a.size, mtime: a.mtime * 1000, mode: modeString(a.mode, isDir, isLink) };
+      return { name: item.filename, isDir, isLink, size: a.size, mtime: a.mtime * 1000, mode: modeString(a.mode, isDir, isLink), uid: a.uid, gid: a.gid, longname: item.longname };
     }));
     entries.sort((x, y) => (y.isDir - x.isDir) || x.name.localeCompare(y.name, 'de', { sensitivity: 'base' }));
+    await owners.annotate(sessions.get(tabId), entries); // Besitzer/Gruppe als Namen (app/lib/owners.js)
     return { path: abs, entries };
   } catch (err) { throw sftpError(err, abs || dir); }
 });
