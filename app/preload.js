@@ -34,3 +34,22 @@ contextBridge.exposeInMainWorld('myssh', {
   onAsk: cb => ipcRenderer.on('ask', (_e, req) => cb(req)),
   answer: (reqId, value) => ipcRenderer.send('ask-answer', reqId, value),
 });
+
+// Tunnel (app/lib/tunnels.js, Oberfläche: src/tunnels.js)
+contextBridge.exposeInMainWorld('s3tunnels', {
+  status: tabId => ipcRenderer.invoke('tunnels:status', tabId),
+  start: (tabId, id) => ipcRenderer.invoke('tunnels:start', tabId, id),
+  stop: (tabId, id) => ipcRenderer.invoke('tunnels:stop', tabId, id),
+  save: (hostName, tunnel) => ipcRenderer.invoke('tunnels:save', hostName, tunnel),
+  remove: (hostName, id) => ipcRenderer.invoke('tunnels:delete', hostName, id),
+  open: (tabId, id) => ipcRenderer.invoke('tunnels:open', tabId, id),
+  onStatus: cb => ipcRenderer.on('tunnels:status', (_e, tabId, st) => cb(tabId, st)),
+});
+
+// Hinweis auf neue Version (app/lib/update-check.js, Oberfläche: src/update-notice.js)
+contextBridge.exposeInMainWorld('s3update', {
+  check: () => ipcRenderer.invoke('update:check'),
+  dismiss: version => ipcRenderer.invoke('update:dismiss', version),
+  disable: () => ipcRenderer.invoke('update:disable'),
+  open: () => ipcRenderer.invoke('update:open'),
+});

@@ -5,6 +5,8 @@ const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
 const { Client, utils } = require('ssh2');
+const { createTunnelManager } = require('./lib/tunnels');
+const { setupUpdateCheck } = require('./lib/update-check');
 
 // Dieselben Dateien wie das Kommandozeilen-Tool myssh
 // S3CURE_CONFIG_DIR nur für Tests, sonst ~/.myssh
@@ -310,7 +312,8 @@ ipcMain.handle('ssh:connect', (_e, tabId, spec, cols, rows) => {
       if (spec.name && auth.pending != null) writePassword(spec.name, auth.pending);
       client.shell({ term: 'xterm-256color', cols, rows }, (err, stream) => {
         if (err) return fail(err);
-        sessions.set(tabId, { client, stream });
+        sessions.set(tabId, { client, stream, hostName: spec.name || null });
+        tunnels.onConnected(tabId);
         stream.on('data', d => win && !win.isDestroyed() && win.webContents.send('ssh:data', tabId, d));
         stream.stderr.on('data', d => win && !win.isDestroyed() && win.webContents.send('ssh:data', tabId, d));
         stream.on('close', () => {
@@ -344,6 +347,7 @@ ipcMain.handle('ssh:connect', (_e, tabId, spec, cols, rows) => {
 
 function closeSession(tabId) {
   stopSearch(tabId);
+  tunnels.stopAll(tabId);
   const s = sessions.get(tabId);
   if (s) { sessions.delete(tabId); s.client.end(); }
 }
@@ -634,8 +638,9 @@ ipcMain.on('search:cancel', (_e, tabId) => stopSearch(tabId));
 ipcMain.handle('hosts:list', () => hostsForUi());
 ipcMain.handle('hosts:save', (_e, name, host, oldName) => {
   const hosts = loadHosts();
+  const prev = hosts[oldName || name] || {}; // weitere Felder (z. B. Tunnel) behalten
   if (oldName && oldName !== name) { delete hosts[oldName]; renamePassword(oldName, name); }
-  hosts[name] = { user: host.user || os.userInfo().username, host: host.host, port: Number(host.port) || 22, key: host.key || null };
+  hosts[name] = { ...prev, user: host.user || os.userInfo().username, host: host.host, port: Number(host.port) || 22, key: host.key || null };
   saveHosts(hosts);
   if (host.forgetPassword) removePassword(name);
   if (host.password) {
@@ -657,6 +662,13 @@ ipcMain.handle('pick-key', async () => {
   });
   return r.canceled ? null : r.filePaths[0].replace(os.homedir(), '~');
 });
+
+// ---------- Tunnel & Update-Hinweis (eigene Dateien in lib/) ----------
+
+const tunnels = createTunnelManager({
+  ipcMain, shell, getWin: () => win, getSession: id => sessions.get(id), loadHosts, saveHosts,
+});
+setupUpdateCheck({ ipcMain, shell, app, configDir: CONFIG_DIR });
 
 // ---------- Fenster ----------
 
