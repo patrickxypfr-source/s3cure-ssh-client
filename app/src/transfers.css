@@ -57,3 +57,6 @@
 /* Reihenfolge nur beim Drüberfahren zeigen – spart Platz */
 .transfer:not(:hover) .t-move { display: none; }
 @keyframes t-busy { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+
+/* Rückfrage „Datei gibt es schon“ (local-pane.js) mit zusätzlichem Knopf „Fortsetzen“ */
+.lp-conflict.can-resume { width: 580px; }

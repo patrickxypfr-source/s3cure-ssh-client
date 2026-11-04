@@ -691,6 +691,7 @@ window.LocalPane = (() => {
     modal.querySelector('[data-c=cancel]').addEventListener('click', () => done('cancel'));
     modal.querySelector('[data-c=skip]').addEventListener('click', () => done('skip'));
     modal.querySelector('[data-c=resume]').hidden = !info.canResume; // Teil-Datei weiterschreiben
+    modal.querySelector('.lp-conflict').classList.toggle('can-resume', !!info.canResume);
     modal.querySelector('[data-c=resume]').addEventListener('click', () => done('resume'));
     modal.querySelector('form').addEventListener('submit', e => { e.preventDefault(); done('overwrite'); });
     modal.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done('cancel'); } });
