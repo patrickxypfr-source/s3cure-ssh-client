@@ -40,4 +40,9 @@ contextBridge.exposeInMainWorld('myssh', {
   onProgress: cb => ipcRenderer.on('sftp:progress', (_e, id, label, pct) => cb(id, label, pct)),
   onAsk: cb => ipcRenderer.on('ask', (_e, req) => cb(req)),
   answer: (reqId, value) => ipcRenderer.send('ask-answer', reqId, value),
+
+  lockStatus: () => ipcRenderer.invoke('lock:status'),
+  unlock: password => ipcRenderer.invoke('lock:unlock', password),
+  unlockTouchId: () => ipcRenderer.invoke('lock:touchid'),
+  configureLock: opts => ipcRenderer.invoke('lock:configure', opts),
 });

@@ -18,6 +18,7 @@ const IS_MAC = PLATFORM === 'darwin';
 const { createConnection } = require('./lib/connection');
 const { createSecretStore } = require('./lib/secrets');
 const { hostExtras, updateJumpRefs } = require('./lib/hosts-extra');
+const { createAppLock } = require('./lib/applock');
 const DEFAULT_KEYS = ['id_ed25519', 'id_ecdsa', 'id_rsa'].map(k => path.join(os.homedir(), '.ssh', k));
 
 let win;
@@ -529,6 +530,15 @@ ipcMain.handle('pick-key', async () => {
   return r.canceled ? null : r.filePaths[0].replace(os.homedir(), '~');
 });
 
+// ---------- App-Sperre (app/lib/applock.js) ----------
+
+const appLock = createAppLock({ configDir: CONFIG_DIR, isMac: IS_MAC });
+appLock.register(ipcMain, {
+  onUnlocked: () => {
+    if (win && !win.isDestroyed() && win.webContents.getURL().endsWith('lock.html')) win.loadFile(path.join(__dirname, 'src', 'index.html'));
+  },
+});
+
 // ---------- Fenster ----------
 
 function titleBarColors() {
@@ -547,7 +557,8 @@ function createWindow() {
       : { titleBarStyle: 'hidden', titleBarOverlay: titleBarColors() }),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
-  win.loadFile(path.join(__dirname, 'src', 'index.html'));
+  // App-Sperre an: erst src/lock.html, nach dem Entsperren die Oberfläche
+  win.loadFile(path.join(__dirname, 'src', appLock.isLocked() ? 'lock.html' : 'index.html'));
   // Links aus dem Terminal im normalen Browser öffnen, nicht in der App
   win.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
   win.on('closed', () => { for (const id of [...sessions.keys()]) closeSession(id); win = null; });
