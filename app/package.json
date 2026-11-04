@@ -8,9 +8,11 @@
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "build": "electron-packager . \"S3cure SSH Client\" --platform=darwin --arch=arm64 --out=../dist --overwrite --app-bundle-id=local.s3cure.sshclient --icon=icon.icns --ignore=\"^/(assets|tools|build)\" --ignore=\"/node_modules/(cpu-features|buildcheck|nan)(/|$)\" && node tools/zip.mjs \"../dist/S3cure SSH Client-darwin-arm64/S3cure SSH Client.app\" ../dist/S3cure-SSH-Client-Mac-AppleSilicon.zip && node tools/mac-dmg.mjs arm64",
-    "build:mac-intel": "electron-packager . \"S3cure SSH Client\" --platform=darwin --arch=x64 --out=../dist --overwrite --app-bundle-id=local.s3cure.sshclient --icon=icon.icns --ignore=\"^/(assets|tools|build)\" --ignore=\"/node_modules/(cpu-features|buildcheck|nan)(/|$)\" && node tools/zip.mjs \"../dist/S3cure SSH Client-darwin-x64/S3cure SSH Client.app\" ../dist/S3cure-SSH-Client-Mac-Intel.zip && node tools/mac-dmg.mjs x64",
-    "build:win": "electron-packager . \"S3cure SSH Client\" --platform=win32 --arch=x64 --out=../dist --overwrite --ignore=\"^/(assets|tools|build)\" --ignore=\"/node_modules/(cpu-features|buildcheck|nan)(/|$)\" && node tools/win-finish.mjs && node tools/win-installers.mjs",
+    "test": "node --test \"test/unit/*.test.js\"",
+    "test:integration": "node --test --test-concurrency=1 \"test/integration/*.test.mjs\"",
+    "build": "electron-packager . \"S3cure SSH Client\" --platform=darwin --arch=arm64 --out=../dist --overwrite --app-bundle-id=local.s3cure.sshclient --icon=icon.icns --ignore=\"^/(assets|tools|build|test)\" --ignore=\"/node_modules/(cpu-features|buildcheck|nan)(/|$)\" && node tools/zip.mjs \"../dist/S3cure SSH Client-darwin-arm64/S3cure SSH Client.app\" ../dist/S3cure-SSH-Client-Mac-AppleSilicon.zip && node tools/mac-dmg.mjs arm64",
+    "build:mac-intel": "electron-packager . \"S3cure SSH Client\" --platform=darwin --arch=x64 --out=../dist --overwrite --app-bundle-id=local.s3cure.sshclient --icon=icon.icns --ignore=\"^/(assets|tools|build|test)\" --ignore=\"/node_modules/(cpu-features|buildcheck|nan)(/|$)\" && node tools/zip.mjs \"../dist/S3cure SSH Client-darwin-x64/S3cure SSH Client.app\" ../dist/S3cure-SSH-Client-Mac-Intel.zip && node tools/mac-dmg.mjs x64",
+    "build:win": "electron-packager . \"S3cure SSH Client\" --platform=win32 --arch=x64 --out=../dist --overwrite --ignore=\"^/(assets|tools|build|test)\" --ignore=\"/node_modules/(cpu-features|buildcheck|nan)(/|$)\" && node tools/win-finish.mjs && node tools/win-installers.mjs",
     "build:all": "npm run build && npm run build:mac-intel && npm run build:win",
     "smoke-test": "node tools/smoke-test.mjs"
   },
