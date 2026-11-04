@@ -17,6 +17,7 @@ const PLATFORM = process.env.S3CURE_PLATFORM || process.platform;
 const IS_MAC = PLATFORM === 'darwin';
 const { createConnection } = require('./lib/connection');
 const { createSecretStore } = require('./lib/secrets');
+const { hostExtras, updateJumpRefs } = require('./lib/hosts-extra');
 const DEFAULT_KEYS = ['id_ed25519', 'id_ecdsa', 'id_rsa'].map(k => path.join(os.homedir(), '.ssh', k));
 
 let win;
@@ -500,8 +501,8 @@ ipcMain.on('search:cancel', (_e, tabId) => stopSearch(tabId));
 ipcMain.handle('hosts:list', () => hostsForUi());
 ipcMain.handle('hosts:save', (_e, name, host, oldName) => {
   const hosts = loadHosts();
-  if (oldName && oldName !== name) { delete hosts[oldName]; renamePassword(oldName, name); }
-  hosts[name] = { user: host.user || os.userInfo().username, host: host.host, port: Number(host.port) || 22, key: host.key || null };
+  if (oldName && oldName !== name) { delete hosts[oldName]; renamePassword(oldName, name); updateJumpRefs(hosts, oldName, name); }
+  hosts[name] = { user: host.user || os.userInfo().username, host: host.host, port: Number(host.port) || 22, key: host.key || null, ...hostExtras(host) };
   saveHosts(hosts);
   if (host.forgetPassword) removePassword(name);
   if (host.password) {
@@ -512,10 +513,14 @@ ipcMain.handle('hosts:save', (_e, name, host, oldName) => {
 ipcMain.handle('hosts:delete', (_e, name) => {
   const hosts = loadHosts();
   delete hosts[name];
+  updateJumpRefs(hosts, name, null);
   saveHosts(hosts);
   removePassword(name);
   return hostsForUi();
 });
+// Import aus ~/.ssh/config und SSH-Schlüssel: app/lib/sshconfig.js, app/lib/keys.js
+require('./lib/sshconfig').register(ipcMain, { loadHosts, saveHosts });
+require('./lib/keys').register(ipcMain, { connection, loadHosts, saveHosts, passphrases });
 ipcMain.handle('pick-key', async () => {
   const r = await dialog.showOpenDialog(win, {
     title: 'Privaten Schlüssel wählen', defaultPath: path.join(os.homedir(), '.ssh'),

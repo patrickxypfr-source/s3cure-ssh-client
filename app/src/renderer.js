@@ -51,28 +51,30 @@ function renderHosts() {
   list.innerHTML = '';
   const names = Object.keys(hosts).sort((a, b) => a.localeCompare(b));
   $('#host-empty').hidden = names.length > 0;
-  for (const name of names) {
-    const h = hosts[name];
-    const li = document.createElement('li');
-    const connected = [...tabs.values()].some(t => t.spec.name === name && t.state === 'open');
-    li.innerHTML = `
-      <span class="host-avatar">${icon('server')}<span class="host-dot ${connected ? 'on' : ''}"></span></span>
-      <div class="host-text"><div class="host-name"><span class="host-name-text"></span>${h.hasPassword ? `<span class="pw-badge" title="Passwort gespeichert">${icon('lock')}</span>` : ''}</div><div class="host-addr"></div></div>
-      <div class="host-actions">
-        <button class="mini-btn" data-act="files" title="Dateien öffnen (SFTP)">${icon('folder')}</button>
-        <button class="mini-btn" data-act="edit" title="Bearbeiten">${icon('edit')}</button>
-        <button class="mini-btn danger" data-act="delete" title="Löschen">${icon('trash')}</button>
-      </div>`;
-    if (connected) li.classList.add('connected');
-    li.querySelector('.host-name-text').textContent = name;
-    li.querySelector('.host-addr').textContent = `${h.user}@${h.host}${h.port !== 22 ? ':' + h.port : ''}`;
-    li.title = 'Doppelklick zum Verbinden';
-    li.addEventListener('dblclick', () => openTab({ name }, name));
-    li.querySelector('[data-act=files]').addEventListener('click', e => { e.stopPropagation(); openTab({ name }, name, 'files'); });
-    li.querySelector('[data-act=edit]').addEventListener('click', e => { e.stopPropagation(); editHost(name); });
-    li.querySelector('[data-act=delete]').addEventListener('click', e => { e.stopPropagation(); deleteHost(name); });
-    list.appendChild(li);
-  }
+  renderHostGroups(list, names, hostItem); // Suche, Gruppen, Farben: hosts-extra.js
+}
+
+function hostItem(name) {
+  const h = hosts[name];
+  const li = document.createElement('li');
+  const connected = [...tabs.values()].some(t => t.spec.name === name && t.state === 'open');
+  li.innerHTML = `
+    <span class="host-avatar">${icon('server')}<span class="host-dot ${connected ? 'on' : ''}"></span></span>
+    <div class="host-text"><div class="host-name"><span class="host-name-text"></span>${h.hasPassword ? `<span class="pw-badge" title="Passwort gespeichert">${icon('lock')}</span>` : ''}</div><div class="host-addr"></div></div>
+    <div class="host-actions">
+      <button class="mini-btn" data-act="files" title="Dateien öffnen (SFTP)">${icon('folder')}</button>
+      <button class="mini-btn" data-act="edit" title="Bearbeiten">${icon('edit')}</button>
+      <button class="mini-btn danger" data-act="delete" title="Löschen">${icon('trash')}</button>
+    </div>`;
+  if (connected) li.classList.add('connected');
+  li.querySelector('.host-name-text').textContent = name;
+  li.querySelector('.host-addr').textContent = `${h.user}@${h.host}${h.port !== 22 ? ':' + h.port : ''}`;
+  li.title = 'Doppelklick zum Verbinden';
+  li.addEventListener('dblclick', () => openTab({ name }, name));
+  li.querySelector('[data-act=files]').addEventListener('click', e => { e.stopPropagation(); openTab({ name }, name, 'files'); });
+  li.querySelector('[data-act=edit]').addEventListener('click', e => { e.stopPropagation(); editHost(name); });
+  li.querySelector('[data-act=delete]').addEventListener('click', e => { e.stopPropagation(); deleteHost(name); });
+  return li;
 }
 
 // ---------- Verbindung anlegen / bearbeiten ----------
@@ -101,6 +103,7 @@ function editHost(name) {
     form.user.value = h.user;
     form.key.value = h.key || '';
   }
+  fillHostExtras(form, name); // Gruppe, Farbe, Sprung-Server: hosts-extra.js
   forgetPassword = false;
   const saved = !!(name && hosts[name].hasPassword);
   form.password.placeholder = saved ? '•••••••• gespeichert – leer lassen zum Behalten' : 'Wird beim ersten Verbinden abgefragt';
@@ -120,7 +123,7 @@ $('#host-form').addEventListener('submit', async e => {
   try {
     hosts = await api.saveHost(name, {
       host: f.host.value.trim(), port: f.port.value, user: f.user.value.trim(), key: f.key.value.trim(),
-      password: f.password.value, forgetPassword,
+      password: f.password.value, forgetPassword, ...readHostExtras(f),
     }, editingName);
   } catch (err) { showError(err); return; }
   f.password.value = '';
@@ -134,7 +137,9 @@ $('#pick-key').addEventListener('click', async () => {
 });
 
 async function deleteHost(name) {
-  const ok = await askLocal({ kind: 'confirm', title: 'Verbindung löschen', message: `„${name}“ wirklich löschen?`, okLabel: 'Löschen', danger: true });
+  const users = jumpUsers(name); // hosts-extra.js
+  const ok = await askLocal({ kind: 'confirm', title: 'Verbindung löschen', message: `„${name}“ wirklich löschen?`, okLabel: 'Löschen', danger: true,
+    detail: users.length ? `Wird als Sprung-Server benutzt von: ${users.join(', ')}.\nDiese verbinden danach direkt.` : '' });
   if (!ok) return;
   hosts = await api.deleteHost(name);
   renderHosts();
@@ -1039,6 +1044,7 @@ function nextAsk() {
   $('#ask-cancel').hidden = req.kind === 'info';
   $('#ask-remember-wrap').hidden = !req.remember;
   $('#ask-remember').checked = true;
+  $('#ask-remember-text').textContent = req.rememberLabel || 'Passwort merken (verschlüsselt)';
   $('#ask-ok').textContent = req.okLabel || 'OK';
   $('#ask-ok').className = 'btn ' + (req.danger ? 'danger' : 'primary');
   $('#ask-modal').hidden = false;
@@ -1070,5 +1076,6 @@ document.addEventListener('keydown', e => {
 // Fragen vom Hauptprozess (Passwort, Host-Key)
 api.onAsk(async req => api.answer(req.reqId, await askLocal(req)));
 
-refreshHosts();
+// Erst laden, wenn auch die Zusatz-Skripte (hosts-extra.js, …) bereit sind
+window.addEventListener('DOMContentLoaded', () => refreshHosts());
 activate(null);

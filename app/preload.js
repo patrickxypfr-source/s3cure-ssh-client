@@ -8,6 +8,11 @@ contextBridge.exposeInMainWorld('myssh', {
   saveHost: (name, host, oldName) => ipcRenderer.invoke('hosts:save', name, host, oldName),
   deleteHost: name => ipcRenderer.invoke('hosts:delete', name),
   pickKey: () => ipcRenderer.invoke('pick-key'),
+  sshConfigScan: () => ipcRenderer.invoke('sshconfig:scan'),
+  sshConfigImport: () => ipcRenderer.invoke('sshconfig:import'),
+  keyStatus: () => ipcRenderer.invoke('keys:status'),
+  keyGenerate: (passphrase, remember) => ipcRenderer.invoke('keys:generate', passphrase, remember),
+  keyInstall: name => ipcRenderer.invoke('keys:install', name),
 
   connect: (id, spec, cols, rows) => ipcRenderer.invoke('ssh:connect', id, spec, cols, rows),
   write: (id, data) => ipcRenderer.send('ssh:write', id, data),
