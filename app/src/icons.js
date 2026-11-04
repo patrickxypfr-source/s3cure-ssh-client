@@ -34,7 +34,8 @@ function applyIcons(root = document) {
   }
 }
 
-// Icons für die Befehlsknöpfe (quickbar.js) – auch im Knopf-Dialog auswählbar
+// Icons für die Befehlsknöpfe (quickbar.js) – auch im Knopf-Dialog auswählbar.
+// key, gear, globe kommen aus files-extra.js, settings.js, tunnels.js.
 Object.assign(ICON_PATHS, (CIRCLE => ({
   pulse: 'M3 12h4l2.5-6 4 12 2.5-6H21',
   check: 'M5 12.5l4.5 4.5L19 7',
@@ -53,13 +54,10 @@ Object.assign(ICON_PATHS, (CIRCLE => ({
   hammer: 'M12.9 4.1l7.1 7.1-2.9 2.8-7-7.1z M13.6 10.4L4.5 19.5',
   archive: 'M4 4.5h16A1 1 0 0 1 21 5.5v2.5A1 1 0 0 1 20 9H4a1 1 0 0 1-1-1V5.5a1 1 0 0 1 1-1z M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9 M10 13h4',
   undo: 'M9 14L4 9l5-5 M4 9h10.5a5.5 5.5 0 0 1 0 11H11',
-  gear: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z M12 5a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M12 2.5V5 M12 19v2.5 M2.5 12H5 M19 12h2.5 M5.3 5.3l1.7 1.7 M17 17l1.7 1.7 M5.3 18.7L7 17 M17 7l1.7-1.7',
   sliders: 'M4 6h10 M18 6h2 M16 4v4 M4 12h2 M10 12h10 M8 10v4 M4 18h11 M19 18h1 M17 16v4',
-  key: 'M7.5 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z M7.5 11.2v1.6 M12.5 12H21 M17.5 12v3.5 M21 12v3',
   database: 'M12 3c4.4 0 8 1.3 8 3s-3.6 3-8 3-8-1.3-8-3 3.6-3 8-3z M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6 M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
   container: 'M12 3l8 4.5v9L12 21l-8-4.5v-9z M4 7.5l8 4.5 8-4.5 M12 12v9',
   layers: 'M12 3.5l8.5 4.5-8.5 4.5L3.5 8z M3.5 12l8.5 4.5 8.5-4.5 M3.5 16l8.5 4.5 8.5-4.5',
-  globe: CIRCLE + ' M3 12h18 M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9 M12 3c-2.5 2.5-3.8 5.5-3.8 9s1.3 6.5 3.8 9',
   network: 'M9.5 3h5v5h-5z M3 16h5v5H3z M16 16h5v5h-5z M12 8v4 M5.5 16v-2a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v2',
   wifi: 'M2.5 9a14 14 0 0 1 19 0 M5.5 12.5a9.5 9.5 0 0 1 13 0 M8.8 16a4.5 4.5 0 0 1 6.4 0 M12 19.5h.01',
   hardDrive: 'M3 13l2.5-7.5A2 2 0 0 1 7.4 4h9.2a2 2 0 0 1 1.9 1.5L21 13 M3 13v4.5A2.5 2.5 0 0 0 5.5 20h13a2.5 2.5 0 0 0 2.5-2.5V13z M7 16.5h.01 M11 16.5h.01',
@@ -81,6 +79,3 @@ Object.assign(ICON_PATHS, (CIRCLE => ({
   bell: 'M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z M10 20.5a2 2 0 0 0 4 0',
   star: 'M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z',
 }))('M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z'));
-
-// Hauptprozess (app/lib/snippets.js) prüft Icon-Namen gegen diese Liste
-if (typeof module !== 'undefined' && module.exports) module.exports = { ICON_PATHS };

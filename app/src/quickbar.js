@@ -80,7 +80,7 @@ const Quickbar = (() => {
   // ---------- Icons ----------
 
   // Suchwörter (deutsch) für die Icon-Auswahl; das erste Wort ist der Name im Tooltip.
-  // Reihenfolge = Reihenfolge im Raster. Weitere Icons aus icons.js erscheinen danach.
+  // Reihenfolge = Reihenfolge im Raster. Nur diese Icons stehen zur Auswahl.
   const ICON_WORDS = {
     pulse: 'Status Puls Aktivität', checkCircle: 'Check Prüfen Gesundheit OK', check: 'Häkchen Prüfen OK',
     sync: 'Update Aktualisieren Synchronisieren', layers: 'Alles Ebenen Stapel', refresh: 'Neu laden Aktualisieren',
@@ -101,10 +101,14 @@ const Quickbar = (() => {
     search: 'Suche Suchen Finden', alert: 'Warnung Achtung Fehler', info: 'Info Information Hinweis', help: 'Hilfe Frage',
     bell: 'Glocke Benachrichtigung Alarm', star: 'Stern Favorit', bolt: 'Blitz Schnell Aktion',
     file: 'Datei Dokument', folder: 'Ordner Verzeichnis', link: 'Link Verknüpfung URL', home: 'Home Haus Start', edit: 'Stift Bearbeiten Editor',
+    save: 'Speichern Diskette', copy: 'Kopieren', eye: 'Ansehen Auge Anzeigen', zip: 'ZIP Packen Komprimieren', tunnel: 'Tunnel Weiterleitung Port',
   };
-  const UI_ONLY = new Set(['close', 'down', 'up', 'rename', 'plus', 'folderPlus']); // nur für die Oberfläche
   const hasIcon = name => typeof name === 'string' && Object.hasOwn(ICON_PATHS, name);
-  const iconNames = () => [...new Set([...Object.keys(ICON_WORDS), ...Object.keys(ICON_PATHS)])].filter(n => hasIcon(n) && !UI_ONLY.has(n));
+  const iconNames = () => Object.keys(ICON_WORDS).filter(hasIcon);
+  // Unbekannte Icons (z. B. aus einer Datei von einer neueren Version) beim Import weglassen
+  const dropUnknownIcons = groups => groups.map(g => ({ ...g, items: g.items.map(function fix(it) {
+    return { ...it, icon: hasIcon(it.icon) ? it.icon : '', ...(it.items ? { items: it.items.map(fix) } : {}) };
+  }) }));
   const iconTitle = name => (ICON_WORDS[name] || name).split(' ')[0];
 
   // Inhalt eines Knopfs: [Icon] Text [Pfeil bei Menüs]
@@ -537,7 +541,7 @@ const Quickbar = (() => {
   async function importFile(key) {
     let groups;
     try { groups = await api.snippetsImport(); } catch (err) { showError(err); return; }
-    if (groups) await applyGroups(key, groups, 'Knöpfe importieren');
+    if (groups) await applyGroups(key, dropUnknownIcons(groups), 'Knöpfe importieren');
   }
 
   // ---------- Dialoge ----------

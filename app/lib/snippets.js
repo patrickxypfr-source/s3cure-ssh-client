@@ -13,10 +13,9 @@ const FORMAT = 's3cure-befehle';
 const KINDS = ['ref', 'number', 'text'];
 const PLACEHOLDER = /(?<!\$)\{([\p{L}_][\p{L}\p{N}_-]*)\}/gu;
 
-// Gültige Icon-Namen – unbekannte (z. B. aus einem Import) werden verworfen
-let ICON_NAMES = new Set();
-try { ICON_NAMES = new Set(Object.keys(require('../src/icons.js').ICON_PATHS)); } catch { /* ohne Icons weiter */ }
-const cleanIcon = v => (typeof v === 'string' && ICON_NAMES.has(v) ? v : '');
+// Icon-Name: nur die Form wird hier geprüft. Die Icons selbst liegen in der Oberfläche
+// (icons.js und weitere Dateien); dort werden unbekannte Namen ignoriert.
+const cleanIcon = v => (typeof v === 'string' && /^[a-zA-Z][a-zA-Z0-9]{0,39}$/.test(v) ? v : '');
 
 const str = (v, max) => (typeof v === 'string' ? v : v == null ? '' : String(v)).slice(0, max);
 const id = v => (typeof v === 'string' && /^[\w-]{1,64}$/.test(v) ? v : crypto.randomUUID());
@@ -112,7 +111,7 @@ function addTemplateIcons(groups) {
       } else if (!/\n/.test(it.cmd.trim())) {
         name = TEMPLATE_ICONS[it.cmd.trim().replace(/\s+/g, ' ')] || TEMPLATE_MENU_ICONS[cmdKey(it.cmd)] || '';
       }
-      if (name && ICON_NAMES.has(name)) { it.icon = name; changed++; }
+      if (name) { it.icon = name; changed++; }
     }
   }
   return changed;
