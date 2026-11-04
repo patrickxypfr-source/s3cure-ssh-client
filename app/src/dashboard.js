@@ -219,7 +219,8 @@ window.Dashboard = (() => {
     return c;
   }
 
-  function renderSystem(st) {
+  // cardsOnly: nur die großen Kennzahlen (Takt alle 2,5 s) – Listen bleiben stehen, damit Klicks nicht verloren gehen
+  function renderSystem(st, cardsOnly = false) {
     const s = sec(st, 'system');
     const m = st.tab.monitorStats;
     const sys = st.system || {};
@@ -245,6 +246,7 @@ window.Dashboard = (() => {
       if (m.uptime != null) cards.appendChild(card('Läuft seit', uptimeLong(m.uptime), m.at ? `Stand ${new Date(m.at).toLocaleTimeString('de-DE')} · alle 5 Sek.` : ''));
     }
     cards.hidden = !cards.children.length;
+    if (cardsOnly) return;
 
     const dl = s.querySelector('.dash-info dl');
     dl.innerHTML = '';
@@ -591,7 +593,7 @@ window.Dashboard = (() => {
   function startTimers(st) {
     if (!st.timer) st.timer = setInterval(() => { if (!document.hidden && st.sec !== 'system') refresh(st); }, REFRESH);
     // Systemwerte kommen von der Leiste (monitor.js, alle 5 s) – nur neu zeichnen
-    if (!st.sysTimer) st.sysTimer = setInterval(() => { if (st.sec === 'system' && st.probe && !st.du?.running) renderSystem(st); }, 2500);
+    if (!st.sysTimer) st.sysTimer = setInterval(() => { if (st.sec === 'system' && st.probe && !st.root.hidden) renderSystem(st, true); }, 2500);
   }
   function stopTimers(st) {
     clearInterval(st.timer); clearInterval(st.sysTimer);
