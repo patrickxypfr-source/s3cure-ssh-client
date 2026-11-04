@@ -110,6 +110,9 @@ $('#host-search').addEventListener('keydown', e => {
 
 // ---------- Host-Dialog: Gruppe, Farbe, Sprung-Server ----------
 
+// Weitere Felder im Host-Dialog: hostFormHooks.push({ fill(form, name), read(form) => {…} }) (z. B. src/conn-pro.js)
+const hostFormHooks = [];
+
 let pickedColor = '';
 
 function renderColorPick() {
@@ -144,10 +147,13 @@ function fillHostExtras(form, name) {
   pickedColor = h.color || '';
   renderColorPick();
   $('#setup-key').hidden = !name;
+  for (const h of hostFormHooks) h.fill?.(form, name, h);
 }
 
 function readHostExtras(form) {
-  return { group: form.group.value.trim(), color: pickedColor, jump: form.jump.value };
+  const out = { group: form.group.value.trim(), color: pickedColor, jump: form.jump.value };
+  for (const h of hostFormHooks) Object.assign(out, h.read?.(form) || {});
+  return out;
 }
 
 // Hinweis beim Löschen, wenn andere Verbindungen diese als Sprung-Server nutzen
