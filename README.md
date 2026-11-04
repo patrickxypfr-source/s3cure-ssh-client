@@ -36,17 +36,19 @@ Fertige Versionen gibt es unter **[Releases](../../releases/latest)**:
 ## Funktionen
 
 ### Terminal
-- Mehrere Verbindungen in Tabs, helles und dunkles Design
+- Mehrere Verbindungen in Tabs, helles und dunkles Design, einklappbare Seitenleiste (Cmd/Strg+B)
+- Zeigt unten links die eigene Version – und deutlich „Veraltet“, sobald es eine neuere gibt
 - **Automatisch neu verbinden** nach WLAN-Wechsel oder Ruhezustand
 - Suche im Terminal (Cmd/Strg+F), anklickbare Links, Schriftgröße per Cmd/Strg +/−
 - Geteilte Ansicht: zwei Terminals nebeneinander
 - Mitschnitt einer Sitzung als Textdatei
 - „An alle senden“: Eingaben gleichzeitig an mehrere Server
-- Eigene **Befehlsknöpfe** pro Server – mit Rückfrage, Eingabefeldern (`{name}`), Menüs, Export/Import
+- Eigene **Befehlsknöpfe** pro Server mit Icons – mit Rückfrage, Eingabefeldern (`{name}`), Menüs, Export/Import
 - Hilfsleiste für `nano` (Speichern & schließen per Klick)
 
 ### Dateien (SFTP)
-- Dateibrowser mit Hochladen (auch per Drag & Drop), Herunterladen, Umbenennen, Löschen
+- Dateibrowser mit Hochladen, Herunterladen, Umbenennen, Löschen
+- **„Mein Computer“** daneben: eigene Dateien und Server-Dateien nebeneinander, per Ziehen & Ablegen in beide Richtungen kopieren
 - **Geteilte Ansicht „Mein Computer“** wie bei FileZilla: eigene Dateien links, Server rechts – Dateien und ganze Ordner einfach hin- und herziehen, mit Rückfrage vor dem Überschreiben
 - **Eingebauter Editor** – Dateien direkt auf dem Server bearbeiten, Cmd/Strg+S speichert
 - Vorschau für Bilder und Text (Leertaste)
@@ -69,7 +71,7 @@ Fertige Versionen gibt es unter **[Releases](../../releases/latest)**:
 
 ## Datenschutz
 
-Alles bleibt auf deinem Rechner. Verbindungen und Einstellungen liegen in `~/.myssh`, Passwörter verschlüsselt über das Betriebssystem. Die App nimmt nur Verbindung zu deinen Servern auf – und, falls nicht abgeschaltet, einmal täglich zu GitHub, um nach einer neuen Version zu schauen.
+Alles bleibt auf deinem Rechner. Verbindungen und Einstellungen liegen in `~/.myssh`, Passwörter verschlüsselt über das Betriebssystem. Die App nimmt nur Verbindung zu deinen Servern auf – und höchstens einmal pro Stunde zu GitHub, um nach einer neuen Version zu schauen.
 
 ## Selbst bauen
 

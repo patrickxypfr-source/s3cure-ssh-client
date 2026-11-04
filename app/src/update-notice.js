@@ -1,28 +1,45 @@
-// S3cure SSH Client – dezenter Hinweis auf eine neue Version (unten in der Seitenleiste)
-// Die Prüfung (höchstens 1x täglich) macht app/lib/update-check.js.
+// S3cure SSH Client – Versionsanzeige unten in der Seitenleiste.
+// Immer sichtbar: die eigene Version. Gibt es auf GitHub eine neuere, steht dort deutlich
+// „Veraltet“ mit beiden Versionsnummern und einem Knopf zum Herunterladen.
+// Die Abfrage macht app/lib/update-check.js (höchstens einmal pro Stunde bei GitHub).
 (() => {
   const api = window.s3update;
   if (!api) return;
+  const RECHECK = 60 * 60 * 1000; // stündlich nachsehen, solange die App läuft
 
-  async function show() {
-    const info = await api.check().catch(() => null);
-    if (!info) return;
-    const box = document.createElement('div');
-    box.id = 'update-notice';
-    box.innerHTML = `
-      <div class="un-title"></div>
-      <div class="un-links">
-        <button type="button" class="un-get">Herunterladen</button>
-        <button type="button" class="un-later">Später</button>
-        <button type="button" class="un-off" title="Nicht mehr nach neuen Versionen suchen">Nicht mehr prüfen</button>
-      </div>`;
-    box.querySelector('.un-title').textContent = `Version ${info.version} ist da (du hast ${info.current})`;
-    box.querySelector('.un-get').addEventListener('click', () => api.open());
-    box.querySelector('.un-later').addEventListener('click', () => { api.dismiss(info.version); box.remove(); });
-    box.querySelector('.un-off').addEventListener('click', () => { api.disable(); box.remove(); });
-    document.querySelector('#sidebar')?.appendChild(box);
+  const box = document.createElement('div');
+  box.id = 'app-version';
+  document.querySelector('#sidebar')?.appendChild(box);
+
+  function render(info) {
+    if (!info || !info.current) return;
+    if (info.outdated) {
+      // id „update-notice“: die eingeklappte Seitenleiste zeigt dann einen roten Punkt (layout.css)
+      box.id = 'update-notice';
+      box.className = 'outdated';
+      box.innerHTML = `
+        <div class="un-title">Veraltet – neue Version verfügbar</div>
+        <div class="un-versions">
+          <span>Deine Version <b class="un-cur"></b></span>
+          <span>Neueste <b class="un-new"></b></span>
+        </div>
+        <button type="button" class="un-get">Neue Version herunterladen</button>`;
+      box.querySelector('.un-cur').textContent = info.current;
+      box.querySelector('.un-new').textContent = info.latest;
+      box.querySelector('.un-get').addEventListener('click', () => api.open());
+      box.title = '';
+    } else {
+      box.id = 'app-version';
+      box.className = '';
+      box.textContent = `Version ${info.current}`;
+      box.title = info.latest ? 'Aktuell – das ist die neueste Version' : 'Neueste Version konnte nicht geprüft werden (offline?)';
+      if (info.latest) box.insertAdjacentHTML('beforeend', ' <span class="av-ok">· aktuell</span>');
+    }
   }
 
-  // Etwas später, damit der Start nicht gebremst wird
-  window.addEventListener('load', () => setTimeout(show, 3000));
+  const refresh = () => api.check().then(render).catch(() => {});
+  // Kurz nach dem Start, dann regelmäßig und wenn das Fenster wieder nach vorne kommt
+  window.addEventListener('load', () => setTimeout(refresh, 1500));
+  setInterval(refresh, RECHECK);
+  window.addEventListener('focus', refresh);
 })();

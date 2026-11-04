@@ -1,9 +1,9 @@
 // S3cure SSH Client – Hinweis auf neue Version (kein automatisches Update)
 //
-// Fragt höchstens einmal am Tag die neueste GitHub-Release-Version ab.
-// Das Repo ist privat: ohne Token antwortet GitHub mit 404 – dann passiert einfach nichts.
+// Fragt höchstens einmal pro Stunde die neueste GitHub-Release-Version ab.
+// Ohne Antwort (offline, Limit) bleibt der letzte bekannte Stand.
 // Einstellungen in ~/.myssh/update-check.json:
-//   { "enabled": true, "lastCheck": <ms>, "latest": {…}, "dismissed": "1.2.0", "token": "<optional>" }
+//   { "lastCheck": <ms>, "latest": {…}, "token": "<optional>" }
 // Token alternativ über die Umgebungsvariable S3CURE_UPDATE_TOKEN (nur Lesezugriff nötig).
 const fs = require('fs');
 const path = require('path');
@@ -12,7 +12,7 @@ const { net } = require('electron');
 const REPO = process.env.S3CURE_UPDATE_REPO || 'patrickxypfr-source/s3cure-ssh-client';
 // S3CURE_UPDATE_URL nur für Tests (lokaler Server statt GitHub)
 const API_URL = process.env.S3CURE_UPDATE_URL || `https://api.github.com/repos/${REPO}/releases/latest`;
-const DAY = 24 * 60 * 60 * 1000;
+const HOUR = 60 * 60 * 1000;
 
 // "v1.2.10" > "1.2.9"; Vorabversionen ("1.3.0-beta") zählen nicht
 function parseVersion(v) {
@@ -49,24 +49,27 @@ function setupUpdateCheck({ ipcMain, shell, app, configDir }) {
     return { version, url, name: String(data.name || '') };
   }
 
-  // Ergebnis für die Oberfläche: null = nichts anzeigen
+  // Ergebnis für die Oberfläche – immer mit der eigenen Version:
+  // { current, latest (oder null, wenn unbekannt), outdated }
+  // GitHub wird höchstens einmal pro Stunde gefragt (ohne Anmeldung erlaubt GitHub 60 Abfragen/Stunde).
   async function check() {
     const st = load();
-    if (st.enabled === false) return null;
-    if (!st.lastCheck || Date.now() - st.lastCheck > DAY || st.lastCheck > Date.now()) {
+    const current = app.getVersion();
+    if (!st.lastCheck || Date.now() - st.lastCheck > HOUR || st.lastCheck > Date.now()) {
       let latest = null;
       try { latest = await fetchLatest(process.env.S3CURE_UPDATE_TOKEN || st.token || null); } catch { latest = null; }
-      Object.assign(st, { lastCheck: Date.now(), latest });
+      // Keine Antwort (offline, Limit): letzten bekannten Stand behalten
+      Object.assign(st, { lastCheck: Date.now(), latest: latest || st.latest || null });
       try { save(st); } catch {}
     }
-    const latest = st.latest;
-    if (!latest || !isNewer(latest.version, app.getVersion()) || st.dismissed === latest.version) return null;
-    return { version: latest.version, current: app.getVersion() };
+    const latest = st.latest && parseVersion(st.latest.version) ? st.latest.version : null;
+    return { current, latest, outdated: !!latest && isNewer(latest, current) };
   }
 
-  ipcMain.handle('update:check', () => check().catch(() => null));
-  ipcMain.handle('update:dismiss', (_e, version) => { const st = load(); st.dismissed = String(version); save(st); });
-  ipcMain.handle('update:disable', () => { const st = load(); st.enabled = false; save(st); });
+  ipcMain.handle('update:check', () => check().catch(() => ({ current: app.getVersion(), latest: null, outdated: false })));
+  // Früher: Hinweis wegklicken/abschalten. Die Versionsanzeige ist jetzt immer da – Aufrufe ignorieren.
+  ipcMain.handle('update:dismiss', () => {});
+  ipcMain.handle('update:disable', () => {});
   ipcMain.handle('update:open', () => {
     const url = load().latest?.url;
     if (url && /^https:\/\/github\.com\//.test(url)) return shell.openExternal(url);

@@ -74,6 +74,7 @@ body.sb-collapsed #import-hosts,
 body.sb-collapsed .section-head > span:first-child,
 body.sb-collapsed #host-empty,
 body.sb-collapsed #update-notice,
+body.sb-collapsed #app-version,
 body.sb-collapsed .host-text,
 body.sb-collapsed .host-actions,
 body.sb-collapsed #host-list li.host-nohit { display: none !important; }
