@@ -1,0 +1,4 @@
+#!/bin/sh
+# Startet myssh mit der mitgelieferten Python-Umgebung
+DIR="$(cd "$(dirname "$0")" && pwd)"
+exec "$DIR/.venv/bin/python" "$DIR/myssh.py" "$@"

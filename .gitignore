@@ -1,0 +1,7 @@
+# Abhängigkeiten und Builds (werden neu erzeugt)
+node_modules/
+dist/
+.venv/
+__pycache__/
+*.pyc
+.DS_Store

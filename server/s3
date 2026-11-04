@@ -1,0 +1,239 @@
+#!/bin/bash
+# s3 – Verwaltung des S3cure-Servers (Bot + Panel)
+# Gleiche Befehle und Abläufe wie bisher, nur mit übersichtlicher Ausgabe.
+set -uo pipefail
+APP=/opt/s3cure
+BRANCH=main
+as() { sudo -u s3cure "$@"; }
+g() { as git -C "$APP" "$@"; }
+
+# ---------- Ausgabe-Helfer ----------
+if [ -t 1 ]; then
+  B=$'\e[1m'; DIM=$'\e[2m'; RED=$'\e[31m'; GRN=$'\e[32m'; YEL=$'\e[33m'; CYN=$'\e[36m'; N=$'\e[0m'
+else
+  B=; DIM=; RED=; GRN=; YEL=; CYN=; N=
+fi
+section() { printf '\n%s%s%s\n' "$B$CYN" "$1" "$N"; }          # Überschrift
+ok()      { printf '  %s✔%s %s\n' "$GRN" "$N" "$*"; }
+fail()    { printf '  %s✘%s %s\n' "$RED" "$N" "$*"; }
+step()    { printf '  %s→%s %s\n' "$DIM" "$N" "$*"; }
+row()     { printf '  %-14s %s\n' "$1" "$2"; }                  # Name  Wert
+indent()  { sed 's/^/    /'; }
+# Auffüllen nach Zeichen statt Bytes (ä, ö, ü) – unabhängig von der Spracheinstellung
+pad() {
+  local bytes cont
+  bytes=$(printf '%s' "$1" | LC_ALL=C wc -c)
+  cont=$(printf '%s' "$1" | LC_ALL=C tr -cd '\200-\277' | LC_ALL=C wc -c)
+  printf '%s%*s' "$1" $(( $2 - (bytes - cont) > 0 ? $2 - (bytes - cont) : 0 )) ''
+}
+
+svc() {  # Dienst mit farbigem Status
+  local state
+  state=$(systemctl is-active "$1" 2>/dev/null)
+  case "$state" in
+    active)                printf '  %s●%s %-16s %släuft%s\n' "$GRN" "$N" "$1" "$GRN" "$N" ;;
+    activating|reloading)  printf '  %s●%s %-16s %sstartet …%s\n' "$YEL" "$N" "$1" "$YEL" "$N" ;;
+    inactive)              printf '  %s●%s %-16s %sgestoppt%s\n' "$RED" "$N" "$1" "$RED" "$N" ;;
+    failed)                printf '  %s●%s %-16s %sFEHLER%s  %s(Details: s3 logs …)%s\n' "$RED" "$N" "$1" "$RED" "$N" "$DIM" "$N" ;;
+    *)                     printf '  %s●%s %-16s %s%s%s\n' "$RED" "$N" "$1" "$RED" "${state:-unbekannt}" "$N" ;;
+  esac
+}
+services() { for s in "$@"; do svc "$s"; done; }
+stand() { row "Stand" "$(g log -1 --format='%h  %s  %C(dim)(%cr)%C(reset)' --color=always)"; }
+app_services() { section "Dienste"; services s3cure-panel s3cure-bot; }
+
+build_panel() {
+  as bash -c 'cd /opt/s3cure/apps/panel && NEXT_DIST_DIR=.next-prod node scripts/next-prod.mjs build'
+}
+
+restart() {
+  case "${1:-all}" in
+    bot)   systemctl restart s3cure-bot ;;
+    panel) systemctl restart s3cure-panel ;;
+    all)   systemctl restart s3cure-panel s3cure-bot ;;
+    *) echo "Nutzung: s3 restart [bot|panel|all]"; exit 1 ;;
+  esac
+}
+
+case "${1:-help}" in
+  update)
+    section "Update"
+    g checkout "$BRANCH" 2>/dev/null
+    OLD=$(g rev-parse HEAD)
+    step "Hole neuen Code …"
+    g pull --ff-only -q || { fail "Pull fehlgeschlagen"; exit 1; }
+    NEW=$(g rev-parse HEAD)
+    [ "$OLD" = "$NEW" ] && { ok "Nichts Neues – schon aktuell."; stand; exit 0; }
+    CHANGED=$(g diff --name-only "$OLD" "$NEW")
+    ok "$(echo "$CHANGED" | wc -l | tr -d ' ') Dateien geändert:"
+    echo "$CHANGED" | sed "s/^/    $DIM/; s/\$/$N/"
+    if echo "$CHANGED" | grep -qE 'package.json|pnpm-lock.yaml|pnpm-workspace.yaml'; then
+      step "Pakete installieren …"
+      (cd "$APP" && as pnpm install --frozen-lockfile) && ok "Pakete installiert"
+    fi
+    PANEL=0; BOT=0
+    echo "$CHANGED" | grep -qE '^apps/panel/|^packages/' && PANEL=1
+    echo "$CHANGED" | grep -vE '^apps/panel/|^docs/|\.md$' | grep -q . && BOT=1
+    if [ $PANEL = 1 ]; then
+      step "Panel bauen …"
+      build_panel || { fail "Panel-Build fehlgeschlagen, nichts neu gestartet"; exit 1; }
+      ok "Panel gebaut"
+    fi
+    [ $PANEL = 1 ] && systemctl restart s3cure-panel && ok "Panel neu gestartet"
+    [ $BOT = 1 ] && systemctl restart s3cure-bot && ok "Bot neu gestartet"
+    [ $PANEL = 0 ] && [ $BOT = 0 ] && ok "Nur Doku geändert – kein Neustart nötig"
+    sleep 4
+    app_services
+    section "Stand"; stand
+    ;;
+  update-all)
+    section "Komplett-Update"
+    g checkout "$BRANCH" 2>/dev/null
+    step "Hole neuen Code …";   g pull --ff-only -q || { fail "Pull fehlgeschlagen"; exit 1; }; ok "Code aktuell"
+    step "Pakete installieren …"; (cd "$APP" && as pnpm install --frozen-lockfile) || { fail "Installation fehlgeschlagen"; exit 1; }; ok "Pakete installiert"
+    step "Panel bauen …";       build_panel || { fail "Panel-Build fehlgeschlagen"; exit 1; }; ok "Panel gebaut"
+    systemctl restart s3cure-panel s3cure-bot && ok "Bot und Panel neu gestartet"
+    sleep 4
+    app_services
+    section "Stand"; stand
+    ;;
+  restart)
+    restart "${2:-all}"
+    section "Neustart: ${2:-all}"
+    sleep 2
+    services s3cure-panel s3cure-bot
+    ;;
+  stop)
+    systemctl stop "s3cure-${2:?bot oder panel}"
+    section "Gestoppt: $2"; svc "s3cure-$2"
+    ;;
+  start)
+    systemctl start "s3cure-${2:?bot oder panel}"
+    section "Gestartet: $2"; sleep 2; svc "s3cure-$2"
+    ;;
+  status)
+    section "Dienste"
+    services s3cure-panel s3cure-bot postgresql redis-server caddy
+    section "Stand"; stand
+    section "Backup-Timer"
+    systemctl list-timers --all --no-pager --no-legend 2>/dev/null | grep -oE 's3cure[^ ]*\.timer' | sort -u | while read -r unit; do
+      next=$(systemctl show "$unit" -p NextElapseUSecRealtime --value 2>/dev/null)
+      last=$(systemctl show "$unit" -p LastTriggerUSec --value 2>/dev/null)
+      printf '  %-28s %snächster:%s %-26s %szuletzt:%s %s\n' "${unit%.timer}" "$DIM" "$N" "${next:-–}" "$DIM" "$N" "${last:-–}"
+    done
+    ;;
+  logs)
+    case "${2:-bot}" in
+      bot|panel|caddy) ;;
+      *) echo "Nutzung: s3 logs [bot|panel|caddy]"; exit 1 ;;
+    esac
+    unit="s3cure-${2:-bot}"; [ "${2:-bot}" = caddy ] && unit=caddy
+    section "Log: ${2:-bot}  ${DIM}(letzte 60 Zeilen)${N}"
+    journalctl -u "$unit" -n 60 --no-pager --no-hostname -o short
+    printf '\n  %sLive mitlesen: s3 live %s%s\n' "$DIM" "${2:-bot}" "$N"
+    ;;
+  live)
+    section "Live-Log: ${2:-bot}  ${DIM}(beenden mit Strg+C)${N}"
+    journalctl -u "s3cure-${2:-bot}" -f --no-hostname -o short
+    ;;
+  log)
+    section "Letzte Commits"
+    g log -8 --color=always --format='  %C(yellow)%h%C(reset)  %s  %C(dim)%cr · %an%C(reset)'
+    ;;
+  rollback)
+    TARGET="${2:-HEAD~1}"
+    section "Rollback auf $TARGET"
+    if g checkout -q "$TARGET" && systemctl restart s3cure-bot; then
+      ok "Zurück auf $(g log -1 --format='%h  %s')"
+      ok "Bot neu gestartet"
+      step "Panel ggf. neu bauen: s3 build"
+    else
+      fail "Rollback fehlgeschlagen"
+      exit 1
+    fi
+    ;;
+  build)
+    section "Panel bauen"
+    if build_panel && systemctl restart s3cure-panel; then
+      ok "Panel gebaut und neu gestartet"
+      svc s3cure-panel
+    else
+      fail "Panel-Build fehlgeschlagen"
+      exit 1
+    fi
+    ;;
+  backup)
+    section "Backup"
+    step "Datenbank sichern …"
+    if systemctl start s3cure-postgres-backup.service; then
+      ok "Datenbank gesichert"
+      step "Kopie auf Drive …"
+      systemctl start s3cure-drive-copy.service && ok "Auf Drive kopiert" || fail "Drive-Kopie fehlgeschlagen"
+    else
+      fail "Datenbank-Sicherung fehlgeschlagen – Drive-Kopie übersprungen"
+    fi
+    section "Backup-Log  ${DIM}(letzte 5 Zeilen)${N}"
+    tail -n 5 /var/backups/s3cure/backup.log | indent
+    ;;
+  env)
+    nano "$APP/.env"
+    printf '\n  %sDanach: s3 restart%s\n' "$DIM" "$N"
+    ;;
+  check)
+    section "Dienste"
+    services s3cure-panel s3cure-bot postgresql redis-server caddy
+
+    section "Panel"
+    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:3000/)
+    if [ "$code" = 200 ]; then ok "antwortet lokal (HTTP 200)"; else fail "antwortet nicht richtig (HTTP ${code:-keine Antwort})"; fi
+
+    section "Offene Ports"
+    printf '  %s%s %s %s %s%s\n' "$DIM" "$(pad Port 6)" "$(pad Erreichbar 12)" "$(pad Programm 16)" "Adressen" "$N"
+    { ss -tlnpH 2>/dev/null || ss -tlnp | tail -n +2; } | while read -r _ _ _ local _ proc; do
+      port=${local##*:}; addr=${local%:*}
+      case "$port" in 22|80|443|3000|5432|6379) ;; *) continue ;; esac
+      name=$(sed -nE 's/.*\(\("([^"]+)".*/\1/p' <<<"$proc")
+      case "$addr" in 127.0.0.1|\[::1\]) where="nur lokal" ;; *) where="öffentlich" ;; esac
+      echo "$port|$where|${name:-?}|$addr"
+    done | sort -t'|' -k1,1n -k4,4 | awk -F'|' '
+      { key = $1 "|" $2 "|" $3; if (!(key in a)) { order[++n] = key; a[key] = $4 } else a[key] = a[key] ", " $4 }
+      END { for (i = 1; i <= n; i++) print order[i] "|" a[order[i]] }' |
+    while IFS='|' read -r port where name addrs; do
+      color=$GRN; [ "$where" = "öffentlich" ] && color=$YEL
+      printf '  %s %s%s%s %s %s%s%s\n' "$(pad "$port" 6)" "$color" "$(pad "$where" 12)" "$N" "$(pad "$name" 16)" "$DIM" "$addrs" "$N"
+    done
+
+    section "Firewall"
+    if ufw status 2>/dev/null | head -n 1 | grep -q 'Status: active'; then ok "aktiv"; else fail "nicht aktiv"; fi
+
+    section "Speicher & Platte"
+    read -r _ ram_total ram_used _ _ _ ram_free < <(free -h | sed -n 2p)
+    row "RAM" "$ram_used von $ram_total belegt, $ram_free verfügbar"
+    read -r _ disk_total disk_used disk_free disk_pct _ < <(df -h / | tail -n 1)
+    row "Platte (/)" "$disk_used von $disk_total belegt ($disk_pct), $disk_free frei"
+    echo
+    ;;
+  *)
+    printf '\n%sS3cure – Serververwaltung%s\n\n' "$B" "$N"
+    h() { printf '  %s%-28s%s %s\n' "$CYN" "$1" "$N" "$2"; }
+    printf '%s  Überblick%s\n' "$DIM" "$N"
+    h "s3 status"                 "Dienste, Stand, Backup-Timer"
+    h "s3 check"                  "Gesundheitscheck (Dienste, Ports, Firewall, RAM, Platte)"
+    printf '\n%s  Aktualisieren%s\n' "$DIM" "$N"
+    h "s3 update"                 "Code holen, nur Nötiges bauen und neu starten"
+    h "s3 update-all"             "Alles: pull, install, Panel-Build, beide neu starten"
+    h "s3 build"                  "Panel neu bauen + neu starten"
+    h "s3 rollback [commit]"      "Zurück auf alten Stand (Standard: ein Commit zurück)"
+    printf '\n%s  Dienste%s\n' "$DIM" "$N"
+    h "s3 restart [bot|panel|all]" "Neu starten"
+    h "s3 start|stop bot|panel"   "Starten / stoppen"
+    printf '\n%s  Logs%s\n' "$DIM" "$N"
+    h "s3 logs [bot|panel|caddy]" "Letzte 60 Zeilen"
+    h "s3 live [bot|panel]"       "Live mitlesen (Strg+C beendet)"
+    h "s3 log"                    "Letzte 8 Commits"
+    printf '\n%s  Sonstiges%s\n' "$DIM" "$N"
+    h "s3 backup"                 "DB-Sicherung + Drive-Kopie jetzt ausführen"
+    h "s3 env"                    ".env bearbeiten"
+    echo
+    ;;
+esac
