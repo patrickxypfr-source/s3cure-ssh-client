@@ -664,6 +664,7 @@ window.LocalPane = (() => {
           <button type="button" class="btn" data-c="cancel">Übertragung abbrechen</button>
           <span class="spacer"></span>
           <button type="button" class="btn" data-c="skip">Überspringen</button>
+          <button type="button" class="btn" data-c="resume" hidden title="Die vorhandene Datei ist kleiner – vermutlich ein abgebrochener Versuch. Ab dort weitermachen statt neu anfangen.">Fortsetzen</button>
           <button type="submit" class="btn danger" data-c="overwrite">Überschreiben</button>
         </div>
       </form>`;
@@ -683,11 +684,19 @@ window.LocalPane = (() => {
     };
     modal.querySelector('[data-c=cancel]').addEventListener('click', () => done('cancel'));
     modal.querySelector('[data-c=skip]').addEventListener('click', () => done('skip'));
+    modal.querySelector('[data-c=resume]').hidden = !info.canResume; // Teil-Datei weiterschreiben
+    modal.querySelector('[data-c=resume]').addEventListener('click', () => done('resume'));
     modal.querySelector('form').addEventListener('submit', e => { e.preventDefault(); done('overwrite'); });
     modal.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done('cancel'); } });
     document.body.appendChild(modal);
     modal.querySelector('[data-c=skip]').focus();
   }
 
-  return { attach, detach, serverDragOver, serverDrop, isOpen: tab => !!panes.get(tab.id)?.open };
+  // Lokale Liste neu laden, wenn sie gerade `dir` zeigt (z. B. nach „Erneut versuchen“ in transfers.js)
+  function refresh(tab, dir) {
+    const p = panes.get(tab.id);
+    if (p && p.loaded && p.path === dir) go(p, p.path, { keep: true, silent: true });
+  }
+
+  return { attach, detach, serverDragOver, serverDrop, refresh, isOpen: tab => !!panes.get(tab.id)?.open };
 })();
