@@ -216,6 +216,7 @@ function setState(tab, state) {
 function updateToolbar() {
   const tab = tabs.get(activeId);
   $('#toolbar').hidden = !tab;
+  window.tunnelUi?.setTab(tab || null);
   if (!tab) return;
   const texts = {
     connecting: 'Verbinde …',

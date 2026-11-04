@@ -41,6 +41,7 @@
       <span id="tab-status"><span class="status-dot"></span><span id="tab-status-text"></span></span>
       <div class="spacer"></div>
       <button id="btn-reconnect" class="btn" hidden data-icon="refresh">Neu verbinden</button>
+      <button id="btn-tunnels" class="btn ghost" data-icon="tunnel" title="Port-Weiterleitungen (Tunnel) für diese Verbindung">Tunnel<span id="tunnel-count" hidden></span></button>
       <button id="btn-quick" class="btn ghost" data-icon="bolt" title="Schnellbefehle für diese Verbindung ein- oder ausblenden">Befehle</button>
       <div class="seg" id="view-switch">
         <button data-view="terminal" data-icon="terminal">Terminal</button>
@@ -118,6 +119,8 @@
   <script src="../node_modules/@xterm/xterm/lib/xterm.js"></script>
   <script src="../node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
   <script src="icons.js"></script>
+  <script src="tunnels.js"></script>
+  <script src="update-notice.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>
