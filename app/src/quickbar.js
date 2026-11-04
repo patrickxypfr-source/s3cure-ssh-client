@@ -42,40 +42,80 @@ const Quickbar = (() => {
       name: 's3cure',
       groups: () => [
         { items: [
-          B('Status', 's3 status', 'Dienste, Stand, Backup-Timer'),
-          B('Check', 's3 check', 'Gesundheitscheck: Dienste, Ports, Firewall, RAM, Platte'),
+          B('Status', 's3 status', 'Dienste, Stand, Backup-Timer', { icon: 'pulse' }),
+          B('Check', 's3 check', 'Gesundheitscheck: Dienste, Ports, Firewall, RAM, Platte', { icon: 'checkCircle' }),
         ] },
         { items: [
-          B('Update', 's3 update', 'Code holen, nur Nötiges bauen und neu starten'),
+          B('Update', 's3 update', 'Code holen, nur Nötiges bauen und neu starten', { icon: 'sync' }),
           B('Update all', 's3 update-all', 'Alles: pull, install, Panel-Build, beide neu starten',
-            { confirm: 'Alles neu installieren, das Panel neu bauen und Bot und Panel neu starten?' }),
+            { icon: 'layers', confirm: 'Alles neu installieren, das Panel neu bauen und Bot und Panel neu starten?' }),
         ] },
         { items: [
-          M('Restart', 'Dienste neu starten', [B('Alles', 's3 restart all'), B('Bot', 's3 restart bot'), B('Panel', 's3 restart panel')]),
-          M('Start', 'Dienst starten', [B('Bot', 's3 start bot'), B('Panel', 's3 start panel')]),
+          M('Restart', 'Dienste neu starten', [B('Alles', 's3 restart all'), B('Bot', 's3 restart bot'), B('Panel', 's3 restart panel')], { icon: 'restart' }),
+          M('Start', 'Dienst starten', [B('Bot', 's3 start bot'), B('Panel', 's3 start panel')], { icon: 'play' }),
           M('Stop', 'Dienst stoppen', [B('Bot', 's3 stop bot'), B('Panel', 's3 stop panel')],
-            { danger: true, confirm: 'Den Dienst wirklich stoppen? Er ist dann offline, bis du ihn wieder startest.' }),
+            { icon: 'stop', danger: true, confirm: 'Den Dienst wirklich stoppen? Er ist dann offline, bis du ihn wieder startest.' }),
         ] },
         { items: [
-          M('Logs', 'Letzte 60 Zeilen', [B('Bot', 's3 logs bot'), B('Panel', 's3 logs panel'), B('Caddy', 's3 logs caddy')]),
+          M('Logs', 'Letzte 60 Zeilen', [B('Bot', 's3 logs bot'), B('Panel', 's3 logs panel'), B('Caddy', 's3 logs caddy')], { icon: 'logs' }),
           M('Live-Log', 'Log live mitlesen – endet mit Strg+C oder beim nächsten Knopf',
-            [B('Bot', 's3 live bot', '', { live: true }), B('Panel', 's3 live panel', '', { live: true })]),
-          B('Commits', 's3 log', 'Letzte 8 Commits'),
+            [B('Bot', 's3 live bot', '', { live: true }), B('Panel', 's3 live panel', '', { live: true })], { icon: 'radio' }),
+          B('Commits', 's3 log', 'Letzte 8 Commits', { icon: 'gitBranch' }),
         ] },
         { items: [
-          B('Build', 's3 build', 'Panel neu bauen und neu starten'),
-          B('Backup', 's3 backup', 'DB-Sicherung und Drive-Kopie jetzt ausführen'),
+          B('Build', 's3 build', 'Panel neu bauen und neu starten', { icon: 'hammer' }),
+          B('Backup', 's3 backup', 'DB-Sicherung und Drive-Kopie jetzt ausführen', { icon: 'archive' }),
           M('Rollback', 'Auf einen alten Stand zurück', [
-            B('Ein Commit zurück', 's3 rollback'),
-            B('Bestimmter Commit …', 's3 rollback {commit}', '', {
+            B('Ein Commit zurück', 's3 rollback', '', { icon: 'undo' }),
+            B('Bestimmter Commit …', 's3 rollback {commit}', '', { icon: 'gitCommit',
               inputs: { commit: { prompt: 'Auf welchen Commit zurück? (Hash aus „Commits“ oder z. B. HEAD~2)', kind: 'ref', value: '' } },
             }),
-          ], { danger: true, confirm: 'Wirklich auf einen alten Stand zurückgehen? Der Bot wird dabei neu gestartet.' }),
-          B('.env', 's3 env', '.env im Editor nano öffnen – speichern: Strg+O, Enter · beenden: Strg+X'),
+          ], { icon: 'undo', danger: true, confirm: 'Wirklich auf einen alten Stand zurückgehen? Der Bot wird dabei neu gestartet.' }),
+          B('.env', 's3 env', '.env im Editor nano öffnen – speichern: Strg+O, Enter · beenden: Strg+X', { icon: 'key' }),
         ] },
       ],
     },
   };
+
+  // ---------- Icons ----------
+
+  // Suchwörter (deutsch) für die Icon-Auswahl; das erste Wort ist der Name im Tooltip.
+  // Reihenfolge = Reihenfolge im Raster. Weitere Icons aus icons.js erscheinen danach.
+  const ICON_WORDS = {
+    pulse: 'Status Puls Aktivität', checkCircle: 'Check Prüfen Gesundheit OK', check: 'Häkchen Prüfen OK',
+    sync: 'Update Aktualisieren Synchronisieren', layers: 'Alles Ebenen Stapel', refresh: 'Neu laden Aktualisieren',
+    restart: 'Neustart Restart Neu starten', play: 'Start Starten Abspielen', stop: 'Stop Stoppen Anhalten',
+    pause: 'Pause Anhalten', power: 'Ein/Aus Power Strom',
+    logs: 'Logs Protokoll Datei Text', list: 'Liste Logs Zeilen', radio: 'Live Mitlesen Wellen Stream',
+    gitBranch: 'Commits Git Zweig Branch', gitCommit: 'Commit Git Version',
+    hammer: 'Build Bauen Werkzeug', rocket: 'Deploy Rakete Veröffentlichen', archive: 'Backup Archiv Sicherung',
+    undo: 'Rollback Zurück Rückgängig', gear: 'Einstellungen Zahnrad Konfiguration', sliders: 'Regler Einstellungen Optionen',
+    key: 'Schlüssel .env Zugang Passwort', lock: 'Schloss Sperren Sicherheit', unlock: 'Entsperren Offen',
+    shield: 'Firewall Schutz Sicherheit', shieldCheck: 'Zertifikat SSL Sicherheit geprüft',
+    database: 'Datenbank DB SQL', container: 'Docker Container Paket', server: 'Server Dienst',
+    terminal: 'Terminal Konsole Befehl Shell', code: 'Code Programm Skript',
+    globe: 'Web Internet Domain', network: 'Netzwerk Verbindungen', wifi: 'WLAN Verbindung Signal', cloud: 'Cloud Wolke Drive',
+    hardDrive: 'Festplatte Speicherplatz Disk', memory: 'Arbeitsspeicher RAM', cpu: 'Prozessor CPU Last', gauge: 'Auslastung Monitor Tacho',
+    clock: 'Zeit Uhr Cron Timer', user: 'Benutzer Nutzer User', users: 'Gruppe Benutzer Team',
+    trash: 'Papierkorb Löschen Aufräumen', download: 'Download Herunterladen', upload: 'Upload Hochladen',
+    search: 'Suche Suchen Finden', alert: 'Warnung Achtung Fehler', info: 'Info Information Hinweis', help: 'Hilfe Frage',
+    bell: 'Glocke Benachrichtigung Alarm', star: 'Stern Favorit', bolt: 'Blitz Schnell Aktion',
+    file: 'Datei Dokument', folder: 'Ordner Verzeichnis', link: 'Link Verknüpfung URL', home: 'Home Haus Start', edit: 'Stift Bearbeiten Editor',
+  };
+  const UI_ONLY = new Set(['close', 'down', 'up', 'rename', 'plus', 'folderPlus']); // nur für die Oberfläche
+  const hasIcon = name => typeof name === 'string' && Object.hasOwn(ICON_PATHS, name);
+  const iconNames = () => [...new Set([...Object.keys(ICON_WORDS), ...Object.keys(ICON_PATHS)])].filter(n => hasIcon(n) && !UI_ONLY.has(n));
+  const iconTitle = name => (ICON_WORDS[name] || name).split(' ')[0];
+
+  // Inhalt eines Knopfs: [Icon] Text [Pfeil bei Menüs]
+  function fillButton(b, item, arrow) {
+    if (hasIcon(item.icon)) {
+      b.insertAdjacentHTML('beforeend', icon(item.icon, 'qicon'));
+      b.classList.add('has-icon');
+    }
+    b.appendChild(el('span', 'qtext', item.label));
+    if (arrow) b.insertAdjacentHTML('beforeend', icon('down', 'qarrow'));
+  }
 
   // ---------- Daten ----------
 
@@ -221,14 +261,16 @@ const Quickbar = (() => {
     groups.forEach((group, gi) => {
       if (gi) bar.appendChild(el('span', 'qsep'));
       for (const item of group.items) {
-        const b = el('button', 'qbtn' + (item.danger ? ' danger' : ''), item.label);
+        const b = el('button', 'qbtn' + (item.danger ? ' danger' : ''));
         b.disabled = !connected;
-        if (item.type === 'menu') b.insertAdjacentHTML('beforeend', icon('down'));
-        b.title = (item.type === 'button' ? `${item.cmd}\n` : '') + (item.tip || '');
+        fillButton(b, item, item.type === 'menu');
+        // Mit Icon steht der Name auch im Tooltip (bei schmaler Leiste ist nur das Icon zu sehen)
+        b.title = (hasIcon(item.icon) ? `${item.label}\n` : '') + (item.type === 'button' ? `${item.cmd}\n` : '') + (item.tip || '');
+        b.setAttribute('aria-label', item.label);
         b.addEventListener('click', e => {
           if (item.type !== 'menu') return run(item);
           const r = e.currentTarget.getBoundingClientRect();
-          const entries = item.items.map(sub => [sub.label, () => run(sub, item), sub.danger || item.danger ? 'danger' : '', 'terminal']);
+          const entries = item.items.map(sub => [sub.label, () => run(sub, item), sub.danger || item.danger ? 'danger' : '', hasIcon(sub.icon) ? sub.icon : 'terminal']);
           if (!entries.length) entries.push(['Leer – Einträge hinzufügen …', () => startEdit(key), '', 'plus']);
           openMenu(entries, r.left, r.bottom + 4);
         });
@@ -288,8 +330,9 @@ const Quickbar = (() => {
   let drag = null; // { from: { gi, ii, ei? }, isMenu }
   const marker = el('span', 'qdrop');
 
-  function chip(text, cls, item) {
-    const c = el('button', 'qbtn qitem ' + cls + (item.danger ? ' danger' : ''), text);
+  function chip(cls, item) {
+    const c = el('button', 'qbtn qitem ' + cls + (item.danger ? ' danger' : ''));
+    fillButton(c, item, false);
     c.type = 'button';
     c.draggable = true;
     return c;
@@ -307,14 +350,14 @@ const Quickbar = (() => {
         if (item.type === 'menu') {
           const m = el('div', 'qmenu qitem' + (item.danger ? ' danger' : ''));
           m.draggable = true;
-          const head = el('button', 'qmenu-head', item.label);
+          const head = el('button', 'qmenu-head');
           head.type = 'button';
-          head.insertAdjacentHTML('beforeend', icon('down'));
+          fillButton(head, item, true);
           head.title = 'Menü bearbeiten (Name, Rückfrage) – ziehen zum Verschieben';
           head.addEventListener('click', () => openEditor(key, { gi, ii }));
           const list = el('div', 'qmenu-items');
           item.items.forEach((sub, ei) => {
-            const c = chip(sub.label, 'qentry', sub);
+            const c = chip('qentry', sub);
             c.title = sub.cmd + '\nKlick: bearbeiten · ziehen: verschieben';
             c.addEventListener('click', () => openEditor(key, { gi, ii, ei }));
             c.addEventListener('dragstart', e => startDrag(e, { gi, ii, ei }, false, c));
@@ -331,7 +374,7 @@ const Quickbar = (() => {
           m.addEventListener('dragstart', e => startDrag(e, { gi, ii }, true, m));
           box.appendChild(m);
         } else {
-          const c = chip(item.label, '', item);
+          const c = chip('', item);
           c.title = item.cmd + '\nKlick: bearbeiten · ziehen: verschieben';
           c.addEventListener('click', () => openEditor(key, { gi, ii }));
           c.addEventListener('dragstart', e => startDrag(e, { gi, ii }, false, c));
@@ -531,6 +574,13 @@ const Quickbar = (() => {
       <form class="dialog snip-dialog" autocomplete="off">
         <h2></h2>
         <label>Name auf dem Knopf<input name="label" required maxlength="80" placeholder="z. B. Neustart"></label>
+        <div class="snip-icons">
+          <div class="snip-icons-head">
+            <span>Icon <span class="muted">(optional)</span></span>
+            <input type="search" class="snip-icon-search" placeholder="Icon suchen, z. B. Neustart" spellcheck="false">
+          </div>
+          <div class="snip-icon-grid" role="listbox" aria-label="Icon"></div>
+        </div>
         <label class="for-button">Befehl
           <textarea name="cmd" rows="3" spellcheck="false" placeholder="z. B. sudo systemctl restart nginx"></textarea>
         </label>
@@ -555,6 +605,14 @@ const Quickbar = (() => {
     const syncConfirm = () => { form.confirmText.hidden = !form.confirmOn.checked; };
     form.confirmOn.addEventListener('change', () => { syncConfirm(); if (form.confirmOn.checked) form.confirmText.focus(); });
     form.cmd.addEventListener('input', () => renderInputs(ed));
+    const search = modal.querySelector('.snip-icon-search');
+    search.addEventListener('input', () => renderIconGrid(ed));
+    search.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault(); // nicht speichern – erstes Suchergebnis wählen
+      const first = modal.querySelector('.snip-icon-grid [data-icon-name]:not([data-icon-name=""])');
+      if (first) selectIcon(ed, first.dataset.iconName);
+    });
     modal.querySelector('[data-x]').addEventListener('click', () => { modal.hidden = true; });
     modal.querySelector('.snip-delete').addEventListener('click', async () => {
       if (await deleteAt(ed.key, ed.path)) modal.hidden = true;
@@ -565,6 +623,39 @@ const Quickbar = (() => {
     }, true);
     ed.syncConfirm = syncConfirm;
     return ed;
+  }
+
+  // Icon-Raster: „kein Icon“ + alle passenden Icons zur Suche
+  function renderIconGrid(ed) {
+    const grid = ed.form.querySelector('.snip-icon-grid');
+    const q = ed.form.querySelector('.snip-icon-search').value.trim().toLowerCase();
+    grid.innerHTML = '';
+    const cell = (name, html, title) => {
+      const b = el('button', 'snip-icon' + (ed.icon === name ? ' sel' : ''));
+      b.type = 'button';
+      b.dataset.iconName = name;
+      b.title = title;
+      b.setAttribute('role', 'option');
+      b.setAttribute('aria-selected', String(ed.icon === name));
+      b.innerHTML = html;
+      b.addEventListener('click', () => selectIcon(ed, name));
+      grid.appendChild(b);
+    };
+    if (!q) cell('', '<span class="snip-noicon"></span>', 'Kein Icon');
+    const names = iconNames().filter(n => !q || `${n} ${ICON_WORDS[n] || ''}`.toLowerCase().includes(q));
+    for (const n of names) cell(n, icon(n), iconTitle(n));
+    if (q && !names.length) grid.appendChild(el('span', 'snip-icon-empty', 'Kein passendes Icon gefunden.'));
+    const sel = grid.querySelector('.sel');
+    if (sel) grid.scrollTop = sel.offsetTop - grid.clientHeight / 2 + sel.offsetHeight / 2;
+  }
+
+  function selectIcon(ed, name) {
+    ed.icon = name;
+    for (const b of ed.form.querySelectorAll('.snip-icon')) {
+      const on = b.dataset.iconName === name;
+      b.classList.toggle('sel', on);
+      b.setAttribute('aria-selected', String(on));
+    }
   }
 
   // Für jeden Platzhalter im Befehl: Frage, erlaubte Eingabe, Vorschlag
@@ -604,7 +695,7 @@ const Quickbar = (() => {
     if (path && !item) return;
     const kind = item ? item.type : opts.kind;
     const inMenu = path ? path.ei != null : !!opts.into;
-    Object.assign(ed, { key, path, kind, into: opts.into || null, inputs: clone(item?.inputs || {}) });
+    Object.assign(ed, { key, path, kind, into: opts.into || null, inputs: clone(item?.inputs || {}), icon: hasIcon(item?.icon) ? item.icon : '' });
     const f = ed.form;
     f.reset();
     f.classList.toggle('is-menu', kind === 'menu');
@@ -622,6 +713,7 @@ const Quickbar = (() => {
     f.cmd.required = kind !== 'menu';
     ed.syncConfirm();
     renderInputs(ed);
+    renderIconGrid(ed);
     ed.modal.querySelector('.snip-delete').hidden = !item;
     ed.modal.hidden = false;
     f.label.focus();
@@ -633,7 +725,7 @@ const Quickbar = (() => {
     const label = f.label.value.trim();
     if (!label) { f.label.focus(); return; }
     const confirm = f.confirmOn.checked ? (f.confirmText.value.trim() || true) : false;
-    const base = { label, tip: f.tip.value.trim(), confirm, danger: f.danger.checked };
+    const base = { label, icon: ed.icon || '', tip: f.tip.value.trim(), confirm, danger: f.danger.checked };
     const groups = clone(groupsOf(ed.key));
     let item;
     if (ed.kind === 'menu') {
