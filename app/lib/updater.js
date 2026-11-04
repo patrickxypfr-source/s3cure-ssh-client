@@ -2,11 +2,13 @@
 //
 // Ablauf (Knopf „Update“ unten links):
 //   1. passende Datei aus dem neuesten GitHub-Release wählen
-//        macOS:   S3cure-SSH-Client-Mac-AppleSilicon.dmg / -Mac-Intel.dmg (dieselbe Datei wie zum Installieren)
+//        macOS:   S3cure-SSH-Client-Mac-AppleSilicon.dmg / -Mac-Intel.dmg (ersatzweise .zip)
 //        Windows: S3cure-SSH-Client-Setup.exe (installiert) oder -Windows-Portable.exe (portable)
 //   2. mit Fortschritt herunterladen (Update-Fenster, src/update.html)
 //   3. prüfen (Größe, macOS: Signatur und Versionsnummer im Paket)
 //   4. App beenden, kleines Hilfsskript tauscht die Dateien aus und startet die neue Version
+//   Fehlt eine Datei oder geht der Austausch nicht (z. B. keine Schreibrechte), wird stattdessen
+//   der Installer heruntergeladen und geöffnet – der Nutzer bekommt nie nur eine Fehlermeldung.
 //
 // Fertige Bausteine (electron-updater/Squirrel) brauchen auf dem Mac eine Apple-Signatur –
 // deshalb hier selbst gebaut.
@@ -32,21 +34,34 @@ function setupUpdater({ ipcMain, app, getMainWin, latestRelease, preload, platfo
 
   // ---------- Wie ist diese App installiert? ----------
 
+  // Mögliche Dateien im Release, in dieser Reihenfolge (fehlt eine, wird die nächste genommen).
+  // fallback = Installer, den man herunterladen und öffnen kann, wenn der Austausch selbst nicht geht.
   function installKind() {
     if (!app.isPackaged) return { kind: 'dev' };
     const exe = app.getPath('exe');
     if (platform === 'darwin') {
       const bundle = path.resolve(exe, '..', '..', '..');
-      if (!bundle.endsWith('.app')) return { kind: 'unknown' };
-      return { kind: 'mac', bundle, asset: process.arch === 'arm64' ? 'S3cure-SSH-Client-Mac-AppleSilicon.dmg' : 'S3cure-SSH-Client-Mac-Intel.dmg' };
+      const label = process.arch === 'arm64' ? 'AppleSilicon' : 'Intel';
+      const files = [`S3cure-SSH-Client-Mac-${label}.dmg`, `S3cure-SSH-Client-Mac-${label}.zip`];
+      if (!bundle.endsWith('.app')) return { kind: 'handoff', files: [files[0]] };
+      return { kind: 'mac', bundle, files, fallback: files[0] };
     }
     if (platform === 'win32') {
-      if (process.env.PORTABLE_EXECUTABLE_FILE) return { kind: 'win-portable', target: process.env.PORTABLE_EXECUTABLE_FILE, asset: 'S3cure-SSH-Client-Windows-Portable.exe' };
-      if (fs.existsSync(path.join(path.dirname(exe), `Uninstall ${NAME}.exe`))) return { kind: 'win-setup', asset: 'S3cure-SSH-Client-Setup.exe' };
-      return { kind: 'win-folder' }; // aus der ZIP entpackt – kann sich nicht selbst ersetzen
+      const setup = 'S3cure-SSH-Client-Setup.exe';
+      if (process.env.PORTABLE_EXECUTABLE_FILE) {
+        return { kind: 'win-portable', target: process.env.PORTABLE_EXECUTABLE_FILE, files: ['S3cure-SSH-Client-Windows-Portable.exe'], fallback: setup };
+      }
+      if (fs.existsSync(path.join(path.dirname(exe), `Uninstall ${NAME}.exe`))) return { kind: 'win-setup', files: [setup], fallback: setup };
+      return { kind: 'handoff', files: [setup] }; // aus einer ZIP entpackt: Installer öffnen
     }
     return { kind: 'unknown' };
   }
+
+  // Erste Datei aus der Liste, die es im Release gibt
+  const pickAsset = (rel, names) => {
+    for (const n of names || []) { const a = (rel.assets || []).find(x => x.name === n); if (a) return a; }
+    return null;
+  };
 
   // ---------- Update-Fenster ----------
 
@@ -107,26 +122,31 @@ function setupUpdater({ ipcMain, app, getMainWin, latestRelease, preload, platfo
   // ---------- Installieren ----------
 
   // macOS: neues .app-Paket prüfen, nach dem Beenden austauschen und neu starten
-  async function installMac(kind, dmg, dir, version) {
+  async function installMac(kind, file, dir, version) {
     send({ phase: 'verify' });
-    // DMG unsichtbar einhängen, App herauskopieren, wieder aushängen
-    const mnt = path.join(dir, 'mnt'), x = path.join(dir, 'x');
-    fs.mkdirSync(mnt); fs.mkdirSync(x);
-    await run('hdiutil', ['attach', '-nobrowse', '-readonly', '-noautoopen', '-mountpoint', mnt, dmg]);
-    try {
-      if (!fs.existsSync(path.join(mnt, `${NAME}.app`))) throw new Error('Das Update-Paket ist unvollständig.');
-      await run('ditto', [path.join(mnt, `${NAME}.app`), path.join(x, `${NAME}.app`)]);
-    } finally {
-      await run('hdiutil', ['detach', mnt, '-force']).catch(() => {});
+    const x = path.join(dir, 'x');
+    fs.mkdirSync(x);
+    if (file.endsWith('.zip')) {
+      await run('ditto', ['-x', '-k', file, x]);
+    } else {
+      // DMG unsichtbar einhängen, App herauskopieren, wieder aushängen
+      const mnt = path.join(dir, 'mnt');
+      fs.mkdirSync(mnt);
+      await run('hdiutil', ['attach', '-nobrowse', '-readonly', '-noautoopen', '-mountpoint', mnt, file]);
+      try {
+        if (!fs.existsSync(path.join(mnt, `${NAME}.app`))) throw new Error('Das Update-Paket ist unvollständig.');
+        await run('ditto', [path.join(mnt, `${NAME}.app`), path.join(x, `${NAME}.app`)]);
+      } finally {
+        await run('hdiutil', ['detach', mnt, '-force']).catch(() => {});
+      }
     }
-    fs.rmSync(dmg, { force: true });
     const app2 = path.join(x, `${NAME}.app`);
     if (!fs.existsSync(app2)) throw new Error('Das Update-Paket ist unvollständig.');
     await run('codesign', ['--verify', '--deep', '--strict', app2]).catch(() => { throw new Error('Das Update-Paket ist beschädigt (Signatur ungültig).'); });
     const v = await run('/usr/libexec/PlistBuddy', ['-c', 'Print CFBundleShortVersionString', path.join(app2, 'Contents', 'Info.plist')]);
     if (v !== version) throw new Error(`Das Update-Paket hat die falsche Version (${v} statt ${version}).`);
     try { fs.accessSync(path.dirname(kind.bundle), fs.constants.W_OK); } catch {
-      throw new Error(`Keine Schreibrechte für „${path.dirname(kind.bundle)}“. Bitte die App in den Programme-Ordner legen.`);
+      const e = new Error('Keine Schreibrechte im Programme-Ordner'); e.handoff = true; throw e;
     }
     const script = path.join(dir, 'install.sh');
     fs.writeFileSync(script, `#!/bin/sh
@@ -173,6 +193,41 @@ rm -rf "$TMP"
 
   // ---------- Ablauf ----------
 
+  // Download mit bis zu 3 Versuchen (z. B. kurz kein Netz)
+  async function downloadRetry(asset, file, signal) {
+    for (let attempt = 1; ; attempt++) {
+      try { return await download(asset.url, file, asset.size, signal); } catch (err) {
+        if (signal.aborted || attempt >= 3) throw err;
+        send({ phase: 'retry', attempt: attempt + 1 });
+        await new Promise(r => setTimeout(r, 2000 * attempt));
+      }
+    }
+  }
+
+  // Notlösung: Installer herunterladen und öffnen (Mac: Installationsfenster der DMG, Windows: Setup)
+  async function handoff(rel, names, dir, signal) {
+    const asset = pickAsset(rel, names);
+    if (!asset) throw new Error('Im neuesten Release wurde kein passender Installer gefunden.');
+    const target = path.join(platform === 'darwin' ? app.getPath('downloads') : dir, asset.name);
+    const already = path.join(dir, asset.name); // schon für das Update geladen? Dann nicht nochmal
+    if (fs.existsSync(already) && fs.statSync(already).size === asset.size) {
+      if (already !== target) fs.copyFileSync(already, target);
+    } else {
+      send({ phase: 'download', received: 0, total: asset.size, speed: 0 });
+      await downloadRetry(asset, target, signal);
+    }
+    job.installing = true;
+    send({ phase: 'handoff', platform });
+    await new Promise(r => setTimeout(r, 1500));
+    if (platform === 'darwin') {
+      spawn('/usr/bin/open', [target], { detached: true, stdio: 'ignore' }).unref();
+    } else {
+      spawn(target, [], { detached: true, stdio: 'ignore' }).unref();
+    }
+    // App beenden, damit der Installer sie ersetzen kann
+    setTimeout(() => { app.quit(); setTimeout(() => app.exit(0), 4000); }, 2500);
+  }
+
   async function start() {
     if (job) { openWindow(); return; }
     const kind = installKind();
@@ -180,26 +235,36 @@ rm -rf "$TMP"
     job = { ctrl, installing: false, state: { phase: 'check' } };
     lastState = null;
     openWindow();
-    let dir = null;
+    let dir = null, rel = null;
     try {
       send({ phase: 'check' });
       if (kind.kind === 'dev') throw new Error('Im Entwicklungsmodus (npm start) gibt es keine automatischen Updates.');
-      if (!kind.asset) throw new Error('Diese Installation kann sich nicht selbst aktualisieren. Bitte die neue Version von GitHub laden (Knopf unten).');
-      const rel = await latestRelease();
+      if (kind.kind === 'unknown') throw new Error('Dieses System wird für automatische Updates nicht unterstützt.');
+      // Release-Infos holen (bei Netzproblemen kurz nochmal versuchen)
+      for (let i = 0; i < 3 && !rel; i++) { rel = await latestRelease(); if (!rel) await new Promise(r => setTimeout(r, 1500)); }
       if (!rel) throw new Error('GitHub ist gerade nicht erreichbar. Bitte später nochmal versuchen.');
-      const asset = (rel.assets || []).find(a => a.name === kind.asset);
-      if (!asset) throw new Error(`Im neuesten Release fehlt die Datei „${kind.asset}“.`);
       job.version = rel.version;
-      send({ phase: 'download', received: 0, total: asset.size, speed: 0 });
       dir = fs.mkdtempSync(path.join(os.tmpdir(), 's3cure-update-'));
+
+      if (kind.kind === 'handoff') { await handoff(rel, kind.files, dir, ctrl.signal); return; }
+
+      const asset = pickAsset(rel, kind.files);
+      if (!asset) { await handoff(rel, [kind.fallback], dir, ctrl.signal); return; }
+      send({ phase: 'download', received: 0, total: asset.size, speed: 0 });
       const file = path.join(dir, asset.name);
-      await download(asset.url, file, asset.size, ctrl.signal);
+      await downloadRetry(asset, file, ctrl.signal);
       if (ctrl.signal.aborted) throw new Error('abgebrochen');
 
       let launch;
-      if (kind.kind === 'mac') launch = await installMac(kind, file, dir, rel.version);
-      else if (kind.kind === 'win-setup') launch = installWinSetup(file);
-      else launch = installWinPortable(kind, file, dir);
+      try {
+        if (kind.kind === 'mac') launch = await installMac(kind, file, dir, rel.version);
+        else if (kind.kind === 'win-setup') launch = installWinSetup(file);
+        else launch = installWinPortable(kind, file, dir);
+      } catch (err) {
+        // Selbst austauschen geht nicht (z. B. keine Schreibrechte) – dann den Installer öffnen
+        if (err.handoff && kind.fallback) { await handoff(rel, [kind.fallback], dir, ctrl.signal); return; }
+        throw err;
+      }
 
       job.installing = true;
       send({ phase: 'install', version: rel.version });

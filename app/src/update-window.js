@@ -49,6 +49,21 @@
         bar.classList.add('done');
         $('up-cancel').disabled = true;
         break;
+      case 'retry':
+        $('up-title').textContent = 'Verbindung unterbrochen';
+        $('up-status').textContent = `Neuer Versuch (${st.attempt} von 3) …`;
+        $('up-detail').textContent = '';
+        bar.classList.add('busy');
+        break;
+      case 'handoff':
+        $('up-title').textContent = 'Installer wird geöffnet';
+        $('up-status').textContent = st.platform === 'darwin'
+          ? 'Im Fenster die App auf „Programme“ ziehen und „Ersetzen“ wählen.'
+          : 'Bitte dem Installationsfenster folgen.';
+        $('up-detail').textContent = '';
+        bar.classList.add('done');
+        $('up-cancel').disabled = true;
+        break;
       case 'error':
         $('up-title').textContent = 'Update nicht möglich';
         $('up-status').textContent = st.message || 'Unbekannter Fehler';
