@@ -83,10 +83,19 @@ function parseImport(text) {
 
 function createStore(configDir) {
   const file = path.join(configDir, 'snippets.json');
+  let backedUp = false;
 
   function load() {
-    let data;
-    try { data = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { data = null; }
+    let data = null;
+    let text = null;
+    try { text = fs.readFileSync(file, 'utf8'); } catch { /* gibt es noch nicht */ }
+    if (text != null) {
+      try { data = JSON.parse(text); } catch {
+        // Beschädigt: Kopie behalten statt beim nächsten Speichern zu überschreiben
+        if (!backedUp) { try { fs.copyFileSync(file, `${file}.defekt-${Date.now()}`); backedUp = true; } catch {} }
+        data = { migrated: true, profiles: {} };
+      }
+    }
     const out = { version: 1, migrated: !!(data && data.migrated), profiles: {} };
     const profiles = data && data.profiles && typeof data.profiles === 'object' ? data.profiles : {};
     for (const [key, prof] of Object.entries(profiles)) out.profiles[key] = { groups: cleanGroups(prof && prof.groups) };
