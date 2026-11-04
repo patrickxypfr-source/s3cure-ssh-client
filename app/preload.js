@@ -104,3 +104,18 @@ contextBridge.exposeInMainWorld('mysshTerm', {
   openLink: url => ipcRenderer.send('term:open-link', url),
   onZoom: cb => ipcRenderer.on('term:zoom', (_e, step) => cb(step)),
 });
+
+// Geteilte Dateiansicht „Mein Computer“ (app/lib/localfs.js, app/lib/pane-transfer.js, src/local-pane.js)
+contextBridge.exposeInMainWorld('localFs', {
+  places: () => ipcRenderer.invoke('localfs:places'),
+  list: dir => ipcRenderer.invoke('localfs:list', dir),
+  open: file => ipcRenderer.invoke('localfs:open', file),
+  show: file => ipcRenderer.invoke('localfs:show', file),
+  rename: (file, name) => ipcRenderer.invoke('localfs:rename', file, name),
+  mkdir: (dir, name) => ipcRenderer.invoke('localfs:mkdir', dir, name),
+  trash: files => ipcRenderer.invoke('localfs:trash', files),
+  upload: (tabId, remoteDir, localPaths) => ipcRenderer.invoke('xfer:upload', tabId, remoteDir, localPaths),
+  download: (tabId, localDir, items) => ipcRenderer.invoke('xfer:download', tabId, localDir, items),
+  onConflict: cb => ipcRenderer.on('xfer:conflict', (_e, info) => cb(info)),
+  answerConflict: (reqId, answer) => ipcRenderer.send('xfer:conflict-answer', reqId, answer),
+});

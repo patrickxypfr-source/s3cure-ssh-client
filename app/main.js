@@ -404,6 +404,10 @@ sftpExtra.register({
   },
 });
 
+// Geteilte Dateiansicht: lokales Dateifenster und Übertragungen dorthin (app/lib/localfs.js, app/lib/pane-transfer.js)
+require('./lib/localfs').register({ app, ipcMain, shell, platform: PLATFORM });
+require('./lib/pane-transfer').register({ ipcMain, getSftp, sftpError, transfers, getWin: () => win, platform: PLATFORM });
+
 // ---------- Suche auf dem Server ----------
 // Bevorzugt `find` direkt auf dem Server (schnell). Erlaubt der Server keine Befehle,
 // wird per SFTP Ordner für Ordner durchsucht.
