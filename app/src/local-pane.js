@@ -313,6 +313,7 @@ window.LocalPane = (() => {
     let pendingSingle = null;
 
     body.addEventListener('mousedown', e => {
+      pendingSingle = null;
       const tr = e.target.closest('tr');
       if (!tr || e.button !== 0) return;
       // Mehrfachauswahl nicht verlieren, wenn sie gezogen werden soll
@@ -360,6 +361,7 @@ window.LocalPane = (() => {
     // Ziehen aus der lokalen Liste (zum Server)
     body.addEventListener('dragstart', e => {
       const tr = e.target.closest('tr');
+      pendingSingle = null;
       if (!tr) return;
       if (!p.selected.has(tr.dataset.name)) { p.selected = new Set([tr.dataset.name]); p.anchor = tr.dataset.name; refreshSel(p); }
       const sel = selectedItems(p);
@@ -472,6 +474,7 @@ window.LocalPane = (() => {
     let pendingSingle = null;
     // Mehrfachauswahl beim Ziehen behalten (renderer.js würde sonst beim Mausdruck auf eine Zeile reduzieren)
     f.body.addEventListener('mousedown', e => {
+      pendingSingle = null;
       const tr = e.target.closest('tr');
       if (!tr || e.button !== 0 || modKey(e) || e.shiftKey) return;
       if (f.selected.has(tr.dataset.name) && f.selected.size > 1) { e.stopPropagation(); pendingSingle = tr.dataset.name; }
@@ -481,6 +484,7 @@ window.LocalPane = (() => {
       pendingSingle = null;
     });
     f.body.addEventListener('dragstart', e => {
+      pendingSingle = null;
       const tr = e.target.closest('tr');
       if (!tr || tab.state !== 'open') { e.preventDefault(); return; }
       if (!f.selected.has(tr.dataset.name)) { f.selected = new Set([tr.dataset.name]); f.anchor = tr.dataset.name; updateSelection(tab); }
@@ -573,19 +577,30 @@ window.LocalPane = (() => {
     return `${r.files} Datei${r.files === 1 ? '' : 'en'} ${verb.toLowerCase()}${skipped}`;
   }
 
+  const baseName = x => x.split(/[\\/]/).filter(Boolean).pop();
+
   async function upload(tab, paths, dir) {
-    const name = paths.length === 1 ? paths[0].split(/[\\/]/).filter(Boolean).pop() : null;
+    const f = tab.files;
     try {
       const r = await L.upload(tab.id, dir, paths);
-      flash(summary(r, 'Hochgeladen', name));
+      flash(summary(r, 'Hochgeladen', paths.length === 1 ? baseName(paths[0]) : null));
     } catch (err) { showError(err); }
-    if (tab.state === 'open' && tab.files.path) await loadDir(tab, tab.files.path);
-    const f = tab.files;
-    // Hochgeladenes markieren, wenn es im angezeigten Ordner liegt
-    if (dir === f.path) {
-      const names = paths.map(x => x.split(/[\\/]/).filter(Boolean).pop()).filter(n => f.entries.some(e => e.name === n));
-      if (names.length) { f.selected = new Set(names); f.anchor = names[0]; updateSelection(tab); }
-    }
+    if (tab.state !== 'open' || !f.path) return;
+    // Liste still neu laden: die Auswahl des Nutzers bleibt stehen. Ist nichts
+    // ausgewählt, wird das Hochgeladene markiert (wenn es im angezeigten Ordner liegt).
+    const shown = f.path;
+    try {
+      const r = await api.sftpList(tab.id, shown);
+      if (r.path !== f.path) return;
+      const present = n => r.entries.some(e => e.name === n);
+      f.entries = r.entries;
+      let keep = [...f.selected].filter(present);
+      if (!keep.length && dir === shown) keep = paths.map(baseName).filter(present);
+      renderFiles(tab);
+      f.selected = new Set(keep);
+      if (keep.length && !keep.includes(f.anchor)) f.anchor = keep[0];
+      updateSelection(tab);
+    } catch {}
   }
 
   async function download(p, items, dir) {
@@ -594,9 +609,14 @@ window.LocalPane = (() => {
       const r = await L.download(p.tab.id, dir, items);
       flash(summary(r, 'Heruntergeladen', name));
     } catch (err) { showError(err); }
-    if (p.path) {
-      const names = dir === p.path ? items.map(it => it.path.split('/').pop()) : null;
-      go(p, p.path, names ? { select: names } : { keep: true });
+    if (!p.path) return;
+    const shown = p.path;
+    await go(p, shown, { keep: true, silent: true });
+    if (!p.selected.size && dir === p.path) {
+      const names = items.map(it => it.path.split('/').pop()).filter(n => p.entries.some(e => e.name === n));
+      p.selected = new Set(names);
+      p.anchor = names[0] || null;
+      refreshSel(p);
     }
   }
 
