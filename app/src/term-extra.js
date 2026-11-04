@@ -174,9 +174,9 @@
   const tools = document.createElement('div');
   tools.id = 'term-tools';
   tools.innerHTML = `
-    <button class="btn ghost" data-t="split" data-icon="split" title="Zweites Terminal daneben öffnen (${IS_MAC ? 'Cmd+D' : 'Strg+Umschalt+D'})">Teilen</button>
-    <button class="btn ghost" data-t="log" data-icon="record" title="Alles, was im Terminal passiert, als Textdatei mitschreiben">Mitschnitt</button>
-    <button class="btn ghost" data-t="all" data-icon="broadcast" title="Tastatureingaben gleichzeitig an alle verbundenen Terminals schicken">An alle</button>`;
+    <button class="btn ghost" data-t="split" data-icon="split" title="Zweites Terminal daneben öffnen (${IS_MAC ? 'Cmd+D' : 'Strg+Umschalt+D'})"><span class="lbl">Teilen</span></button>
+    <button class="btn ghost" data-t="log" data-icon="record" title="Alles, was im Terminal passiert, als Textdatei mitschreiben"><span class="lbl">Mitschnitt</span></button>
+    <button class="btn ghost" data-t="all" data-icon="broadcast" title="Tastatureingaben gleichzeitig an alle verbundenen Terminals schicken"><span class="lbl">An alle</span></button>`;
   applyIcons(tools);
   document.getElementById('view-switch').before(tools);
   const tbtn = name => tools.querySelector(`[data-t=${name}]`);

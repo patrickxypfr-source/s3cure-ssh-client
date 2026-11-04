@@ -226,7 +226,16 @@ li.connected .host-avatar { color: var(--accent); border-color: color-mix(in srg
 .tab .state.closed { background: var(--faint); }
 
 #toolbar { display: flex; align-items: center; gap: 10px; padding: 12px 16px; }
-#tab-status { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12.5px; }
+#tab-status { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12.5px; min-width: 0; flex: 0 1 auto; overflow: hidden; }
+#tab-status-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#toolbar > * { flex-shrink: 0; }
+#toolbar > #tab-status, #toolbar > .spacer { flex-shrink: 1; }
+/* Terminal-Werkzeuge (Teilen, Mitschnitt, An alle) als Symbol-Knöpfe, Name im Tooltip */
+#term-tools { display: inline-flex; gap: 2px; }
+#term-tools .btn { padding: 0 8px; }
+#term-tools .btn .lbl { display: none; }
+/* Schmale Fenster: Tunnel/Befehle nur als Symbol */
+@media (max-width: 1080px) { #btn-tunnels, #btn-quick { font-size: 0; gap: 0; padding: 0 8px; } #btn-tunnels #tunnel-count { font-size: 11px; margin-left: 4px; } }
 #tab-status .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); }
 #tab-status.open .status-dot { background: var(--ok); }
 #tab-status.closed .status-dot { background: var(--faint); }

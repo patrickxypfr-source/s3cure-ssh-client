@@ -72,7 +72,7 @@ function showReconnectStatus() {
   if (!tab || !tab.rc || tab.state !== 'reconnecting') return;
   const secs = Math.ceil((tab.rc.next - Date.now()) / 1000);
   $('#tab-status-text').textContent = tab.rc.busy || secs <= 0
-    ? `Verbindung verloren – verbinde neu … (Versuch ${tab.rc.attempt})`
+    ? `Verbindung verloren – verbinde neu …${tab.rc.attempt > 0 ? ` (Versuch ${tab.rc.attempt + 1})` : ''}`
     : `Verbindung verloren – neuer Versuch in ${secs} s`;
 }
 setInterval(showReconnectStatus, 1000);

@@ -9,7 +9,8 @@ const { systemPreferences } = require('electron');
 const SCRYPT = { N: 16384, r: 8, p: 1 };
 
 function createAppLock({ configDir, isMac }) {
-  const file = path.join(configDir, 'settings.json');
+  // Eigene Datei: settings.json gehört lib/settings.js (das sie im Speicher hält und komplett neu schreibt)
+  const file = path.join(configDir, 'applock.json');
   const load = () => { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return {}; } };
   const save = s => {
     fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
