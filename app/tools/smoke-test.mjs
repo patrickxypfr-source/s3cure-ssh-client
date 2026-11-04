@@ -2,7 +2,9 @@
 // Aufruf: node tools/smoke-test.mjs <Programm> [weitere Argumente …]
 //   Windows: node tools/smoke-test.mjs "../dist/S3cure SSH Client-win32-x64/S3cure SSH Client.exe"
 //   Mac:     node tools/smoke-test.mjs "../dist/S3cure SSH Client-darwin-arm64/S3cure SSH Client.app/Contents/MacOS/S3cure SSH Client"
+//   Linux:   APPIMAGE_EXTRACT_AND_RUN=1 node tools/smoke-test.mjs ../dist/S3cure-SSH-Client-Linux-x64.AppImage --no-sandbox
 // Über --remote-debugging-port wird die Seite abgefragt (Chrome DevTools Protocol).
+// S3CURE_EXPECT_KIND=linux-appimage: zusätzlich prüfen, wie sich der Updater einordnet.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -39,7 +41,7 @@ function evaluate(wsUrl, expression) {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(wsUrl);
     const timer = setTimeout(() => { ws.close(); reject(new Error('Keine Antwort über DevTools')); }, 10_000);
-    ws.onopen = () => ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression, returnByValue: true } }));
+    ws.onopen = () => ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression, returnByValue: true, awaitPromise: true } }));
     ws.onmessage = ev => {
       const msg = JSON.parse(ev.data);
       if (msg.id !== 1) return;
@@ -61,6 +63,7 @@ const CHECK = `JSON.stringify({
   tunnels: typeof window.tunnelUi === 'object',
   icons: document.querySelectorAll('svg.ic').length,
 })`;
+const EXPECT_KIND = process.env.S3CURE_EXPECT_KIND || '';
 
 async function main() {
   const start = Date.now();
@@ -74,11 +77,16 @@ async function main() {
         const info = JSON.parse(await evaluate(page.webSocketDebuggerUrl, CHECK));
         last = JSON.stringify(info);
         if (info.ready === 'complete' && info.sidebar && info.bridge && info.tunnels && info.icons > 0) {
+          if (EXPECT_KIND) {
+            const kind = await evaluate(page.webSocketDebuggerUrl, 'window.s3update.kind()');
+            if (kind !== EXPECT_KIND) throw new Error(`Updater-Art „${kind}“ statt „${EXPECT_KIND}“`);
+            last += ` updater=${kind}`;
+          }
           console.log(`OK nach ${((Date.now() - start) / 1000).toFixed(1)} s:`, last);
           return;
         }
       }
-    } catch (err) { last = err.message; }
+    } catch (err) { if (/^Updater-Art/.test(err.message)) throw err; last = err.message; }
     await sleep(1000);
   }
   throw new Error('Fenster nicht rechtzeitig geladen. Letzter Stand: ' + last);

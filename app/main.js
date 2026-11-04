@@ -18,7 +18,7 @@ const HOSTS_FILE = path.join(CONFIG_DIR, 'hosts.json');
 const KNOWN_HOSTS = path.join(CONFIG_DIR, 'known_hosts');
 const PASSWORDS_FILE = path.join(CONFIG_DIR, 'passwords.json');
 const SYSTEM_KNOWN_HOSTS = path.join(os.homedir(), '.ssh', 'known_hosts');
-// S3CURE_PLATFORM nur für Tests (Windows-Verhalten auf dem Mac ausprobieren)
+// S3CURE_PLATFORM nur für Tests (Windows-/Linux-Verhalten auf dem Mac ausprobieren: win32, linux)
 const PLATFORM = process.env.S3CURE_PLATFORM || process.platform;
 const IS_MAC = PLATFORM === 'darwin';
 const { createConnection } = require('./lib/connection');
@@ -594,10 +594,12 @@ function createWindow() {
     width: 1100, height: 700, minWidth: 720, minHeight: 460,
     title: 'S3cure SSH Client',
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#0f0f11' : '#f7f7f8',
-    // macOS: Ampelknöpfe im Fenster; Windows: eigene Titelleiste mit Windows-Knöpfen oben rechts
+    // macOS: Ampelknöpfe im Fenster; Windows und Linux: eigene Titelleiste mit Fensterknöpfen oben rechts
     ...(IS_MAC
       ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 16, y: 14 } }
       : { titleBarStyle: 'hidden', titleBarOverlay: titleBarColors() }),
+    // Linux: Programmsymbol für Fensterliste/Dock (macOS und Windows nehmen es aus dem Paket)
+    ...(PLATFORM === 'linux' ? { icon: path.join(__dirname, 'src', 'logo.png') } : {}),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
   // App-Sperre an: erst src/lock.html, nach dem Entsperren die Oberfläche
@@ -647,7 +649,7 @@ async function offerMoveToApplications() {
 }
 
 app.whenReady().then(async () => {
-  // Windows: keine Menüleiste (Kopieren/Einfügen in Feldern geht trotzdem)
+  // Windows/Linux: keine Menüleiste (Kopieren/Einfügen in Feldern geht trotzdem)
   if (!IS_MAC) Menu.setApplicationMenu(null);
   if (await offerMoveToApplications()) return; // App wird gerade verschoben und neu gestartet
   createWindow();

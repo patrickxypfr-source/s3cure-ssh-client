@@ -4,7 +4,8 @@ const api = window.myssh;
 
 // Mac oder Windows/Linux: Tastenkürzel und Texte passend
 const IS_MAC = api.platform === 'darwin';
-document.body.classList.add(IS_MAC ? 'mac' : 'win');
+document.body.classList.add(IS_MAC ? 'mac' : 'win'); // Linux verhält sich wie Windows
+if (api.platform === 'linux') document.body.classList.add('linux');
 const modKey = e => (IS_MAC ? e.metaKey : e.ctrlKey);
 const KEYS = IS_MAC
   ? { closeTab: 'Cmd+W', quick: 'Cmd+T', search: 'Cmd+F', up: 'Cmd+↑', del: 'Cmd+⌫' }
