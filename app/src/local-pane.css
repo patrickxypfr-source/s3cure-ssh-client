@@ -3,6 +3,7 @@
 .lp {
   position: absolute; top: 0; bottom: 0; left: 0; width: var(--lp-w, 42%);
   display: flex; flex-direction: column; background: var(--surface); min-width: 0;
+  container-type: inline-size;
 }
 .lp[hidden], .lp-divider[hidden] { display: none; }
 .files.lp-on { left: calc(var(--lp-w, 42%) + 44px); container-type: inline-size; }
@@ -82,11 +83,23 @@
 .lp-conflict .actions .spacer { flex: 1; }
 .lp-all[hidden] { display: none; }
 
-/* Wenig Platz: Rechte-Spalte und Beschriftungen ausblenden */
+/* Wenig Platz: weniger wichtige Spalten und Beschriftungen ausblenden */
 @container (max-width: 560px) {
   .files.lp-on .files-list .mode { display: none; }
   .files.lp-on .search-field { width: 205px; min-width: 190px; }
 }
 @container (max-width: 470px) {
   .files.lp-on .files-actions > .btn { font-size: 0; gap: 0; padding: 0 9px; }
+  .files.lp-on .search-field { width: 120px; min-width: 100px; }
+  .files.lp-on .search-field input { padding-right: 8px !important; }
+  .files.lp-on .search-scope { display: none; }
+  .files.lp-on [data-a=home] { display: none; }
+}
+@container (max-width: 500px) {
+  .lp-chip { padding: 0 9px; }
+  .lp-chip .lbl { display: none; }
+}
+@container (max-width: 420px) {
+  .files.lp-on .files-list .date, .lp-list .date { display: none; }
+  .lp [data-l=home] { display: none; }
 }

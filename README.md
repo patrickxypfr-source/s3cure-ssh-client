@@ -46,6 +46,7 @@ ZIP entpacken und die App starten.
 
 ### Dateien (SFTP)
 - Dateibrowser mit Hochladen (auch per Drag & Drop), Herunterladen, Umbenennen, Löschen
+- **Geteilte Ansicht „Mein Computer“** wie bei FileZilla: eigene Dateien links, Server rechts – Dateien und ganze Ordner einfach hin- und herziehen, mit Rückfrage vor dem Überschreiben
 - **Eingebauter Editor** – Dateien direkt auf dem Server bearbeiten, Cmd/Strg+S speichert
 - Vorschau für Bilder und Text (Leertaste)
 - Rechte ändern (chmod), ZIP packen und entpacken
