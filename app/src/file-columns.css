@@ -1,0 +1,26 @@
+/* ---------- Spalten der Server-Dateiliste (file-columns.js) ---------- */
+
+.files-list table.fc { table-layout: fixed; }
+.files-list table.fc td { overflow: hidden; text-overflow: ellipsis; }
+.files-list table.fc td.name { width: auto; max-width: none; }
+.files-list table.fc th { position: sticky; cursor: pointer; user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.files-list table.fc th:hover { color: var(--text); }
+.files-list table.fc th.sorted { color: var(--text); }
+.files-list table.fc th.sorted::after { content: ' ↑'; color: var(--accent); }
+.files-list table.fc th.sorted.desc::after { content: ' ↓'; }
+.files-list td.owner, .files-list td.group { color: var(--muted); font-size: 12px; }
+
+/* Griff zum Verschieben der Breite: linke Kante des Spaltenkopfs */
+.col-grip { position: absolute; top: 0; bottom: 0; left: 0; width: 7px; cursor: col-resize; z-index: 2; }
+.col-grip::after { content: ''; position: absolute; top: 25%; bottom: 25%; left: 0; width: 1px; background: var(--border-strong); }
+.col-grip:hover::after { background: var(--accent); width: 2px; }
+body.col-resizing, body.col-resizing * { cursor: col-resize !important; }
+
+/* Ausgeblendete Spalten */
+.files.hide-size .files-list .size, .files.hide-date .files-list .date, .files.hide-mode .files-list .mode,
+.files.hide-owner .files-list .owner, .files.hide-group .files-list .group { display: none; }
+
+/* Geteilte Ansicht mit wenig Platz: Besitzer/Gruppe ausblenden (wie „Rechte“) */
+@container (max-width: 640px) {
+  .files.lp-on .files-list .owner, .files.lp-on .files-list .group { display: none; }
+}

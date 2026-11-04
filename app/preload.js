@@ -44,6 +44,17 @@ contextBridge.exposeInMainWorld('myssh', {
   archiveUnpack: (id, file) => ipcRenderer.invoke('archive:unpack', id, file),
   transferCancel: jobId => ipcRenderer.send('transfer:cancel', jobId),
   onTransfer: cb => ipcRenderer.on('transfer:update', (_e, info) => cb(info)),
+  // Warteschlange (app/lib/transfers.js, src/transfers.js)
+  transferPause: jobId => ipcRenderer.send('transfer:pause', jobId),
+  transferResume: jobId => ipcRenderer.send('transfer:resume', jobId),
+  transferRetry: jobId => ipcRenderer.send('transfer:retry', jobId),
+  transferMove: (jobId, delta) => ipcRenderer.send('transfer:move', jobId, delta),
+  transferRemove: jobId => ipcRenderer.send('transfer:remove', jobId),
+  transferClear: () => ipcRenderer.send('transfer:clear'),
+  transferPauseAll: () => ipcRenderer.send('transfer:pause-all'),
+  transferResumeAll: () => ipcRenderer.send('transfer:resume-all'),
+  transferConfig: opts => ipcRenderer.invoke('transfer:config', opts),
+  transferList: () => ipcRenderer.invoke('transfer:list'),
   snippetsLoad: () => ipcRenderer.invoke('snippets:load'),
   snippetsSave: (key, profile) => ipcRenderer.invoke('snippets:save', key, profile),
   snippetsMigrate: profiles => ipcRenderer.invoke('snippets:migrate', profiles),
@@ -114,6 +125,12 @@ contextBridge.exposeInMainWorld('mysshTerm', {
   onLogError: cb => ipcRenderer.on('log:error', (_e, id, msg) => cb(id, msg)),
   openLink: url => ipcRenderer.send('term:open-link', url),
   onZoom: cb => ipcRenderer.on('term:zoom', (_e, step) => cb(step)),
+});
+
+// Lesezeichen für Ordner (app/lib/bookmarks.js, src/file-nav.js)
+contextBridge.exposeInMainWorld('s3bookmarks', {
+  get: () => ipcRenderer.invoke('bookmarks:get'),
+  set: (scope, key, list) => ipcRenderer.invoke('bookmarks:set', scope, key, list),
 });
 
 // Geteilte Dateiansicht „Mein Computer“ (app/lib/localfs.js, app/lib/pane-transfer.js, src/local-pane.js)

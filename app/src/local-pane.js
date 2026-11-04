@@ -109,6 +109,11 @@ window.LocalPane = (() => {
     }
     setupLocalList(p);
     setupServerList(p);
+    // Verlauf zurück/vor und Lesezeichen (file-nav.js)
+    p.nav = window.FileNav?.attach({
+      bar: el.querySelector('.files-bar'), scope: 'local', root: el, list: p.list,
+      getPath: () => p.path, go: dir => go(p, dir),
+    });
     dragDivider(p);
 
     // Sichtbar genau dann, wenn die Server-Dateiansicht dieses Tabs sichtbar ist
@@ -219,6 +224,7 @@ window.LocalPane = (() => {
       if (!before) p.anchor = select ? select[0] : null;
       p.loaded = true;
       p.error = null;
+      p.nav?.visited(p.path);
       savePref(p);
       render(p);
       return true;
@@ -664,6 +670,7 @@ window.LocalPane = (() => {
           <button type="button" class="btn" data-c="cancel">Übertragung abbrechen</button>
           <span class="spacer"></span>
           <button type="button" class="btn" data-c="skip">Überspringen</button>
+          <button type="button" class="btn" data-c="resume" hidden title="Die vorhandene Datei ist kleiner – vermutlich ein abgebrochener Versuch. Ab dort weitermachen statt neu anfangen.">Fortsetzen</button>
           <button type="submit" class="btn danger" data-c="overwrite">Überschreiben</button>
         </div>
       </form>`;
@@ -683,6 +690,9 @@ window.LocalPane = (() => {
     };
     modal.querySelector('[data-c=cancel]').addEventListener('click', () => done('cancel'));
     modal.querySelector('[data-c=skip]').addEventListener('click', () => done('skip'));
+    modal.querySelector('[data-c=resume]').hidden = !info.canResume; // Teil-Datei weiterschreiben
+    modal.querySelector('.lp-conflict').classList.toggle('can-resume', !!info.canResume);
+    modal.querySelector('[data-c=resume]').addEventListener('click', () => done('resume'));
     modal.querySelector('form').addEventListener('submit', e => { e.preventDefault(); done('overwrite'); });
     modal.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done('cancel'); } });
     document.body.appendChild(modal);
@@ -695,5 +705,11 @@ window.LocalPane = (() => {
     return p ? { open: p.open, path: p.path || p.startPath || null, w: Math.round(p.w * 10) / 10 } : null;
   }
 
-  return { attach, detach, serverDragOver, serverDrop, isOpen: tab => !!panes.get(tab.id)?.open, state };
+  // Lokale Liste neu laden, wenn sie gerade `dir` zeigt (z. B. nach „Erneut versuchen“ in transfers.js)
+  function refresh(tab, dir) {
+    const p = panes.get(tab.id);
+    if (p && p.loaded && p.path === dir) go(p, p.path, { keep: true, silent: true });
+  }
+
+  return { attach, detach, serverDragOver, serverDrop, refresh, state, isOpen: tab => !!panes.get(tab.id)?.open };
 })();

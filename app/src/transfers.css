@@ -1,0 +1,62 @@
+/* ---------- Übertragungs-Warteschlange unten rechts (transfers.js) ---------- */
+
+#main { position: relative; }
+#transfers {
+  position: absolute; right: 16px; bottom: 16px; z-index: 6;
+  width: 380px; max-width: calc(100% - 32px); max-height: 55%;
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg);
+  animation: pop .14s ease; overflow: hidden;
+}
+#transfers[hidden] { display: none; }
+
+/* Kopf: Gesamtfortschritt, Geschwindigkeit, Restzeit */
+.tq-head { display: flex; align-items: center; gap: 4px; padding: 9px 8px 7px 12px; }
+.tq-ico { display: inline-flex; color: var(--accent); margin-right: 6px; }
+.tq-text { flex: 1; min-width: 0; cursor: pointer; }
+.tq-title { font-weight: 600; font-size: 12.5px; }
+.tq-sum { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tq-head .mini-btn { opacity: 1; display: inline-flex; }
+.tq-head .mini-btn[hidden] { display: none; }
+.tq-fold svg.ic { transition: transform .15s; }
+#transfers.folded .tq-fold svg.ic { transform: rotate(180deg); }
+.tq-bar { margin: 0 12px 9px; }
+#transfers.all-done .tq-ico, #transfers.all-done .tq-bar .t-fill { color: var(--ok); background: var(--ok); }
+#transfers.all-done .tq-ico { background: none; }
+#transfers.has-error .tq-sum { color: var(--accent); }
+
+.tq-list { overflow: auto; border-top: 1px solid var(--border); }
+#transfers.folded .tq-list { display: none; }
+
+/* Ein Auftrag */
+.transfer {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 8px 9px 12px; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+.transfer:last-child { border-bottom: none; }
+.transfer .t-ico { display: inline-flex; color: var(--accent); }
+.transfer .t-text { flex: 1; min-width: 0; }
+.transfer .t-title { font-weight: 550; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.transfer .t-sub { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.t-bar { height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.transfer .t-bar { margin-top: 6px; }
+.t-fill { height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+.transfer.busy:not(.done):not(.error) .t-fill { animation: t-busy 1.2s ease-in-out infinite; width: 40% !important; }
+.transfer.done .t-fill { background: var(--ok); }
+.transfer.done .t-ico { color: var(--ok); }
+.transfer.cancelled .t-fill, .transfer.cancelling .t-fill,
+.transfer.paused .t-fill, .transfer.pausing .t-fill, .transfer.queued .t-fill, .transfer.waiting .t-fill { background: var(--faint); }
+.transfer.paused .t-ico, .transfer.queued .t-ico, .transfer.waiting .t-ico { color: var(--muted); }
+.transfer.waiting .t-sub { color: var(--warn); }
+.transfer.error .t-sub { color: var(--accent); }
+.transfer.cancelled .t-title, .transfer.done .t-title { color: var(--muted); }
+
+.t-actions { display: flex; align-items: center; gap: 1px; flex-shrink: 0; }
+.t-actions .mini-btn { opacity: 1; display: inline-flex; }
+.t-actions .mini-btn[hidden] { display: none; }
+/* Reihenfolge nur beim Drüberfahren zeigen – spart Platz */
+.transfer:not(:hover) .t-move { display: none; }
+@keyframes t-busy { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+
+/* Rückfrage „Datei gibt es schon“ (local-pane.js) mit zusätzlichem Knopf „Fortsetzen“ */
+.lp-conflict.can-resume { width: 580px; }

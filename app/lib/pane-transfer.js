@@ -1,8 +1,8 @@
 // Übertragungen zwischen „Mein Computer“ und dem Server (geteilte Dateiansicht, src/local-pane.js)
 // Hochladen in einen bestimmten Server-Ordner, Herunterladen in einen bestimmten lokalen Ordner,
 // Ordner rekursiv. Gibt es eine Datei am Ziel schon, wird die Oberfläche gefragt:
-// Überschreiben / Überspringen (optional „für alle“) / Abbrechen.
-// Fortschritt und Abbrechen laufen über die bestehende Übertragungsliste (lib/transfers.js).
+// Überschreiben / Fortsetzen (nur wenn das Ziel kleiner ist) / Überspringen (optional „für alle“) / Abbrechen.
+// Die Dateien laufen über die Übertragungs-Warteschlange (lib/transfers.js).
 const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
@@ -34,12 +34,13 @@ function register({ ipcMain, getSftp, sftpError, transfers, getWin, platform }) 
     });
   }
 
-  // Liefert 'overwrite' oder 'skip'; bei Abbrechen wird der ganze Auftrag gestoppt
+  // Liefert 'overwrite', 'resume' (Teil-Datei fortsetzen) oder 'skip'; bei Abbrechen wird der ganze Auftrag gestoppt
   async function resolveConflict(job, state, info) {
     if (state.all) return state.all;
     const a = await askConflict({ jobId: job.id, kind: job.kind, multi: state.multi, ...info });
     job.check();
-    if (a.action !== 'overwrite' && a.action !== 'skip') {
+    if (a.action === 'resume' && !info.canResume) a.action = 'overwrite';
+    if (a.action !== 'overwrite' && a.action !== 'skip' && a.action !== 'resume') {
       transfers.cancel(job.id);
       job.check();
     }
@@ -71,12 +72,14 @@ function register({ ipcMain, getSftp, sftpError, transfers, getWin, platform }) 
     if (existing) {
       if (existing.isDirectory()) throw new Error(`„${name}“ gibt es auf dem Server schon als Ordner.`);
       const choice = await resolveConflict(job, state, {
-        name, target: remote,
+        name, target: remote, canResume: existing.size < st.size,
         source: { size: st.size, mtime: st.mtimeMs }, existing: { size: existing.size, mtime: existing.mtime * 1000 },
       });
-      if (choice === 'skip') { state.skipped++; job.setTotal(job.total - st.size); return; }
+      if (choice === 'skip') { state.skipped++; job.setTotal(job.estimate - st.size); return; }
+      // „Fortsetzen für alle“ nur dort, wo das Ziel kleiner ist – sonst überschreiben
+      if (choice === 'resume' && existing.size < st.size) return job.copy('put', sftp, local, remote, name, { size: st.size, resume: true });
     }
-    await job.copy('put', sftp, local, remote, name);
+    await job.copy('put', sftp, local, remote, name, { size: st.size });
   }
 
   async function downloadOne(job, sftp, remote, localDir, state, fresh) {
@@ -96,12 +99,13 @@ function register({ ipcMain, getSftp, sftpError, transfers, getWin, platform }) 
     if (existing) {
       if (existing.isDirectory()) throw new Error(`„${name}“ gibt es auf diesem Computer schon als Ordner.`);
       const choice = await resolveConflict(job, state, {
-        name, target: local,
+        name, target: local, canResume: existing.size < st.size,
         source: { size: st.size, mtime: st.mtime * 1000 }, existing: { size: existing.size, mtime: existing.mtimeMs },
       });
-      if (choice === 'skip') { state.skipped++; job.setTotal(job.total - st.size); return; }
+      if (choice === 'skip') { state.skipped++; job.setTotal(job.estimate - st.size); return; }
+      if (choice === 'resume' && existing.size < st.size) return job.copy('get', sftp, remote, local, name, { size: st.size, resume: true });
     }
-    await job.copy('get', sftp, remote, local, name);
+    await job.copy('get', sftp, remote, local, name, { size: st.size });
   }
 
   const titleFor = (names, base) => names.length === 1 ? base(names[0]) : `${names.length} Elemente`;
@@ -112,7 +116,7 @@ function register({ ipcMain, getSftp, sftpError, transfers, getWin, platform }) 
     if (!Array.isArray(localPaths) || !localPaths.length) return { files: 0, skipped: 0 };
     const list = localPaths.map(checkPath);
     const sftp = await getSftp(tabId);
-    const job = transfers.start(tabId, 'upload', titleFor(list, path.basename));
+    const job = transfers.start(tabId, 'upload', titleFor(list, path.basename), { remoteDir });
     const state = { all: null, skipped: 0, multi: list.length > 1 };
     try {
       if (!state.multi) state.multi = (await fsp.stat(list[0])).isDirectory();
@@ -122,7 +126,8 @@ function register({ ipcMain, getSftp, sftpError, transfers, getWin, platform }) 
       job.finish(err);
       throw cleanError(err, sftpError);
     }
-    job.finish();
+    // Warten, bis die Warteschlange alles übertragen hat
+    try { await job.finish(); } catch (err) { throw cleanError(err, sftpError); }
     return { files: job.files, skipped: state.skipped };
   });
 
@@ -135,7 +140,7 @@ function register({ ipcMain, getSftp, sftpError, transfers, getWin, platform }) 
     const remotes = items.map(it => String(it.path));
     if (remotes.some(r => !r.startsWith('/'))) throw new Error('Ungültiger Pfad auf dem Server.');
     const sftp = await getSftp(tabId);
-    const job = transfers.start(tabId, 'download', titleFor(remotes, posix.basename));
+    const job = transfers.start(tabId, 'download', titleFor(remotes, posix.basename), { localDir: dir });
     const state = { all: null, skipped: 0, multi: remotes.length > 1 || !!items[0].isDir };
     try {
       job.setTotal(await transfers.remoteSize(sftp, remotes));
@@ -144,7 +149,8 @@ function register({ ipcMain, getSftp, sftpError, transfers, getWin, platform }) 
       job.finish(err);
       throw cleanError(err, sftpError);
     }
-    job.finish();
+    // Warten, bis die Warteschlange alles übertragen hat
+    try { await job.finish(); } catch (err) { throw cleanError(err, sftpError); }
     return { files: job.files, skipped: state.skipped, dir };
   });
 }

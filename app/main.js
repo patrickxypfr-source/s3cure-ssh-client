@@ -7,9 +7,13 @@ const crypto = require('crypto');
 const { createTunnelManager } = require('./lib/tunnels');
 const { setupUpdateCheck } = require('./lib/update-check');
 const sftpExtra = require('./lib/sftp-extra');
-const transfers = require('./lib/transfers').create(() => win);
+// Übertragungs-Warteschlange (Pause, Fortsetzen, parallel, Limit): app/lib/transfers.js
+const transfers = require('./lib/transfers').create(() => win, {
+  getSftp: id => getSftp(id), isConnected: id => sessions.has(id), sftpError: (err, t) => sftpError(err, t),
+});
 const snippets = require('./lib/snippets');
 const monitor = require('./lib/monitor');
+const owners = require('./lib/owners');
 
 // Dieselben Dateien wie das Kommandozeilen-Tool myssh
 // S3CURE_CONFIG_DIR nur für Tests, sonst ~/.myssh
@@ -33,6 +37,8 @@ const sessions = new Map(); // Tab-ID -> { client, stream }
 
 // Eigene Befehlsknöpfe (snippets.json) und Server-Übersicht
 const snippetStore = snippets.register(ipcMain, { configDir: CONFIG_DIR, dialog, getWin: () => win });
+// Lesezeichen für Ordner (app/lib/bookmarks.js, Oberfläche: src/file-nav.js)
+const bookmarks = require('./lib/bookmarks').register({ ipcMain, configDir: CONFIG_DIR });
 monitor.register(ipcMain, sessions);
 
 // ---------- gespeicherte Verbindungen ----------
@@ -157,17 +163,18 @@ const connection = createConnection({
 });
 
 ipcMain.handle('ssh:connect', (_e, tabId, spec, cols, rows) => {
-  closeSession(tabId);
+  closeSession(tabId, { keepTransfers: true }); // Übertragungen warten aufs Neuverbinden
   return connection.openShell(tabId, spec, cols, rows).then(info => {
     tunnels.onConnected(tabId);
+    transfers.resumeTab(tabId);
     return info;
   });
 });
 
-function closeSession(tabId) {
+function closeSession(tabId, { keepTransfers = false } = {}) {
   stopSearch(tabId);
   tunnels.stopAll(tabId);
-  transfers.cancelTab(tabId);
+  if (keepTransfers) transfers.suspendTab(tabId); else transfers.cancelTab(tabId);
   const s = sessions.get(tabId);
   if (s) { sessions.delete(tabId); s.client.end(); }
 }
@@ -224,9 +231,10 @@ ipcMain.handle('sftp:list', async (_e, tabId, dir) => {
       const isLink = a.isSymbolicLink();
       let isDir = a.isDirectory();
       if (isLink) { try { isDir = (await p(cb => sftp.stat(posix.join(abs, item.filename), cb))).isDirectory(); } catch {} }
-      return { name: item.filename, isDir, isLink, size: a.size, mtime: a.mtime * 1000, mode: modeString(a.mode, isDir, isLink) };
+      return { name: item.filename, isDir, isLink, size: a.size, mtime: a.mtime * 1000, mode: modeString(a.mode, isDir, isLink), uid: a.uid, gid: a.gid, longname: item.longname };
     }));
     entries.sort((x, y) => (y.isDir - x.isDir) || x.name.localeCompare(y.name, 'de', { sensitivity: 'base' }));
+    await owners.annotate(sessions.get(tabId), entries); // Besitzer/Gruppe als Namen (app/lib/owners.js)
     return { path: abs, entries };
   } catch (err) { throw sftpError(err, abs || dir); }
 });
@@ -283,12 +291,12 @@ async function uploadPath(job, sftp, local, remoteDir) {
 
 ipcMain.handle('sftp:upload', async (_e, tabId, remoteDir, localPaths) => {
   const sftp = await getSftp(tabId);
-  const job = transfers.start(tabId, 'upload', localPaths.length === 1 ? path.basename(localPaths[0]) : `${localPaths.length} Elemente`);
+  const job = transfers.start(tabId, 'upload', localPaths.length === 1 ? path.basename(localPaths[0]) : `${localPaths.length} Elemente`, { remoteDir });
   job.setTotal(transfers.localSize(localPaths));
   for (const local of localPaths) {
     try { await uploadPath(job, sftp, local, remoteDir); } catch (err) { job.finish(err); throw sftpError(err, path.basename(local)); }
   }
-  job.finish();
+  await job.finish(); // wartet, bis die Warteschlange alles übertragen hat
   return localPaths.length;
 });
 
@@ -301,7 +309,7 @@ async function downloadPath(job, sftp, remote, local) {
       await downloadPath(job, sftp, posix.join(remote, item.filename), path.join(local, item.filename));
     }
   } else {
-    await job.copy('get', sftp, remote, local, posix.basename(remote));
+    await job.copy('get', sftp, remote, local, posix.basename(remote), { size: st.size });
   }
 }
 
@@ -323,17 +331,17 @@ ipcMain.handle('sftp:download', async (_e, tabId, items) => {
     if (r.canceled) return null;
     targets = items.map(it => path.join(r.filePaths[0], posix.basename(it.path)));
   }
-  const job = transfers.start(tabId, 'download', items.length === 1 ? posix.basename(items[0].path) : `${items.length} Elemente`);
+  const job = transfers.start(tabId, 'download', items.length === 1 ? posix.basename(items[0].path) : `${items.length} Elemente`, { localDir: path.dirname(targets[0]) });
   job.setTotal(await transfers.remoteSize(sftp, items.map(it => it.path)));
   for (let i = 0; i < items.length; i++) {
     try { await downloadPath(job, sftp, items[i].path, targets[i]); } catch (err) { job.finish(err); throw sftpError(err, posix.basename(items[i].path)); }
   }
-  job.finish();
+  await job.finish(); // wartet, bis die Warteschlange alles übertragen hat
   return targets;
 });
 
 ipcMain.on('show-file', (_e, file) => shell.showItemInFolder(file));
-ipcMain.on('transfer:cancel', (_e, jobId) => transfers.cancel(jobId));
+transfers.register(ipcMain); // Abbrechen, Pause, Reihenfolge, Erneut versuchen, Einstellungen
 
 // Editor, Vorschau, Rechte, ZIP (app/lib/sftp-extra.js)
 sftpExtra.register({
@@ -473,7 +481,7 @@ ipcMain.handle('hosts:list', () => hostsForUi());
 ipcMain.handle('hosts:save', (_e, name, host, oldName) => {
   const hosts = loadHosts();
   const prev = hosts[oldName || name] || {}; // weitere Felder (z. B. Tunnel) behalten
-  if (oldName && oldName !== name) { delete hosts[oldName]; renamePassword(oldName, name); snippetStore.rename(oldName, name); updateJumpRefs(hosts, oldName, name); }
+  if (oldName && oldName !== name) { delete hosts[oldName]; renamePassword(oldName, name); snippetStore.rename(oldName, name); updateJumpRefs(hosts, oldName, name); bookmarks.rename(oldName, name); }
   hosts[name] = { ...prev, user: host.user || os.userInfo().username, host: host.host, port: Number(host.port) || 22, key: host.key || null, ...hostExtras(host) };
   saveHosts(hosts);
   if (host.forgetPassword) removePassword(name);
@@ -489,6 +497,7 @@ ipcMain.handle('hosts:delete', (_e, name) => {
   updateJumpRefs(hosts, name, null);
   saveHosts(hosts);
   removePassword(name);
+  bookmarks.remove(name);
   return hostsForUi();
 });
 // Import aus ~/.ssh/config und SSH-Schlüssel: app/lib/sshconfig.js, app/lib/keys.js

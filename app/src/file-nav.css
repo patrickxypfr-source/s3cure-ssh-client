@@ -1,0 +1,57 @@
+/* ---------- Verlauf und Lesezeichen in der Pfadleiste (file-nav.js) ---------- */
+
+/* Stern rechts im Pfadfeld */
+.field.has-star input { padding-right: 34px !important; }
+.bm-star {
+  position: absolute; right: 3px; width: 28px !important; height: 28px !important;
+  border: none !important; box-shadow: none !important; background: transparent !important; color: var(--faint);
+}
+.bm-star:not(:disabled):hover { color: var(--accent); background: var(--hover) !important; }
+.bm-star svg.ic { width: 15px; height: 15px; }
+.bm-star.on { color: var(--accent); }
+.bm-star.on svg.ic { fill: currentColor; }
+
+/* Ausklappliste */
+#bm-menu {
+  position: fixed; z-index: 21; width: 340px; max-width: calc(100vw - 16px);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-lg);
+  padding: 5px; animation: pop .12s ease;
+}
+#bm-menu[hidden] { display: none; }
+.bm-head { font-size: 11.5px; font-weight: 600; color: var(--muted); padding: 6px 9px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bm-add {
+  display: flex; align-items: center; gap: 9px; width: 100%; text-align: left;
+  padding: 8px 9px; border: none; border-radius: 7px; background: transparent; color: var(--text);
+  font: inherit; font-size: 13px; cursor: pointer;
+}
+.bm-add:hover { background: var(--hover); }
+.bm-add svg.ic { color: var(--accent); }
+.bm-empty { color: var(--muted); font-size: 12.5px; padding: 8px 9px 10px; line-height: 1.45; }
+.bm-list { max-height: 320px; overflow: auto; }
+.bm-item { display: flex; align-items: center; gap: 1px; border-radius: 7px; padding-right: 3px; }
+.bm-item:hover { background: var(--hover); }
+.bm-item.on .bm-name { color: var(--accent); }
+.bm-open {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; text-align: left;
+  padding: 6px 9px; border: none; background: transparent; color: var(--text); font: inherit; cursor: pointer;
+}
+.bm-ico { display: inline-flex; color: var(--accent); }
+.bm-text { display: flex; flex-direction: column; min-width: 0; }
+.bm-name { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bm-path { font-family: var(--mono); font-size: 10.5px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bm-item .mini-btn { opacity: 0; }
+.bm-item:hover .mini-btn { opacity: 1; }
+.bm-item .mini-btn[hidden] { display: none; }
+
+/* Zurück/Vor: etwas schmaler, damit die Pfadleiste nicht zu voll wird */
+.files-bar .nav-back, .files-bar .nav-fwd { width: 30px; }
+/* Geteilte Ansicht: „Vor“ und „Home“ ausblenden (Tastenkürzel, Lesezeichen und ~ gehen weiter),
+   damit die Leiste in eine Zeile passt und der Pfad lesbar bleibt */
+@container (max-width: 560px) {
+  .files.lp-on .nav-fwd, .files.lp-on [data-a=home] { display: none; }
+  .files.lp-on .search-field { min-width: 170px; flex: 0 1 190px; }
+}
+@container (max-width: 470px) {
+  .lp .nav-fwd { display: none; }
+}
+.bm-add.remove svg.ic { fill: currentColor; }
