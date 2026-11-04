@@ -92,8 +92,10 @@ function create(getWin) {
       const step = total => { job.done = base + total; tick(); };
       try {
         const s = cancellable(sftp, job);
-        if (dir === 'put') await p(cb => s.fastPut(from, to, { step }, cb));
-        else await p(cb => s.fastGet(from, to, { step }, cb));
+        // cancelled: für FTP (lib/ftp.js), ssh2 ignoriert die Angabe
+        const opts = { step, cancelled: () => job.cancelled };
+        if (dir === 'put') await p(cb => s.fastPut(from, to, opts, cb));
+        else await p(cb => s.fastGet(from, to, opts, cb));
         job.files++;
         tick(true);
       } catch (err) {

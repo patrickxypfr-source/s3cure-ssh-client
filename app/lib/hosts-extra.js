@@ -9,6 +9,21 @@ function hostExtras(host) {
   if (COLORS.includes(host.color)) out.color = host.color;
   const jump = String(host.jump || '').trim();
   if (jump) out.jump = jump;
+  Object.assign(out, protocolFields(host));
+  return out;
+}
+
+// Protokoll: SFTP/SSH (Standard, kein Eintrag) oder FTP/FTPS (lib/ftp.js).
+// Felder werden immer gesetzt (auch undefined), damit beim Zurückwechseln auf SFTP nichts Altes übrig bleibt.
+function protocolFields(host) {
+  const { PROTOCOLS } = require('./ftp');
+  const proto = Object.prototype.hasOwnProperty.call(PROTOCOLS, host.protocol || '') ? host.protocol : undefined;
+  const out = { protocol: proto, ftpPassive: undefined, ftpInsecure: undefined };
+  if (!proto) return out;
+  if (host.ftpPassive === false) out.ftpPassive = false;             // Standard: passiv
+  if (proto !== 'ftp' && host.ftpInsecure === true) out.ftpInsecure = true; // Standard: Zertifikat prüfen
+  if (!Number(host.port)) out.port = PROTOCOLS[proto].port;
+  out.jump = undefined; // Sprung-Server gibt es nur bei SSH
   return out;
 }
 
@@ -23,4 +38,4 @@ function updateJumpRefs(hosts, oldName, newName) {
   }
 }
 
-module.exports = { hostExtras, updateJumpRefs, COLORS };
+module.exports = { hostExtras, updateJumpRefs, COLORS, protocolFields };
