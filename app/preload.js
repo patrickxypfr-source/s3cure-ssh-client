@@ -46,6 +46,7 @@ contextBridge.exposeInMainWorld('myssh', {
   onTransfer: cb => ipcRenderer.on('transfer:update', (_e, info) => cb(info)),
   snippetsLoad: () => ipcRenderer.invoke('snippets:load'),
   snippetsSave: (key, profile) => ipcRenderer.invoke('snippets:save', key, profile),
+  snippetsSaveGlobal: profile => ipcRenderer.invoke('snippets:saveGlobal', profile),
   snippetsMigrate: profiles => ipcRenderer.invoke('snippets:migrate', profiles),
   snippetsExport: (name, groups) => ipcRenderer.invoke('snippets:export', name, groups),
   snippetsImport: () => ipcRenderer.invoke('snippets:import'),

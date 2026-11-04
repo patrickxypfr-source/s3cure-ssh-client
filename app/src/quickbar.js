@@ -1,5 +1,6 @@
 // Eigene Befehlsknöpfe pro Verbindung (Befehlsleiste #quickbar)
 // Gespeichert in ~/.myssh/snippets.json über den Hauptprozess (app/lib/snippets.js).
+// Dazu kommen Knöpfe „Für alle Server“ (eigene Gruppe, bei jeder Verbindung sichtbar).
 // Wird vor renderer.js geladen – Zugriff auf tabs, askLocal, openMenu, runQuick usw. erst beim Aufruf.
 const Quickbar = (() => {
   const api = window.myssh;
@@ -123,6 +124,8 @@ const Quickbar = (() => {
 
   // ---------- Daten ----------
 
+  // Profil-Schlüssel der Knöpfe „Für alle Server“ – kann kein Verbindungsname sein
+  const GLOBAL = '\u0000alle';
   let profiles = {};
   let loaded = false;
   let loading = null;
@@ -166,6 +169,7 @@ const Quickbar = (() => {
         let data = await api.snippetsLoad();
         if (!data.migrated) data = await api.snippetsMigrate(await migrationProfiles());
         profiles = data.profiles || {};
+        profiles[GLOBAL] = data.global || { groups: [] };
       } catch (err) {
         console.error('Befehlsknöpfe konnten nicht geladen werden', err);
       }
@@ -180,7 +184,7 @@ const Quickbar = (() => {
     groups = groups.filter(g => g.items.length);
     profiles[key] = { groups };
     renderQuickbar();
-    try { await api.snippetsSave(key, { groups }); }
+    try { await (key === GLOBAL ? api.snippetsSaveGlobal({ groups }) : api.snippetsSave(key, { groups })); }
     catch (err) { showError('Befehlsknöpfe konnten nicht gespeichert werden: ' + (err.message || err)); }
   }
 
@@ -260,37 +264,18 @@ const Quickbar = (() => {
     if (editing) editing = null; // anderer Tab -> Bearbeiten beenden
 
     const groups = groupsOf(key);
-    if (!countButtons(groups)) { renderEmpty(key, bar); return; }
+    const globals = groupsOf(GLOBAL);
+    if (!countButtons(groups) && !countButtons(globals)) { renderEmpty(key, bar); return; }
 
-    groups.forEach((group, gi) => {
-      if (gi) bar.appendChild(el('span', 'qsep'));
-      for (const item of group.items) {
-        const b = el('button', 'qbtn' + (item.danger ? ' danger' : ''));
-        b.disabled = !connected;
-        fillButton(b, item, item.type === 'menu');
-        // Mit Icon steht der Name auch im Tooltip (bei schmaler Leiste ist nur das Icon zu sehen)
-        b.title = (hasIcon(item.icon) ? `${item.label}\n` : '') + (item.type === 'button' ? `${item.cmd}\n` : '') + (item.tip || '');
-        b.setAttribute('aria-label', item.label);
-        b.addEventListener('click', e => {
-          if (item.type !== 'menu') return run(item);
-          const r = e.currentTarget.getBoundingClientRect();
-          const entries = item.items.map(sub => [sub.label, () => run(sub, item), sub.danger || item.danger ? 'danger' : '', hasIcon(sub.icon) ? sub.icon : 'terminal']);
-          if (!entries.length) entries.push(['Leer – Einträge hinzufügen …', () => startEdit(key), '', 'plus']);
-          openMenu(entries, r.left, r.bottom + 4);
-        });
-        b.addEventListener('contextmenu', e => {
-          e.preventDefault();
-          e.stopPropagation();
-          openMenu([
-            ['Bearbeiten …', () => openEditor(key, findPath(key, item.id)), '', 'edit'],
-            ['Leiste bearbeiten', () => startEdit(key), '', 'bolt'],
-            null,
-            ['Löschen …', () => deleteAt(key, findPath(key, item.id)), 'danger', 'trash'],
-          ], e.clientX, e.clientY);
-        });
-        bar.appendChild(b);
-      }
-    });
+    renderButtons(bar, key, key, groups, connected);
+    if (countButtons(globals)) {
+      if (countButtons(groups)) bar.appendChild(el('span', 'qsep'));
+      const tag = el('span', 'qscope');
+      tag.innerHTML = icon(hasIcon('globe') ? 'globe' : 'server');
+      tag.title = 'Die folgenden Knöpfe gelten für alle Server';
+      bar.appendChild(tag);
+      renderButtons(bar, GLOBAL, key, globals, connected);
+    }
     const edit = el('button', 'qbtn qghost');
     edit.innerHTML = icon('edit');
     edit.title = 'Knöpfe bearbeiten, sortieren, Vorlage, Export/Import';
@@ -303,6 +288,53 @@ const Quickbar = (() => {
         ['Neuer Knopf …', () => newButton(key), '', 'plus'],
       ], e.clientX, e.clientY);
     };
+  }
+
+  // owner: Profil, in dem die Knöpfe gespeichert sind (Verbindung oder GLOBAL); key: aktuelle Verbindung
+  function renderButtons(bar, owner, key, groups, connected) {
+    const global = owner === GLOBAL;
+    groups.forEach((group, gi) => {
+      if (gi) bar.appendChild(el('span', 'qsep'));
+      for (const item of group.items) {
+        const b = el('button', 'qbtn' + (item.danger ? ' danger' : '') + (global ? ' qglobal' : ''));
+        b.disabled = !connected;
+        fillButton(b, item, item.type === 'menu');
+        // Mit Icon steht der Name auch im Tooltip (bei schmaler Leiste ist nur das Icon zu sehen)
+        b.title = (hasIcon(item.icon) ? `${item.label}\n` : '') + (item.type === 'button' ? `${item.cmd}\n` : '') + (item.tip || '') + (global ? '\n(für alle Server)' : '');
+        b.setAttribute('aria-label', item.label);
+        b.addEventListener('click', e => {
+          if (item.type !== 'menu') return run(item);
+          const r = e.currentTarget.getBoundingClientRect();
+          const entries = item.items.map(sub => [sub.label, () => run(sub, item), sub.danger || item.danger ? 'danger' : '', hasIcon(sub.icon) ? sub.icon : 'terminal']);
+          if (!entries.length) entries.push(['Leer – Einträge hinzufügen …', () => startEdit(key), '', 'plus']);
+          openMenu(entries, r.left, r.bottom + 4);
+        });
+        b.addEventListener('contextmenu', e => {
+          e.preventDefault();
+          e.stopPropagation();
+          openMenu([
+            ['Bearbeiten …', () => openEditor(owner, findPath(owner, item.id)), '', 'edit'],
+            global
+              ? ['Nur bei dieser Verbindung zeigen', () => moveScope(owner, key, item.id), '', 'server']
+              : ['Bei allen Servern zeigen', () => moveScope(owner, GLOBAL, item.id), '', hasIcon('globe') ? 'globe' : 'server'],
+            ['Leiste bearbeiten', () => startEdit(key), '', 'bolt'],
+            null,
+            ['Löschen …', () => deleteAt(owner, findPath(owner, item.id)), 'danger', 'trash'],
+          ], e.clientX, e.clientY);
+        });
+        bar.appendChild(b);
+      }
+    });
+  }
+
+  // Knopf oder Menü zwischen „nur diese Verbindung“ und „alle Server“ verschieben (ans Ende)
+  function moveScope(fromKey, toKey, id) {
+    const p = findPath(fromKey, id);
+    if (!p || p.ei != null) return;
+    const to = groupsOf(toKey);
+    const last = to.length - 1;
+    move({ key: fromKey, ...p }, last >= 0 ? { key: toKey, gi: last, index: to[last].items.length } : { key: toKey, newGroup: true, index: 0 });
+    flash(toKey === GLOBAL ? 'Knopf wird jetzt bei allen Servern angezeigt' : 'Knopf gilt jetzt nur für diese Verbindung');
   }
 
   function renderEmpty(key, bar) {
@@ -346,52 +378,22 @@ const Quickbar = (() => {
     bar.classList.add('editing');
     const groups = groupsOf(key);
     bar.appendChild(el('span', 'qlabel qedit-label', 'Bearbeiten'));
-
-    groups.forEach((group, gi) => {
-      if (gi) bar.appendChild(el('span', 'qsep'));
-      const box = el('div', 'qgroup');
-      group.items.forEach((item, ii) => {
-        if (item.type === 'menu') {
-          const m = el('div', 'qmenu qitem' + (item.danger ? ' danger' : ''));
-          m.draggable = true;
-          const head = el('button', 'qmenu-head');
-          head.type = 'button';
-          fillButton(head, item, true);
-          head.title = 'Menü bearbeiten (Name, Rückfrage) – ziehen zum Verschieben';
-          head.addEventListener('click', () => openEditor(key, { gi, ii }));
-          const list = el('div', 'qmenu-items');
-          item.items.forEach((sub, ei) => {
-            const c = chip('qentry', sub);
-            c.title = sub.cmd + '\nKlick: bearbeiten · ziehen: verschieben';
-            c.addEventListener('click', () => openEditor(key, { gi, ii, ei }));
-            c.addEventListener('dragstart', e => startDrag(e, { gi, ii, ei }, false, c));
-            list.appendChild(c);
-          });
-          const plus = el('button', 'qadd');
-          plus.type = 'button';
-          plus.innerHTML = icon('plus');
-          plus.title = 'Eintrag zu diesem Menü hinzufügen';
-          plus.addEventListener('click', () => openEditor(key, null, { kind: 'button', into: { gi, ii } }));
-          list.appendChild(plus);
-          dropTarget(list, key, { gi, ii }, false);
-          m.append(head, list);
-          m.addEventListener('dragstart', e => startDrag(e, { gi, ii }, true, m));
-          box.appendChild(m);
-        } else {
-          const c = chip('', item);
-          c.title = item.cmd + '\nKlick: bearbeiten · ziehen: verschieben';
-          c.addEventListener('click', () => openEditor(key, { gi, ii }));
-          c.addEventListener('dragstart', e => startDrag(e, { gi, ii }, false, c));
-          box.appendChild(c);
-        }
-      });
-      dropTarget(box, key, { gi }, true);
-      bar.appendChild(box);
-    });
-
+    renderEditGroups(bar, key, key, groups);
     const zone = el('div', 'qgroup qnew', groups.length ? 'Hierher ziehen = neue Gruppe' : 'Noch keine Knöpfe');
-    dropTarget(zone, key, { newGroup: true }, true);
+    dropTarget(zone, { key, newGroup: true }, true);
     bar.appendChild(zone);
+
+    // Eigene Gruppe: Knöpfe für alle Server
+    const globals = groupsOf(GLOBAL);
+    const label = el('span', 'qlabel qscope-label');
+    label.innerHTML = icon(hasIcon('globe') ? 'globe' : 'server');
+    label.append('Alle Server');
+    label.title = 'Diese Knöpfe erscheinen bei jeder Verbindung. Knöpfe hierher ziehen = für alle Server.';
+    bar.appendChild(label);
+    renderEditGroups(bar, GLOBAL, key, globals);
+    const gzone = el('div', 'qgroup qnew qglobal-zone', globals.length ? 'Hierher ziehen = neue Gruppe für alle Server' : 'Hierher ziehen = für alle Server');
+    dropTarget(gzone, { key: GLOBAL, newGroup: true }, true);
+    bar.appendChild(gzone);
 
     const tools = el('div', 'qtools');
     const tool = (text, ic, fn, cls = '') => {
@@ -408,6 +410,50 @@ const Quickbar = (() => {
     tool('Import', 'upload', () => importFile(key)).title = 'Knöpfe aus einer JSON-Datei übernehmen';
     tool('Fertig', '', stopEdit, 'primary');
     bar.appendChild(tools);
+  }
+
+  function renderEditGroups(bar, owner, key, groups) {
+    groups.forEach((group, gi) => {
+      if (gi) bar.appendChild(el('span', 'qsep'));
+      const box = el('div', 'qgroup' + (owner === GLOBAL ? ' qglobal' : ''));
+      group.items.forEach((item, ii) => {
+        if (item.type === 'menu') {
+          const m = el('div', 'qmenu qitem' + (item.danger ? ' danger' : ''));
+          m.draggable = true;
+          const head = el('button', 'qmenu-head');
+          head.type = 'button';
+          fillButton(head, item, true);
+          head.title = 'Menü bearbeiten (Name, Rückfrage) – ziehen zum Verschieben';
+          head.addEventListener('click', () => openEditor(owner, { gi, ii }));
+          const list = el('div', 'qmenu-items');
+          item.items.forEach((sub, ei) => {
+            const c = chip('qentry', sub);
+            c.title = sub.cmd + '\nKlick: bearbeiten · ziehen: verschieben';
+            c.addEventListener('click', () => openEditor(owner, { gi, ii, ei }));
+            c.addEventListener('dragstart', e => startDrag(e, { key: owner, gi, ii, ei }, false, c));
+            list.appendChild(c);
+          });
+          const plus = el('button', 'qadd');
+          plus.type = 'button';
+          plus.innerHTML = icon('plus');
+          plus.title = 'Eintrag zu diesem Menü hinzufügen';
+          plus.addEventListener('click', () => openEditor(owner, null, { kind: 'button', into: { gi, ii } }));
+          list.appendChild(plus);
+          dropTarget(list, { key: owner, gi, ii }, false);
+          m.append(head, list);
+          m.addEventListener('dragstart', e => startDrag(e, { key: owner, gi, ii }, true, m));
+          box.appendChild(m);
+        } else {
+          const c = chip('', item);
+          c.title = item.cmd + '\nKlick: bearbeiten · ziehen: verschieben';
+          c.addEventListener('click', () => openEditor(owner, { gi, ii }));
+          c.addEventListener('dragstart', e => startDrag(e, { key: owner, gi, ii }, false, c));
+          box.appendChild(c);
+        }
+      });
+      dropTarget(box, { key: owner, gi }, true);
+      bar.appendChild(box);
+    });
   }
 
   function startDrag(e, from, isMenu, node) {
@@ -430,7 +476,7 @@ const Quickbar = (() => {
     return { index: kids.length, before: container.querySelector(':scope > .qadd') };
   }
 
-  function dropTarget(container, key, to, acceptsMenus) {
+  function dropTarget(container, to, acceptsMenus) {
     container.addEventListener('dragover', e => {
       if (!drag || (drag.isMenu && !acceptsMenus)) return; // Menü im Menü geht nicht
       e.preventDefault();
@@ -452,25 +498,29 @@ const Quickbar = (() => {
       const index = to.newGroup ? 0 : dropIndex(container, e.clientX, e.clientY).index;
       const from = drag.from;
       drag = null;
-      move(key, from, { ...to, index });
+      move(from, { ...to, index });
     });
   }
 
   // Ziel-Liste: Gruppe { gi } oder Einträge eines Menüs { gi, ii }
   const listAt = (groups, c) => (c.ii == null ? groups[c.gi].items : groups[c.gi].items[c.ii].items);
 
-  function move(key, from, to) {
-    const groups = clone(groupsOf(key));
-    const src = from.ei == null ? groups[from.gi].items : groups[from.gi].items[from.ii].items;
+  // from/to: { key, gi, ii?, ei? } bzw. { key, newGroup } – key darf verschieden sein (Verbindung <-> alle Server)
+  function move(from, to) {
+    const same = from.key === to.key;
+    const srcGroups = clone(groupsOf(from.key));
+    const dstGroups = same ? srcGroups : clone(groupsOf(to.key));
+    const src = from.ei == null ? srcGroups[from.gi].items : srcGroups[from.gi].items[from.ii].items;
     const srcIndex = from.ei == null ? from.ii : from.ei;
-    const target = to.newGroup ? [] : listAt(groups, to); // Ziel merken, bevor sich Positionen verschieben
+    const target = to.newGroup ? [] : listAt(dstGroups, to); // Ziel merken, bevor sich Positionen verschieben
     let index = to.index;
     if (target === src && srcIndex < index) index--;
     const [item] = src.splice(srcIndex, 1);
     if (!item) return;
     target.splice(index, 0, item);
-    if (to.newGroup) groups.push({ id: uid(), items: target });
-    setGroups(key, groups);
+    if (to.newGroup) dstGroups.push({ id: uid(), items: target });
+    setGroups(from.key, srcGroups);
+    if (!same) setGroups(to.key, dstGroups);
   }
 
   function findPath(key, id) {
@@ -525,7 +575,7 @@ const Quickbar = (() => {
   function templateMenu(key, btn) {
     const r = btn.getBoundingClientRect();
     const entries = [['Vorlage „s3cure“ (s3-Befehle)', () => applyGroups(key, withIds(TEMPLATES.s3cure.groups()), 'Vorlage „s3cure“ übernehmen'), '', 'bolt']];
-    const others = Object.keys(profiles).filter(k => k !== key && countButtons(groupsOf(k))).sort((a, b) => a.localeCompare(b));
+    const others = Object.keys(profiles).filter(k => k !== key && k !== GLOBAL && countButtons(groupsOf(k))).sort((a, b) => a.localeCompare(b));
     if (others.length) entries.push(null);
     for (const k of others) entries.push([`Von „${k}“ kopieren`, () => applyGroups(key, withIds(groupsOf(k)), `Knöpfe von „${k}“ übernehmen`), '', 'server']);
     openMenu(entries, r.left, r.bottom + 4);
@@ -595,6 +645,13 @@ const Quickbar = (() => {
         <input name="confirmText" class="snip-sub" maxlength="500" placeholder="Frage, z. B. Wirklich neu starten? (leer = Standardfrage)">
         <label class="toggle"><input type="checkbox" name="danger"><span class="track"><span class="knob"></span></span>Rot markieren (vorsichtig benutzen)</label>
         <label class="toggle for-button"><input type="checkbox" name="live"><span class="track"><span class="knob"></span></span>Läuft dauerhaft (z. B. Live-Log) – vor dem nächsten Knopf mit Strg+C beenden</label>
+        <div class="snip-scope">
+          <span>Anzeigen bei</span>
+          <div class="seg">
+            <button type="button" data-scope="local">Nur dieser Server</button>
+            <button type="button" data-scope="global">Alle Server</button>
+          </div>
+        </div>
         <p class="snip-help for-menu">Die Rückfrage gilt für alle Einträge im Menü. Einträge bearbeitest du direkt in der Leiste: anklicken, ziehen oder mit ＋ hinzufügen.</p>
         <div class="actions">
           <button type="button" class="btn snip-delete">${icon('trash')}Löschen</button>
@@ -609,6 +666,7 @@ const Quickbar = (() => {
     const syncConfirm = () => { form.confirmText.hidden = !form.confirmOn.checked; };
     form.confirmOn.addEventListener('change', () => { syncConfirm(); if (form.confirmOn.checked) form.confirmText.focus(); });
     form.cmd.addEventListener('input', () => renderInputs(ed));
+    for (const b of modal.querySelectorAll('[data-scope]')) b.addEventListener('click', () => setScope(ed, b.dataset.scope));
     const search = modal.querySelector('.snip-icon-search');
     search.addEventListener('input', () => renderIconGrid(ed));
     search.addEventListener('keydown', e => {
@@ -627,6 +685,11 @@ const Quickbar = (() => {
     }, true);
     ed.syncConfirm = syncConfirm;
     return ed;
+  }
+
+  function setScope(ed, scope) {
+    ed.scope = scope;
+    for (const b of ed.modal.querySelectorAll('[data-scope]')) b.classList.toggle('on', b.dataset.scope === scope);
   }
 
   // Icon-Raster: „kein Icon“ + alle passenden Icons zur Suche
@@ -699,7 +762,9 @@ const Quickbar = (() => {
     if (path && !item) return;
     const kind = item ? item.type : opts.kind;
     const inMenu = path ? path.ei != null : !!opts.into;
-    Object.assign(ed, { key, path, kind, into: opts.into || null, inputs: clone(item?.inputs || {}), icon: hasIcon(item?.icon) ? item.icon : '' });
+    const active = tabs.get(activeId);
+    const localKey = key === GLOBAL ? (active ? keyOf(active) : null) : key;
+    Object.assign(ed, { key, localKey, path, kind, into: opts.into || null, inputs: clone(item?.inputs || {}), icon: hasIcon(item?.icon) ? item.icon : '' });
     const f = ed.form;
     f.reset();
     f.classList.toggle('is-menu', kind === 'menu');
@@ -719,6 +784,9 @@ const Quickbar = (() => {
     renderInputs(ed);
     renderIconGrid(ed);
     ed.modal.querySelector('.snip-delete').hidden = !item;
+    // Menü-Einträge gehören zu ihrem Menü – nur Knöpfe und Menüs selbst sind umschaltbar
+    ed.modal.querySelector('.snip-scope').hidden = inMenu || !localKey;
+    setScope(ed, key === GLOBAL ? 'global' : 'local');
     ed.modal.hidden = false;
     f.label.focus();
   }
@@ -743,6 +811,18 @@ const Quickbar = (() => {
       const old = ed.path ? itemAt(groups, ed.path) : null;
       item = { id: old?.id || uid(), type: 'button', ...base, cmd, live: f.live.checked, inputs };
     }
+    // „Anzeigen bei“ umgeschaltet: aus dem bisherigen Profil entfernen, im anderen hinten anfügen
+    const target = ed.into || (ed.path && ed.path.ei != null) || !ed.localKey ? ed.key : ed.scope === 'global' ? GLOBAL : ed.localKey;
+    if (ed.path && target !== ed.key) {
+      groups[ed.path.gi].items.splice(ed.path.ii, 1);
+      const other = clone(groupsOf(target));
+      if (other.length) other[other.length - 1].items.push(item); else other.push({ id: uid(), items: [item] });
+      ed.modal.hidden = true;
+      setGroups(ed.key, groups);
+      setGroups(target, other);
+      return;
+    }
+    if (!ed.path && target !== ed.key) { ed.key = target; groups.splice(0, groups.length, ...clone(groupsOf(target))); }
     if (ed.path) {
       const list = ed.path.ei == null ? groups[ed.path.gi].items : groups[ed.path.gi].items[ed.path.ii].items;
       list[ed.path.ei == null ? ed.path.ii : ed.path.ei] = item;
@@ -756,8 +836,24 @@ const Quickbar = (() => {
     ed.modal.hidden = true;
     setGroups(ed.key, groups);
     // Neues Menü: gleich in den Bearbeiten-Modus, damit Einträge hinzugefügt werden können
-    if (!ed.path && ed.kind === 'menu') startEdit(ed.key);
+    if (!ed.path && ed.kind === 'menu') startEdit(ed.localKey || ed.key);
   }
 
-  return { render, isLive, load, TEMPLATES };
+  // Alle ausführbaren Knöpfe der Verbindung (für die Befehlspalette): eigene zuerst, dann „alle Server“
+  function entries(tab) {
+    if (!tab) return [];
+    if (!loaded) load();
+    const out = [];
+    for (const [owner, global] of [[keyOf(tab), false], [GLOBAL, true]]) {
+      for (const g of groupsOf(owner)) {
+        for (const it of g.items) {
+          if (it.type === 'menu') for (const sub of it.items) out.push({ item: sub, parent: it, global, label: `${it.label}: ${sub.label}` });
+          else out.push({ item: it, parent: null, global, label: it.label });
+        }
+      }
+    }
+    return out;
+  }
+
+  return { render, isLive, load, TEMPLATES, entries, run };
 })();
