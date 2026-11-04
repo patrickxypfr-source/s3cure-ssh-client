@@ -127,3 +127,17 @@ contextBridge.exposeInMainWorld('localFs', {
   onConflict: cb => ipcRenderer.on('xfer:conflict', (_e, info) => cb(info)),
   answerConflict: (reqId, answer) => ipcRenderer.send('xfer:conflict-answer', reqId, answer),
 });
+
+// Server-Übersicht: Dienste, Docker, System (app/lib/dashboard.js, Oberfläche: src/dashboard.js)
+contextBridge.exposeInMainWorld('s3dash', {
+  probe: tabId => ipcRenderer.invoke('dash:probe', tabId),
+  services: tabId => ipcRenderer.invoke('dash:services', tabId),
+  serviceAction: (tabId, unit, action) => ipcRenderer.invoke('dash:serviceAction', tabId, unit, action),
+  serviceLogs: (tabId, unit, lines) => ipcRenderer.invoke('dash:serviceLogs', tabId, unit, lines),
+  containers: tabId => ipcRenderer.invoke('dash:containers', tabId),
+  containerAction: (tabId, id, action) => ipcRenderer.invoke('dash:containerAction', tabId, id, action),
+  containerLogs: (tabId, id, lines) => ipcRenderer.invoke('dash:containerLogs', tabId, id, lines),
+  system: tabId => ipcRenderer.invoke('dash:system', tabId),
+  bigDirs: (tabId, dir, useSudo) => ipcRenderer.invoke('dash:bigDirs', tabId, dir, useSudo),
+  cancel: tabId => ipcRenderer.invoke('dash:cancel', tabId),
+});

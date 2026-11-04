@@ -33,6 +33,7 @@ const sessions = new Map(); // Tab-ID -> { client, stream }
 // Eigene Befehlsknöpfe (snippets.json) und Server-Übersicht
 const snippetStore = snippets.register(ipcMain, { configDir: CONFIG_DIR, dialog, getWin: () => win });
 monitor.register(ipcMain, sessions);
+require('./lib/dashboard').register(ipcMain, sessions); // Übersicht: Dienste, Docker, System
 
 // ---------- gespeicherte Verbindungen ----------
 

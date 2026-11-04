@@ -234,6 +234,7 @@ function updateToolbar() {
   $('#toolbar').hidden = !tab;
   window.tunnelUi?.setTab(tab || null);
   window.TermExtra?.update(tab);
+  window.Dashboard?.update(tab); // Ansicht „Übersicht“ (dashboard.js)
   if (!tab) return;
   const texts = {
     connecting: 'Verbinde …',
@@ -384,6 +385,7 @@ function closeTab(id, force = false) {
   api.close(id);
   window.TermExtra?.detach(tab);
   window.LocalPane?.detach(tab);
+  window.Dashboard?.detach(tab);
   tab.term.dispose();
   tab.el.remove();
   tab.files.el.remove();
