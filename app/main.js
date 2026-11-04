@@ -1,10 +1,9 @@
 // S3cure SSH Client – Hauptprozess: Fenster, gespeicherte Verbindungen und SSH-Sitzungen
-const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, safeStorage, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, safeStorage, Menu, powerMonitor } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
-const { Client, utils } = require('ssh2');
 
 // Dieselben Dateien wie das Kommandozeilen-Tool myssh
 // S3CURE_CONFIG_DIR nur für Tests, sonst ~/.myssh
@@ -16,6 +15,8 @@ const SYSTEM_KNOWN_HOSTS = path.join(os.homedir(), '.ssh', 'known_hosts');
 // S3CURE_PLATFORM nur für Tests (Windows-Verhalten auf dem Mac ausprobieren)
 const PLATFORM = process.env.S3CURE_PLATFORM || process.platform;
 const IS_MAC = PLATFORM === 'darwin';
+const { createConnection } = require('./lib/connection');
+const { createSecretStore } = require('./lib/secrets');
 const DEFAULT_KEYS = ['id_ed25519', 'id_ecdsa', 'id_rsa'].map(k => path.join(os.homedir(), '.ssh', k));
 
 let win;
@@ -181,106 +182,6 @@ async function verifyHostKey(target, rawKey) {
   return { ok: true };
 }
 
-// ---------- Anmeldung ----------
-
-function makeAuthHandler(target, hostName, auth) {
-  const user = target.user;
-  const queue = [];
-  // SSH-Agent: macOS/Linux über SSH_AUTH_SOCK, Windows über den OpenSSH-Agent-Dienst
-  const WIN_AGENT_PIPE = '\\\\.\\pipe\\openssh-ssh-agent';
-  let agent = process.env.SSH_AUTH_SOCK || null;
-  if (!agent && process.platform === 'win32' && fs.existsSync(WIN_AGENT_PIPE)) agent = WIN_AGENT_PIPE;
-  if (agent) queue.push({ type: 'agent', username: user, agent });
-  const keyFiles = target.key ? [expandHome(target.key)] : DEFAULT_KEYS.filter(f => fs.existsSync(f));
-  for (const file of keyFiles) queue.push({ type: 'publickey', username: user, file });
-
-  let passwordTries = 0;
-
-  async function loadKey(file) {
-    let data;
-    try { data = fs.readFileSync(file); } catch { return null; }
-    let key = utils.parseKey(data);
-    if (key instanceof Error && /passphrase/i.test(key.message)) {
-      const pass = await ask({
-        kind: 'secret', title: 'Schlüssel entsperren',
-        message: `Passphrase für ${path.basename(file)}:`,
-      });
-      if (pass == null) return null;
-      key = utils.parseKey(data, pass);
-    }
-    if (key instanceof Error) return null;
-    return Array.isArray(key) ? key[0] : key;
-  }
-
-  let savedTried = false;
-  let savedRejected = false;
-
-  // Erst das gespeicherte Passwort, sonst nachfragen (mit Option „merken“)
-  async function askPassword() {
-    if (hostName && !savedTried) {
-      savedTried = true;
-      const saved = readPassword(hostName);
-      if (saved != null) { auth.usedSaved = true; auth.pending = null; return saved; }
-    }
-    if (auth.usedSaved) {
-      // Gespeichertes Passwort wurde abgelehnt -> verwerfen
-      auth.usedSaved = false;
-      savedRejected = true;
-      removePassword(hostName);
-    }
-    const again = passwordTries > 0;
-    passwordTries++;
-    const answer = await ask({
-      kind: 'secret',
-      title: savedRejected && !again ? 'Passwort geändert?' : again ? 'Falsches Passwort' : 'Anmeldung',
-      message: savedRejected && !again
-        ? `Das gespeicherte Passwort wurde abgelehnt. Bitte neu eingeben für ${user}@${target.host}:`
-        : `${again ? 'Nochmal versuchen. ' : ''}Passwort für ${user}@${target.host}:`,
-      remember: !!hostName,
-    });
-    if (answer == null) return null;
-    const value = typeof answer === 'object' ? answer.value : answer;
-    auth.pending = hostName && typeof answer === 'object' && answer.remember ? value : null;
-    return value;
-  }
-
-  return (methodsLeft, _partial, next) => {
-    (async () => {
-      const allowed = methodsLeft || ['publickey', 'password', 'keyboard-interactive'];
-      while (queue.length) {
-        const m = queue.shift();
-        if (!allowed.includes('publickey')) continue;
-        if (m.type === 'agent') return next(m);
-        const key = await loadKey(m.file);
-        if (key) return next({ type: 'publickey', username: user, key });
-      }
-      if (passwordTries < 3 || (hostName && !savedTried)) {
-        if (allowed.includes('password')) {
-          const pw = await askPassword();
-          if (pw == null) return next(false);
-          return next({ type: 'password', username: user, password: pw });
-        }
-        if (allowed.includes('keyboard-interactive')) {
-          return next({
-            type: 'keyboard-interactive', username: user,
-            prompt: async (_name, _instr, _lang, prompts, finish) => {
-              const answers = [];
-              for (const p of prompts) {
-                const a = /passw/i.test(p.prompt) ? await askPassword()
-                  : await ask({ kind: p.echo ? 'text' : 'secret', title: 'Anmeldung', message: p.prompt });
-                if (a == null) return finish([]);
-                answers.push(a);
-              }
-              finish(answers);
-            },
-          });
-        }
-      }
-      next(false);
-    })().catch(() => next(false));
-  };
-}
-
 // ---------- SSH-Sitzung ----------
 
 function friendlyError(err, target) {
@@ -293,53 +194,18 @@ function friendlyError(err, target) {
   return 'Verbindung fehlgeschlagen: ' + msg;
 }
 
+// Verbindungsaufbau, Sprung-Server, Wachhalten: app/lib/connection.js
+const passphrases = createSecretStore(path.join(CONFIG_DIR, 'passphrases.json'));
+const sendToUi = (channel, ...args) => { if (win && !win.isDestroyed()) win.webContents.send(channel, ...args); };
+const connection = createConnection({
+  loadHosts, parseTarget, expandHome, ask, verifyHostKey, friendlyError, sessions, send: sendToUi,
+  passwords: { read: readPassword, write: writePassword, remove: removePassword },
+  passphrases, defaultKeys: DEFAULT_KEYS,
+});
+
 ipcMain.handle('ssh:connect', (_e, tabId, spec, cols, rows) => {
-  const target = spec.name ? loadHosts()[spec.name] : parseTarget(spec.text);
-  const auth = { pending: null, usedSaved: false };
-  if (!target) throw new Error(`Keine Verbindung namens „${spec.name}“ gespeichert.`);
-
   closeSession(tabId);
-  return new Promise((resolve, reject) => {
-    const client = new Client();
-    let hostError = null;
-    let settled = false;
-    const fail = err => { if (!settled) { settled = true; client.end(); reject(new Error(hostError || friendlyError(err, target))); } };
-
-    client.on('ready', () => {
-      // Anmeldung hat geklappt -> neu eingegebenes Passwort merken, falls gewünscht
-      if (spec.name && auth.pending != null) writePassword(spec.name, auth.pending);
-      client.shell({ term: 'xterm-256color', cols, rows }, (err, stream) => {
-        if (err) return fail(err);
-        sessions.set(tabId, { client, stream });
-        stream.on('data', d => win && !win.isDestroyed() && win.webContents.send('ssh:data', tabId, d));
-        stream.stderr.on('data', d => win && !win.isDestroyed() && win.webContents.send('ssh:data', tabId, d));
-        stream.on('close', () => {
-          if (sessions.get(tabId)?.client === client) sessions.delete(tabId);
-          client.end();
-          if (win && !win.isDestroyed()) win.webContents.send('ssh:closed', tabId);
-        });
-        settled = true;
-        resolve({ user: target.user, host: target.host, port: target.port });
-      });
-    });
-    client.on('error', fail);
-    client.on('close', () => fail(new Error('Verbindung geschlossen')));
-
-    client.connect({
-      host: target.host,
-      port: target.port,
-      username: target.user,
-      readyTimeout: 20000,
-      keepaliveInterval: 30000,
-      hostVerifier: (rawKey, verify) => {
-        verifyHostKey(target, rawKey).then(r => {
-          if (!r.ok) hostError = r.error;
-          verify(r.ok);
-        });
-      },
-      authHandler: makeAuthHandler(target, spec.name || null, auth),
-    });
-  });
+  return connection.openShell(tabId, spec, cols, rows);
 });
 
 function closeSession(tabId) {
@@ -350,7 +216,7 @@ function closeSession(tabId) {
 
 ipcMain.on('ssh:write', (_e, tabId, data) => sessions.get(tabId)?.stream.write(data));
 ipcMain.on('ssh:resize', (_e, tabId, cols, rows) => sessions.get(tabId)?.stream.setWindow(rows, cols, 0, 0));
-ipcMain.on('ssh:close', (_e, tabId) => closeSession(tabId));
+ipcMain.on('ssh:close', (_e, tabId) => { closeSession(tabId); connection.forget(tabId); });
 
 // ---------- Dateien (SFTP) ----------
 
@@ -687,6 +553,8 @@ app.whenReady().then(() => {
   // Windows: keine Menüleiste (Kopieren/Einfügen in Feldern geht trotzdem)
   if (!IS_MAC) Menu.setApplicationMenu(null);
   createWindow();
+  // Nach dem Aufwachen: tote Verbindungen sofort erkennen und neu verbinden
+  powerMonitor.on('resume', () => { connection.probeAll(); sendToUi('power:resume'); });
   nativeTheme.on('updated', () => { if (!IS_MAC && win && !win.isDestroyed()) win.setTitleBarOverlay(titleBarColors()); });
 });
 app.on('window-all-closed', () => app.quit());
