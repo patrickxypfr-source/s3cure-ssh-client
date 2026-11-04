@@ -5,6 +5,7 @@
   "description": "S3cure SSH Client – SSH & SFTP",
   "main": "main.js",
   "private": true,
+  "license": "MIT",
   "scripts": {
     "start": "electron .",
     "build": "electron-packager . \"S3cure SSH Client\" --platform=darwin --arch=arm64 --out=../dist --overwrite --app-bundle-id=local.s3cure.sshclient --icon=icon.icns --ignore=\"^/(assets|tools)\" --ignore=\"/node_modules/(cpu-features|buildcheck|nan)(/|$)\" && node tools/zip.mjs \"../dist/S3cure SSH Client-darwin-arm64/S3cure SSH Client.app\" ../dist/S3cure-SSH-Client-Mac-AppleSilicon.zip",
