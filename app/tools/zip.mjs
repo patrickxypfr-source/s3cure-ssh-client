@@ -13,7 +13,14 @@ export function zipDir(src, zip) {
   fs.rmSync(zip, { force: true });
   const opts = { stdio: 'inherit' };
   if (process.platform === 'darwin') {
-    execFileSync('ditto', ['-c', '-k', '--keepParent', src, zip], opts);
+    // .app neu ad-hoc signieren: Der Packager verändert das Bundle, danach passt Electrons
+    // Signatur nicht mehr – heruntergeladen meldet macOS die App sonst als „beschädigt“.
+    if (src.endsWith('.app')) {
+      execFileSync('codesign', ['--force', '--deep', '--sign', '-', src], opts);
+      execFileSync('codesign', ['--verify', '--deep', '--strict', src], opts);
+      console.log('Ad-hoc signiert:', path.basename(src));
+    }
+    execFileSync('ditto',['-c', '-k', '--keepParent', src, zip], opts);
   } else if (process.platform === 'win32') {
     // Das tar von Windows (nicht das aus Git) kann ZIP schreiben
     const tar = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe');

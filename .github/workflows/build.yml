@@ -78,7 +78,10 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: S3cure SSH Client – ${{ matrix.name }}
-          path: dist/${{ matrix.zip }}
+          # Windows zusätzlich: portable Einzeldatei-.exe (fehlt bei macOS – dann nur die ZIP)
+          path: |
+            dist/${{ matrix.zip }}
+            dist/S3cure-SSH-Client-Windows-Portable.exe
           if-no-files-found: error
           compression-level: 0
           retention-days: 30
@@ -102,8 +105,8 @@ jobs:
         run: |
           ls -la dist
           if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" dist/*.zip --clobber --repo "$GITHUB_REPOSITORY"
+            gh release upload "$GITHUB_REF_NAME" dist/*.zip dist/*.exe --clobber --repo "$GITHUB_REPOSITORY"
           else
-            gh release create "$GITHUB_REF_NAME" dist/*.zip --repo "$GITHUB_REPOSITORY" \
+            gh release create "$GITHUB_REF_NAME" dist/*.zip dist/*.exe --repo "$GITHUB_REPOSITORY" \
               --title "S3cure SSH Client ${GITHUB_REF_NAME#v}" --generate-notes
           fi

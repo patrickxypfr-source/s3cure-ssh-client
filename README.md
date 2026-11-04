@@ -22,15 +22,16 @@ Fertige Versionen gibt es unter **[Releases](../../releases/latest)**:
 
 | System | Datei |
 |---|---|
+| **Windows 10/11** – einfach starten | `S3cure-SSH-Client-Windows-Portable.exe` (eine Datei, keine Installation) |
+| Windows 10/11 – als Ordner | `S3cure-SSH-Client-Windows-x64.zip` (entpacken, `S3cure SSH Client.exe` starten) |
 | Mac mit Apple-Chip (M1–M4) | `S3cure-SSH-Client-Mac-AppleSilicon.zip` |
 | Mac mit Intel-Chip | `S3cure-SSH-Client-Mac-Intel.zip` |
-| Windows 10/11 (64 Bit) | `S3cure-SSH-Client-Windows-x64.zip` |
 
-ZIP entpacken und die App starten.
+> ⚠️ Bitte **nicht** den grünen Knopf „Code → Download ZIP“ benutzen – das ist der Quellcode, kein fertiges Programm.
 
-> **Hinweis:** Die App ist nicht von Apple bzw. Microsoft signiert.
-> - **macOS:** Beim ersten Start Rechtsklick auf die App → **Öffnen** → **Öffnen**. Falls macOS meldet, die App sei „beschädigt“: im Terminal `xattr -cr "/Pfad/zu/S3cure SSH Client.app"` ausführen.
-> - **Windows:** Bei „Der Computer wurde durch Windows geschützt“ auf **Weitere Informationen** → **Trotzdem ausführen** klicken.
+**Erster Start** – die App ist nicht von Apple bzw. Microsoft signiert, deshalb fragt das System einmal nach:
+- **macOS:** ZIP doppelklicken, App in den Programme-Ordner ziehen und öffnen. Kommt „kann nicht geöffnet werden, da der Entwickler nicht verifiziert werden kann“: **Systemeinstellungen → Datenschutz & Sicherheit** → ganz unten **Dennoch öffnen** klicken (ältere macOS-Versionen: Rechtsklick auf die App → **Öffnen**).
+- **Windows:** Bei „Der Computer wurde durch Windows geschützt“ auf **Weitere Informationen** → **Trotzdem ausführen** klicken.
 
 ## Funktionen
 
