@@ -1,5 +1,6 @@
-// Nachbearbeitung des Windows-Builds (läuft auf dem Mac, ohne Wine):
-// 1. icon.ico aus assets/icon-1024.png erzeugen
+// Nachbearbeitung des Windows-Builds (läuft auf Mac, Windows und Linux, ohne Wine):
+// 1. icon.ico nehmen (liegt im Repo). Neu erzeugen aus assets/icon-1024.png nur mit
+//    `node tools/win-finish.mjs --new-icon` (braucht `sips`, also macOS)
 // 2. Symbol und Programm-Infos in die .exe schreiben
 // 3. alles als ZIP zum Weitergeben verpacken
 import fs from 'node:fs';
@@ -8,6 +9,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import * as ResEdit from 'resedit';
+import { zipDir } from './zip.mjs';
 
 const APP_DIR = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const NAME = 'S3cure SSH Client';
@@ -83,12 +85,15 @@ function patchExe() {
 
 // --- 3. ZIP ---
 function zip() {
-  fs.rmSync(ZIP, { force: true });
-  execFileSync('ditto', ['-c', '-k', '--keepParent', BUILD, ZIP]);
-  console.log('ZIP:', path.relative(path.join(APP_DIR, '..'), ZIP), `(${Math.round(fs.statSync(ZIP).size / 1e6)} MB)`);
+  zipDir(BUILD, ZIP);
 }
 
 if (!fs.existsSync(EXE)) { console.error('Kein Windows-Build gefunden:', EXE); process.exit(1); }
-makeIco();
+if (process.argv.includes('--new-icon') || !fs.existsSync(ICO)) {
+  if (process.platform !== 'darwin') { console.error('icon.ico fehlt und kann nur auf dem Mac (sips) erzeugt werden.'); process.exit(1); }
+  makeIco();
+} else {
+  console.log('icon.ico vorhanden – wird verwendet');
+}
 patchExe();
 zip();
