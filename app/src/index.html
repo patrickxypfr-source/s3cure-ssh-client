@@ -2,12 +2,13 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
   <title>S3cure SSH Client</title>
   <link rel="stylesheet" href="../node_modules/@xterm/xterm/css/xterm.css">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="settings.css">
   <link rel="stylesheet" href="term-extra.css">
+  <link rel="stylesheet" href="files-extra.css">
 </head>
 <body>
   <aside id="sidebar">
@@ -128,5 +129,8 @@
   <script src="renderer.js"></script>
   <script src="settings.js"></script>
   <script src="term-extra.js"></script>
+  <script src="transfers.js"></script>
+  <script src="editor.js"></script>
+  <script src="files-extra.js"></script>
 </body>
 </html>

@@ -7,6 +7,8 @@ const crypto = require('crypto');
 const { Client, utils } = require('ssh2');
 const { createTunnelManager } = require('./lib/tunnels');
 const { setupUpdateCheck } = require('./lib/update-check');
+const sftpExtra = require('./lib/sftp-extra');
+const transfers = require('./lib/transfers').create(() => win);
 
 // Dieselben Dateien wie das Kommandozeilen-Tool myssh
 // S3CURE_CONFIG_DIR nur für Tests, sonst ~/.myssh
@@ -348,6 +350,7 @@ ipcMain.handle('ssh:connect', (_e, tabId, spec, cols, rows) => {
 function closeSession(tabId) {
   stopSearch(tabId);
   tunnels.stopAll(tabId);
+  transfers.cancelTab(tabId);
   const s = sessions.get(tabId);
   if (s) { sessions.delete(tabId); s.client.end(); }
 }
@@ -388,14 +391,6 @@ function modeString(mode, isDir, isLink) {
   let s = isLink ? 'l' : isDir ? 'd' : '-';
   for (let i = 0; i < 9; i++) s += (mode & (1 << (8 - i))) ? chars[i] : '-';
   return s;
-}
-
-function progress(tabId, label) {
-  let last = -1;
-  return (_done, done, total) => {
-    const pct = total ? Math.floor(done * 100 / total) : 100;
-    if (pct !== last && win && !win.isDestroyed()) { last = pct; win.webContents.send('sftp:progress', tabId, label, pct); }
-  };
 }
 
 ipcMain.handle('sftp:list', async (_e, tabId, dir) => {
@@ -455,37 +450,41 @@ ipcMain.handle('pick-upload', async (_e, kind) => {
   return r.canceled ? null : r.filePaths;
 });
 
-async function uploadPath(tabId, sftp, local, remoteDir) {
+async function uploadPath(job, sftp, local, remoteDir) {
   const name = path.basename(local);
   const remote = posix.join(remoteDir, name);
   if (fs.statSync(local).isDirectory()) {
     try { await p(cb => sftp.mkdir(remote, cb)); } catch { /* Ordner gibt es schon */ }
     for (const child of fs.readdirSync(local)) {
       if (child === '.DS_Store') continue;
-      await uploadPath(tabId, sftp, path.join(local, child), remote);
+      await uploadPath(job, sftp, path.join(local, child), remote);
     }
   } else {
-    await p(cb => sftp.fastPut(local, remote, { step: progress(tabId, `Hochladen: ${name}`) }, cb));
+    await job.copy('put', sftp, local, remote, name);
   }
 }
 
 ipcMain.handle('sftp:upload', async (_e, tabId, remoteDir, localPaths) => {
   const sftp = await getSftp(tabId);
+  const job = transfers.start(tabId, 'upload', localPaths.length === 1 ? path.basename(localPaths[0]) : `${localPaths.length} Elemente`);
+  job.setTotal(transfers.localSize(localPaths));
   for (const local of localPaths) {
-    try { await uploadPath(tabId, sftp, local, remoteDir); } catch (err) { throw sftpError(err, path.basename(local)); }
+    try { await uploadPath(job, sftp, local, remoteDir); } catch (err) { job.finish(err); throw sftpError(err, path.basename(local)); }
   }
+  job.finish();
   return localPaths.length;
 });
 
-async function downloadPath(tabId, sftp, remote, local) {
+async function downloadPath(job, sftp, remote, local) {
   const st = await p(cb => sftp.stat(remote, cb));
   if (st.isDirectory()) {
     fs.mkdirSync(local, { recursive: true });
     for (const item of await p(cb => sftp.readdir(remote, cb))) {
-      await downloadPath(tabId, sftp, posix.join(remote, item.filename), path.join(local, item.filename));
+      job.check();
+      await downloadPath(job, sftp, posix.join(remote, item.filename), path.join(local, item.filename));
     }
   } else {
-    await p(cb => sftp.fastGet(remote, local, { step: progress(tabId, `Herunterladen: ${posix.basename(remote)}`) }, cb));
+    await job.copy('get', sftp, remote, local, posix.basename(remote));
   }
 }
 
@@ -507,13 +506,27 @@ ipcMain.handle('sftp:download', async (_e, tabId, items) => {
     if (r.canceled) return null;
     targets = items.map(it => path.join(r.filePaths[0], posix.basename(it.path)));
   }
+  const job = transfers.start(tabId, 'download', items.length === 1 ? posix.basename(items[0].path) : `${items.length} Elemente`);
+  job.setTotal(await transfers.remoteSize(sftp, items.map(it => it.path)));
   for (let i = 0; i < items.length; i++) {
-    try { await downloadPath(tabId, sftp, items[i].path, targets[i]); } catch (err) { throw sftpError(err, posix.basename(items[i].path)); }
+    try { await downloadPath(job, sftp, items[i].path, targets[i]); } catch (err) { job.finish(err); throw sftpError(err, posix.basename(items[i].path)); }
   }
+  job.finish();
   return targets;
 });
 
 ipcMain.on('show-file', (_e, file) => shell.showItemInFolder(file));
+ipcMain.on('transfer:cancel', (_e, jobId) => transfers.cancel(jobId));
+
+// Editor, Vorschau, Rechte, ZIP (app/lib/sftp-extra.js)
+sftpExtra.register({
+  ipcMain, getSftp, sftpError,
+  getClient: tabId => {
+    const s = sessions.get(tabId);
+    if (!s) throw new Error('Keine aktive Verbindung in diesem Tab.');
+    return s.client;
+  },
+});
 
 // ---------- Suche auf dem Server ----------
 // Bevorzugt `find` direkt auf dem Server (schnell). Erlaubt der Server keine Befehle,

@@ -404,9 +404,16 @@ function setView(view) {
 
 for (const b of document.querySelectorAll('#view-switch button')) b.addEventListener('click', () => setView(b.dataset.view));
 
-function closeTab(id) {
+function closeTab(id, force = false) {
   const tab = tabs.get(id);
   if (!tab) return;
+  // Ungespeicherte Änderungen im Editor (editor.js)?
+  if (!force && Editor.isDirty(tab)) {
+    if (activeId !== id) activate(id);
+    if (tab.view !== 'files') setView('files');
+    Editor.confirmDiscard(tab).then(ok => { if (ok) closeTab(id, true); });
+    return;
+  }
   api.close(id);
   window.TermExtra?.detach(tab);
   tab.term.dispose();
@@ -467,6 +474,7 @@ window.addEventListener('keydown', e => {
 // ---------- Fehler & Fortschritt ----------
 
 function showError(err) {
+  if (FilesExtra.isCancel(err)) return; // vom Nutzer abgebrochen – kein Fehler
   const msg = String(err.message || err).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
   askLocal({ kind: 'info', title: 'Fehler', message: msg });
 }
@@ -736,7 +744,7 @@ async function loadDir(tab, dir) {
 
 function openEntry(tab, it) {
   if (it.isDir) loadDir(tab, joinPath(tab.files.path, it.name));
-  else downloadItems(tab, [it]);
+  else FilesExtra.openFile(tab, it); // Editor, Vorschau oder Herunterladen (files-extra.js)
 }
 
 async function uploadPicked(tab, kind) {
@@ -962,6 +970,7 @@ function showContextMenu(tab, x, y) {
   if (sel.length === 1 && sel[0].isDir) entries.push(['Öffnen', () => openEntry(tab, sel[0]), '', 'folder']);
   entries.push(['Herunterladen', () => downloadItems(tab, sel), '', 'download']);
   if (sel.length === 1) entries.push(['Umbenennen', () => renameSelected(tab), '', 'rename']);
+  FilesExtra.addMenuEntries(tab, sel, entries); // files-extra.js
   entries.push(null);
   entries.push(['Löschen', () => deleteSelected(tab), 'danger', 'trash']);
   openMenu(entries, x, y);
@@ -1002,7 +1011,6 @@ function flash(text, pct = 100) {
   clearTimeout(flashTimer);
   if (pct >= 100) flashTimer = setTimeout(() => { $('#progress').hidden = true; }, 4000);
 }
-api.onProgress((_id, label, pct) => flash(`${label} – ${pct} %`, pct));
 
 // ---------- Dialoge ----------
 
