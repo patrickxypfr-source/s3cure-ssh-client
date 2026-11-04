@@ -411,6 +411,7 @@ window.LocalPane = (() => {
       if (one) entries.push(['Pfad kopieren', () => { navigator.clipboard.writeText(one.path); flash('Pfad kopiert'); }, '', 'copy']);
       entries.push(null);
     }
+    window.SyncTools?.addLocalMenuEntries(p.tab, sel, entries); // vergleichen (sync.js)
     entries.push(['Neuer Ordner', () => makeDir(p), '', 'folderPlus']);
     if (!sel.length && p.path) {
       entries.push([`Im ${FINDER} öffnen`, () => L.open(p.path).catch(showError), '', 'folder']);
@@ -689,5 +690,16 @@ window.LocalPane = (() => {
     modal.querySelector('[data-c=skip]').focus();
   }
 
-  return { attach, detach, serverDragOver, serverDrop, isOpen: tab => !!panes.get(tab.id)?.open };
+  // Für Synchronisieren/Vergleichen (sync.js): angezeigter Ordner, Auswahl, neu laden
+  function state(tab) {
+    const p = panes.get(tab.id);
+    if (!p) return null;
+    return { open: p.open, path: p.path, sep: places.sep, selected: selectedItems(p), entries: p.entries };
+  }
+  function refresh(tab) {
+    const p = panes.get(tab.id);
+    if (p && p.path) return go(p, p.path, { keep: true, silent: true });
+  }
+
+  return { attach, detach, serverDragOver, serverDrop, isOpen: tab => !!panes.get(tab.id)?.open, state, refresh };
 })();

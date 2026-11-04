@@ -17,8 +17,8 @@ const Transfers = (() => {
     const finished = ['done', 'cancelled', 'error'].includes(i.state);
     const pct = i.total ? Math.min(100, Math.floor(i.done * 100 / i.total)) : (i.state === 'done' ? 100 : 0);
     it.el.className = `transfer ${i.state}${i.busy ? ' busy' : ''}`;
-    it.el.querySelector('.t-ico').innerHTML = icon(i.kind === 'upload' ? 'upload' : i.kind === 'download' ? 'download' : i.icon || 'zip');
-    const verb = i.kind === 'upload' ? 'Hochladen' : i.kind === 'download' ? 'Herunterladen' : '';
+    it.el.querySelector('.t-ico').innerHTML = icon(i.kind === 'upload' ? 'upload' : i.kind === 'download' ? 'download' : i.kind === 'sync' ? 'refresh' : i.icon || 'zip');
+    const verb = i.kind === 'upload' ? 'Hochladen' : i.kind === 'download' ? 'Herunterladen' : ''; // 'sync': Titel sagt es (sync.js)
     it.el.querySelector('.t-title').textContent = verb ? `${verb}: ${i.title}` : i.title;
     let sub;
     if (i.state === 'error') sub = i.error || STATE_TEXT.error;
