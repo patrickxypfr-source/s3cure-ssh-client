@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>S3cure SSH Client</title>
+  <link rel="stylesheet" href="../node_modules/@xterm/xterm/css/xterm.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <aside id="sidebar">
+    <div class="drag-area titlebar-space"></div>
+
+    <div class="brand">
+      <img class="logo" src="logo.png" alt="S3cure Logo">
+      <div>
+        <div class="brand-name">S3cure</div>
+        <div class="brand-sub">SSH Client</div>
+      </div>
+    </div>
+
+    <form id="quick" class="field">
+      <span class="field-icon" data-icon="bolt"></span>
+      <input id="quick-input" placeholder="user@host" spellcheck="false" autocomplete="off" title="Schnell verbinden: user@host eingeben und Enter drücken">
+    </form>
+
+    <div class="section-head">
+      <span>Verbindungen</span>
+      <button id="add-host" class="round-btn" title="Neue Verbindung" data-icon="plus"></button>
+    </div>
+    <ul id="host-list"></ul>
+    <div id="host-empty" class="hint">Noch keine Verbindungen.<br>Klick auf ＋, um eine anzulegen.</div>
+  </aside>
+
+  <main id="main">
+    <div id="tabbar" class="drag-area">
+      <div id="tabs"></div>
+    </div>
+
+    <div id="toolbar" hidden>
+      <span id="tab-status"><span class="status-dot"></span><span id="tab-status-text"></span></span>
+      <div class="spacer"></div>
+      <button id="btn-reconnect" class="btn" hidden data-icon="refresh">Neu verbinden</button>
+      <button id="btn-quick" class="btn ghost" data-icon="bolt" title="Schnellbefehle für diese Verbindung ein- oder ausblenden">Befehle</button>
+      <div class="seg" id="view-switch">
+        <button data-view="terminal" data-icon="terminal">Terminal</button>
+        <button data-view="files" data-icon="folder">Dateien</button>
+      </div>
+    </div>
+
+    <div id="quickbar" hidden></div>
+
+    <div id="stage">
+      <div id="terminals">
+        <div id="welcome">
+          <div class="welcome-card">
+            <img class="welcome-logo" src="logo.png" alt="S3cure Logo">
+            <div class="welcome-title">S3cure SSH Client</div>
+            <p>Doppelklick auf eine Verbindung links öffnet das Terminal,<br>
+              das Ordner-Symbol öffnet die Dateien.<br>
+              Oder tipp oben links <code>user@host</code> ein und drück Enter.</p>
+            <button id="welcome-add" class="btn primary" data-icon="plus">Neue Verbindung</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="progress" hidden><span id="progress-label"></span><div class="bar"><div id="progress-fill"></div></div></div>
+  </main>
+
+  <!-- Dialog für Verbindung anlegen/bearbeiten -->
+  <div id="host-modal" class="modal" hidden>
+    <form class="dialog" id="host-form">
+      <h2 id="host-form-title">Neue Verbindung</h2>
+      <label>Name<input name="label" required placeholder="z. B. Raspberry Pi" autocomplete="off"></label>
+      <div class="row">
+        <label class="grow">Server (Adresse oder IP)<input name="host" required placeholder="192.168.1.20" spellcheck="false" autocomplete="off"></label>
+        <label class="port">Port<input name="port" type="number" min="1" max="65535" value="22"></label>
+      </div>
+      <label>Benutzername<input name="user" placeholder="pi" spellcheck="false" autocomplete="off"></label>
+      <label>Passwort <span class="muted">(optional, verschlüsselt im Schlüsselbund)</span>
+        <div class="row">
+          <input name="password" type="password" class="grow" placeholder="Wird beim ersten Verbinden abgefragt" autocomplete="new-password">
+          <button type="button" id="forget-pw" class="btn" hidden>Vergessen</button>
+        </div>
+      </label>
+      <label>SSH-Schlüssel <span class="muted">(optional)</span>
+        <div class="row">
+          <input name="key" class="grow" placeholder="Standard: ~/.ssh oder Passwort" spellcheck="false" autocomplete="off">
+          <button type="button" id="pick-key" class="btn">Wählen…</button>
+        </div>
+      </label>
+      <div class="actions">
+        <button type="button" class="btn" data-cancel>Abbrechen</button>
+        <button type="submit" class="btn primary">Speichern</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Allgemeiner Dialog: Passwort, Bestätigung, Texteingabe -->
+  <div id="ask-modal" class="modal" hidden>
+    <form class="dialog" id="ask-form">
+      <h2 id="ask-title"></h2>
+      <p id="ask-message"></p>
+      <pre id="ask-detail" hidden></pre>
+      <input id="ask-input" autocomplete="off" spellcheck="false">
+      <label class="toggle remember" id="ask-remember-wrap" hidden><input type="checkbox" id="ask-remember" checked><span class="track"><span class="knob"></span></span>Passwort merken (verschlüsselt)</label>
+      <div class="actions">
+        <button type="button" class="btn" id="ask-cancel">Abbrechen</button>
+        <button type="submit" class="btn primary" id="ask-ok">OK</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Rechtsklick-Menü im Dateibrowser -->
+  <div id="ctx-menu" hidden></div>
+
+  <script src="../node_modules/@xterm/xterm/lib/xterm.js"></script>
+  <script src="../node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
+  <script src="icons.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
