@@ -6,6 +6,7 @@
   <title>S3cure SSH Client</title>
   <link rel="stylesheet" href="../node_modules/@xterm/xterm/css/xterm.css">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="connections.css">
 </head>
 <body>
   <aside id="sidebar">
@@ -26,7 +27,14 @@
 
     <div class="section-head">
       <span>Verbindungen</span>
-      <button id="add-host" class="round-btn" title="Neue Verbindung" data-icon="plus"></button>
+      <span class="section-btns">
+        <button id="import-hosts" class="round-btn" title="Verbindungen aus ~/.ssh/config übernehmen" data-icon="download"></button>
+        <button id="add-host" class="round-btn" title="Neue Verbindung" data-icon="plus"></button>
+      </span>
+    </div>
+    <div id="host-search-wrap" class="field" hidden>
+      <span class="field-icon" data-icon="search"></span>
+      <input id="host-search" placeholder="Verbindungen suchen" spellcheck="false" autocomplete="off">
     </div>
     <ul id="host-list"></ul>
     <div id="host-empty" class="hint">Noch keine Verbindungen.<br>Klick auf ＋, um eine anzulegen.</div>
@@ -90,6 +98,14 @@
           <button type="button" id="pick-key" class="btn">Wählen…</button>
         </div>
       </label>
+      <!-- Zusatzfelder: app/src/hosts-extra.js -->
+      <button type="button" id="setup-key" class="btn ghost" data-icon="lock" hidden>Anmeldung ohne Passwort einrichten …</button>
+      <div class="row">
+        <label class="grow">Gruppe <span class="muted">(optional)</span><input name="group" list="group-list" placeholder="z. B. Zuhause" autocomplete="off"></label>
+        <label class="grow">Sprung-Server <span class="muted">(optional)</span><select name="jump" id="jump-select"></select></label>
+      </div>
+      <div class="color-row"><span>Farbe</span><div id="color-pick"></div></div>
+      <datalist id="group-list"></datalist>
       <div class="actions">
         <button type="button" class="btn" data-cancel>Abbrechen</button>
         <button type="submit" class="btn primary">Speichern</button>
@@ -104,7 +120,7 @@
       <p id="ask-message"></p>
       <pre id="ask-detail" hidden></pre>
       <input id="ask-input" autocomplete="off" spellcheck="false">
-      <label class="toggle remember" id="ask-remember-wrap" hidden><input type="checkbox" id="ask-remember" checked><span class="track"><span class="knob"></span></span>Passwort merken (verschlüsselt)</label>
+      <label class="toggle remember" id="ask-remember-wrap" hidden><input type="checkbox" id="ask-remember" checked><span class="track"><span class="knob"></span></span><span id="ask-remember-text">Passwort merken (verschlüsselt)</span></label>
       <div class="actions">
         <button type="button" class="btn" id="ask-cancel">Abbrechen</button>
         <button type="submit" class="btn primary" id="ask-ok">OK</button>
@@ -120,5 +136,6 @@
   <script src="icons.js"></script>
   <script src="renderer.js"></script>
   <script src="reconnect.js"></script>
+  <script src="hosts-extra.js"></script>
 </body>
 </html>
