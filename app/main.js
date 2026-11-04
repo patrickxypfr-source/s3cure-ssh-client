@@ -408,6 +408,17 @@ sftpExtra.register({
 require('./lib/localfs').register({ app, ipcMain, shell, platform: PLATFORM });
 require('./lib/pane-transfer').register({ ipcMain, getSftp, sftpError, transfers, getWin: () => win, platform: PLATFORM });
 
+// Synchronisieren, Server-Ordner aktuell halten, extern bearbeiten, Dateien vergleichen
+// (app/lib/sync.js, app/lib/ext-edit.js, app/lib/compare.js)
+const getClient = tabId => {
+  const s = sessions.get(tabId);
+  if (!s) throw new Error('Keine aktive Verbindung in diesem Tab.');
+  return s.client;
+};
+require('./lib/sync').register({ ipcMain, shell, getSftp, getClient, sftpError, transfers, getWin: () => win });
+require('./lib/ext-edit').register({ app, ipcMain, shell, dialog, getSftp, sftpError, transfers, getWin: () => win, configDir: CONFIG_DIR, platform: PLATFORM });
+require('./lib/compare').register({ ipcMain, dialog, getWin: () => win });
+
 // ---------- Suche auf dem Server ----------
 // Bevorzugt `find` direkt auf dem Server (schnell). Erlaubt der Server keine Befehle,
 // wird per SFTP Ordner für Ordner durchsucht.
