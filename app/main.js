@@ -613,7 +613,16 @@ function createWindow() {
 }
 
 // Einstellungen und Terminal-Extras (eigene Dateien in lib/)
-require('./lib/settings').register({ app, ipcMain, nativeTheme, configDir: CONFIG_DIR });
+const settingsStore = require('./lib/settings').register({ app, ipcMain, nativeTheme, configDir: CONFIG_DIR });
+
+// Backup & Umzug (app/lib/backup.js)
+const backupApi = require('./lib/backup').register({
+  ipcMain, dialog, app, getWin: () => win, configDir: CONFIG_DIR, loadHosts, saveHosts, settingsStore, snippetStore, passphrases,
+  passwords: { names: () => Object.keys(loadPasswordStore()), read: readPassword, write: writePassword, remove: removePassword },
+});
+// Abgleich über einen Cloud-Ordner (app/lib/sync.js)
+const cloudSync = require('./lib/sync').register({ ipcMain, dialog, getWin: () => win, send: sendToUi, configDir: CONFIG_DIR, data: backupApi.data, platform: PLATFORM });
+app.whenReady().then(() => cloudSync.start());
 require('./lib/term-extra').register({ app, ipcMain, dialog, shell, sessions, getWin: () => win, platform: PLATFORM });
 
 app.setName('S3cure SSH Client');
