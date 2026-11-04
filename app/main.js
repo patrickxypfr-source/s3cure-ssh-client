@@ -1,5 +1,5 @@
 // S3cure SSH Client – Hauptprozess: Fenster, gespeicherte Verbindungen und SSH-Sitzungen
-const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, safeStorage, Menu, powerMonitor } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, safeStorage, Menu, powerMonitor, clipboard } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -15,7 +15,6 @@ const monitor = require('./lib/monitor');
 // S3CURE_CONFIG_DIR nur für Tests, sonst ~/.myssh
 const CONFIG_DIR = process.env.S3CURE_CONFIG_DIR || path.join(os.homedir(), '.myssh');
 const HOSTS_FILE = path.join(CONFIG_DIR, 'hosts.json');
-const KNOWN_HOSTS = path.join(CONFIG_DIR, 'known_hosts');
 const PASSWORDS_FILE = path.join(CONFIG_DIR, 'passwords.json');
 const SYSTEM_KNOWN_HOSTS = path.join(os.homedir(), '.ssh', 'known_hosts');
 // S3CURE_PLATFORM nur für Tests (Windows-Verhalten auf dem Mac ausprobieren)
@@ -25,6 +24,8 @@ const { createConnection } = require('./lib/connection');
 const { createSecretStore } = require('./lib/secrets');
 const { hostExtras, updateJumpRefs } = require('./lib/hosts-extra');
 const { createAppLock } = require('./lib/applock');
+const { createKnownHosts } = require('./lib/knownhosts');
+const { createProxyManager } = require('./lib/proxy');
 const DEFAULT_KEYS = ['id_ed25519', 'id_ecdsa', 'id_rsa'].map(k => path.join(os.homedir(), '.ssh', k));
 
 let win;
@@ -125,74 +126,11 @@ ipcMain.on('ask-answer', (_e, reqId, value) => {
   if (resolve) resolve(value);
 });
 
-// ---------- Host-Key-Prüfung (known_hosts, kompatibel zu OpenSSH/CLI) ----------
+// ---------- Host-Key-Prüfung (known_hosts, kompatibel zu OpenSSH/CLI): app/lib/knownhosts.js ----------
 
-function knownName(host, port) {
-  return port === 22 ? host : `[${host}]:${port}`;
-}
-
-function keyType(rawKey) {
-  const len = rawKey.readUInt32BE(0);
-  return rawKey.slice(4, 4 + len).toString();
-}
-
-function fingerprint(rawKey) {
-  return 'SHA256:' + crypto.createHash('sha256').update(rawKey).digest('base64').replace(/=+$/, '');
-}
-
-function hostMatches(pattern, name) {
-  if (pattern.startsWith('|1|')) { // gehashte Einträge
-    const [, , salt, hash] = pattern.split('|');
-    const h = crypto.createHmac('sha1', Buffer.from(salt, 'base64')).update(name).digest('base64');
-    return h === hash;
-  }
-  return pattern.split(',').includes(name);
-}
-
-function knownKeysFor(name) {
-  const result = [];
-  for (const file of [SYSTEM_KNOWN_HOSTS, KNOWN_HOSTS]) {
-    let text;
-    try { text = fs.readFileSync(file, 'utf8'); } catch { continue; }
-    for (const line of text.split('\n')) {
-      const parts = line.trim().split(/\s+/);
-      if (parts.length < 3 || parts[0].startsWith('#') || parts[0].startsWith('@')) continue;
-      if (hostMatches(parts[0], name)) result.push({ type: parts[1], b64: parts[2] });
-    }
-  }
-  return result;
-}
-
-async function verifyHostKey(target, rawKey) {
-  const name = knownName(target.host, target.port);
-  const type = keyType(rawKey);
-  const b64 = rawKey.toString('base64');
-  const sameType = knownKeysFor(name).filter(k => k.type === type);
-
-  if (sameType.some(k => k.b64 === b64)) return { ok: true };
-  if (sameType.length) {
-    return {
-      ok: false,
-      error: `WARNUNG: Der Host-Key von ${name} hat sich geändert!\n` +
-        `Das kann ein Angriff (Man-in-the-Middle) sein, oder der Server wurde neu installiert.\n` +
-        `Neuer Fingerprint: ${fingerprint(rawKey)}\n` +
-        `Wenn du sicher bist, dass das in Ordnung ist, entferne den alten Eintrag aus ~/.myssh/known_hosts.`,
-    };
-  }
-
-  const trust = await ask({
-    kind: 'confirm',
-    title: 'Unbekannter Server',
-    message: `Du verbindest dich zum ersten Mal mit ${name}.`,
-    detail: `${type} Fingerprint:\n${fingerprint(rawKey)}\n\nVertraust du diesem Server?`,
-    okLabel: 'Vertrauen & verbinden',
-  });
-  if (!trust) return { ok: false, error: 'Verbindung abgebrochen: Server nicht vertraut.' };
-
-  fs.mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
-  fs.appendFileSync(KNOWN_HOSTS, `${name} ${type} ${b64}\n`);
-  return { ok: true };
-}
+const knownHosts = createKnownHosts({ configDir: CONFIG_DIR, ask, systemFile: SYSTEM_KNOWN_HOSTS });
+knownHosts.register(ipcMain);
+const verifyHostKey = knownHosts.verifyHostKey;
 
 // ---------- SSH-Sitzung ----------
 
@@ -209,8 +147,11 @@ function friendlyError(err, target) {
 // Verbindungsaufbau, Sprung-Server, Wachhalten: app/lib/connection.js
 const passphrases = createSecretStore(path.join(CONFIG_DIR, 'passphrases.json'));
 const sendToUi = (channel, ...args) => { if (win && !win.isDestroyed()) win.webContents.send(channel, ...args); };
+// Proxy (SOCKS5/HTTP-CONNECT) global oder pro Verbindung: app/lib/proxy.js
+const proxies = createProxyManager({ configDir: CONFIG_DIR, ask, secrets: createSecretStore(path.join(CONFIG_DIR, 'proxy-passwords.json')) });
+proxies.register(ipcMain);
 const connection = createConnection({
-  loadHosts, parseTarget, expandHome, ask, verifyHostKey, friendlyError, sessions, send: sendToUi,
+  loadHosts, parseTarget, expandHome, ask, verifyHostKey, friendlyError, sessions, send: sendToUi, proxies,
   passwords: { read: readPassword, write: writePassword, remove: removePassword },
   passphrases, defaultKeys: DEFAULT_KEYS,
 });
@@ -536,6 +477,7 @@ ipcMain.handle('hosts:save', (_e, name, host, oldName) => {
   hosts[name] = { ...prev, user: host.user || os.userInfo().username, host: host.host, port: Number(host.port) || 22, key: host.key || null, ...hostExtras(host) };
   saveHosts(hosts);
   if (host.forgetPassword) removePassword(name);
+  if (host.proxyPassword && hosts[name].proxy && typeof hosts[name].proxy === 'object') proxies.setPassword(hosts[name].proxy, host.proxyPassword);
   if (host.password) {
     if (!writePassword(name, host.password)) throw new Error('Passwort konnte nicht verschlüsselt gespeichert werden (Schlüsselbund nicht verfügbar).');
   }
@@ -551,7 +493,11 @@ ipcMain.handle('hosts:delete', (_e, name) => {
 });
 // Import aus ~/.ssh/config und SSH-Schlüssel: app/lib/sshconfig.js, app/lib/keys.js
 require('./lib/sshconfig').register(ipcMain, { loadHosts, saveHosts });
-require('./lib/keys').register(ipcMain, { connection, loadHosts, saveHosts, passphrases });
+const keys = require('./lib/keys').register(ipcMain, { connection, loadHosts, saveHosts, passphrases });
+// Schlüssel verwalten (Liste, kopieren, zeigen, erzeugen, übertragen): app/lib/keyring.js
+require('./lib/keyring').register(ipcMain, {
+  clipboard, shell, keys, extraFiles: () => Object.values(loadHosts()).map(h => expandHome(h.key)).filter(Boolean),
+});
 ipcMain.handle('pick-key', async () => {
   const r = await dialog.showOpenDialog(win, {
     title: 'Privaten Schlüssel wählen', defaultPath: path.join(os.homedir(), '.ssh'),
