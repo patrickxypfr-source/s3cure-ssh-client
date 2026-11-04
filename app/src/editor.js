@@ -135,6 +135,7 @@ const Editor = (() => {
     ed.gutter.textContent = s;
     ed.gutter.style.width = `calc(${String(lines).length}ch + 26px)`;
     ed.gutter.scrollTop = ed.ta.scrollTop;
+    if (ed.opts) updateInfo(ed);
   }
 
   function updatePos(ed) {
