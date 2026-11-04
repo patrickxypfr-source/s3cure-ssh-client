@@ -147,3 +147,26 @@ contextBridge.exposeInMainWorld('s3conn', {
   proxyForgetPassword: proxy => ipcRenderer.invoke('proxy:forgetPassword', proxy),
   proxyTest: (proxy, password, host, port) => ipcRenderer.invoke('proxy:test', proxy, password, host, port),
 });
+
+// Sitzung wiederherstellen (app/lib/session.js, Oberfläche: src/session.js)
+contextBridge.exposeInMainWorld('s3session', {
+  take: () => ipcRenderer.invoke('session:take'),
+  update: snapshot => ipcRenderer.send('session:update', snapshot),
+});
+
+// Backup & Umzug (app/lib/backup.js, Oberfläche: src/backup.js)
+contextBridge.exposeInMainWorld('s3backup', {
+  exportAll: opts => ipcRenderer.invoke('backup:export', opts),
+  pick: () => ipcRenderer.invoke('backup:pick'),
+  preview: (file, password) => ipcRenderer.invoke('backup:preview', file, password),
+  apply: (token, opts) => ipcRenderer.invoke('backup:apply', token, opts),
+  onChanged: cb => ipcRenderer.on('backup:changed', (_e, info) => cb(info)),
+  // Abgleich über Cloud-Ordner (app/lib/sync.js)
+  syncStatus: () => ipcRenderer.invoke('sync:status'),
+  syncPickFolder: () => ipcRenderer.invoke('sync:pick-folder'),
+  syncEnable: opts => ipcRenderer.invoke('sync:enable', opts),
+  syncDisable: () => ipcRenderer.invoke('sync:disable'),
+  syncNow: () => ipcRenderer.invoke('sync:now'),
+  syncSecrets: on => ipcRenderer.invoke('sync:secrets', on),
+  onSyncStatus: cb => ipcRenderer.on('sync:status', (_e, st) => cb(st)),
+});

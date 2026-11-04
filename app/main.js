@@ -1,5 +1,5 @@
 // S3cure SSH Client – Hauptprozess: Fenster, gespeicherte Verbindungen und SSH-Sitzungen
-const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, safeStorage, Menu, powerMonitor, clipboard } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, safeStorage, Menu, powerMonitor, clipboard, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -534,10 +534,14 @@ function titleBarColors() {
   return { color: dark ? '#0f0f11' : '#f7f7f8', symbolColor: dark ? '#ededef' : '#18181b', height: 40 };
 }
 
+// Offene Tabs und Fenster beim nächsten Start wiederherstellen (app/lib/session.js)
+const session = require('./lib/session').register({ ipcMain, configDir: CONFIG_DIR });
+
 function createWindow() {
   win = new BrowserWindow({
     // Mindestgröße: Werkzeugleiste und Dateibrowser passen auch mit aufgeklappter Seitenleiste (siehe src/layout.js)
     width: 1100, height: 700, minWidth: 720, minHeight: 460,
+    ...session.windowOptions(screen, { width: 720, height: 460 }), // zuletzt benutzte Größe/Position
     title: 'S3cure SSH Client',
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#0f0f11' : '#f7f7f8',
     // macOS: Ampelknöpfe im Fenster; Windows und Linux: eigene Titelleiste mit Fensterknöpfen oben rechts
@@ -552,11 +556,21 @@ function createWindow() {
   win.loadFile(path.join(__dirname, 'src', appLock.isLocked() ? 'lock.html' : 'index.html'));
   // Links aus dem Terminal im normalen Browser öffnen, nicht in der App
   win.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
+  session.track(win);
   win.on('closed', () => { for (const id of [...sessions.keys()]) closeSession(id); win = null; });
 }
 
 // Einstellungen und Terminal-Extras (eigene Dateien in lib/)
-require('./lib/settings').register({ app, ipcMain, nativeTheme, configDir: CONFIG_DIR });
+const settingsStore = require('./lib/settings').register({ app, ipcMain, nativeTheme, configDir: CONFIG_DIR });
+
+// Backup & Umzug (app/lib/backup.js)
+const backupApi = require('./lib/backup').register({
+  ipcMain, dialog, app, getWin: () => win, configDir: CONFIG_DIR, loadHosts, saveHosts, settingsStore, snippetStore, passphrases,
+  passwords: { names: () => Object.keys(loadPasswordStore()), read: readPassword, write: writePassword, remove: removePassword },
+});
+// Abgleich über einen Cloud-Ordner (app/lib/sync.js)
+const cloudSync = require('./lib/sync').register({ ipcMain, dialog, getWin: () => win, send: sendToUi, configDir: CONFIG_DIR, data: backupApi.data, platform: PLATFORM });
+app.whenReady().then(() => cloudSync.start());
 require('./lib/term-extra').register({ app, ipcMain, dialog, shell, sessions, getWin: () => win, platform: PLATFORM });
 
 app.setName('S3cure SSH Client');

@@ -161,7 +161,8 @@ $('#quick').addEventListener('submit', e => {
 
 // ---------- Tabs & Terminals ----------
 
-function openTab(spec, title, view = 'terminal') {
+// opts.connect: false = noch nicht verbinden; opts.restore: gemerkter Zustand (session.js)
+function openTab(spec, title, view = 'terminal', opts = {}) {
   const id = crypto.randomUUID();
   const el = document.createElement('div');
   el.className = 'term';
@@ -187,13 +188,14 @@ function openTab(spec, title, view = 'terminal') {
   tabEl.querySelector('.close').addEventListener('click', () => closeTab(id));
   $('#tabs').appendChild(tabEl);
 
-  const tab = { id, spec, title, term, fit, el, tabEl, state: 'connecting', view };
+  const tab = { id, spec, title, term, fit, el, tabEl, state: 'connecting', view, restore: opts.restore || null };
   tab.files = buildFilesView(tab);
   tabs.set(id, tab);
   window.TermExtra?.attach(tab); // Suche, Links, geteilte Ansicht … (term-extra.js)
   window.LocalPane?.attach(tab); // „Mein Computer“ neben den Server-Dateien (local-pane.js)
   activate(id);
-  connect(tab);
+  if (opts.connect !== false) connect(tab);
+  return tab;
 }
 
 // opts.reconnect: automatischer neuer Versuch nach Verbindungsabbruch (reconnect.js) –
@@ -366,7 +368,7 @@ function setView(view) {
   const tab = tabs.get(activeId);
   if (!tab || tab.view === view) return;
   tab.view = view;
-  if (view === 'files' && tab.state === 'open' && !tab.files.loaded) loadDir(tab, '~');
+  if (view === 'files' && tab.state === 'open' && !tab.files.loaded) loadDir(tab, tab.files.path || '~');
   activate(tab.id);
 }
 
@@ -711,8 +713,11 @@ async function loadDir(tab, dir) {
     f.anchor = null;
     f.loaded = true;
   } catch (err) {
+    // Wiederhergestellter Ordner gibt es nicht mehr (session.js): still zum Benutzerordner
+    if (f.restoring && dir !== '~') { f.restoring = false; f.path = null; return loadDir(tab, '~'); }
     showError(err);
   }
+  f.restoring = false;
   renderFiles(tab);
 }
 

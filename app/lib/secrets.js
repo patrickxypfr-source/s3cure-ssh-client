@@ -12,6 +12,7 @@ function createSecretStore(file) {
   };
   return {
     has: name => name in load(),
+    names: () => Object.keys(load()),
     read(name) {
       const enc = load()[name];
       if (!enc || !safeStorage.isEncryptionAvailable()) return null;

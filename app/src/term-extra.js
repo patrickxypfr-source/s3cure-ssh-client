@@ -488,5 +488,10 @@
     if (searching && ((IS_MAC && e.metaKey && key === 'g') || e.key === 'F3')) { hit(); runSearch(x, e.shiftKey ? -1 : 1); }
   }, true);
 
-  window.TermExtra = { attach, detach, update, setBroadcast, openSearch: () => activeX() && openSearch(activeX()) };
+  window.TermExtra = {
+    attach, detach, update, setBroadcast, openSearch: () => activeX() && openSearch(activeX()),
+    // Für session.js: geteiltes Terminal merken und wieder öffnen
+    isSplit: tab => !!xs.get(tab.id)?.split,
+    openSplit: tab => { const x = xs.get(tab.id); return x ? openSplit(x) : undefined; },
+  };
 })();
