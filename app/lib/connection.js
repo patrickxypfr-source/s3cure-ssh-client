@@ -12,7 +12,7 @@ const WIN_AGENT_PIPE = '\\\\.\\pipe\\openssh-ssh-agent';
 
 function createConnection(deps) {
   const { loadHosts, parseTarget, expandHome, ask, verifyHostKey, friendlyError,
-    passwords, passphrases, defaultKeys, sessions, send, proxies } = deps;
+    passwords, passphrases, defaultKeys, sessions, send, proxies, vault } = deps;
 
   // Pro Tab: Anmeldedaten nur im Arbeitsspeicher, damit das automatische Neuverbinden nicht erneut fragt
   const caches = new Map();
@@ -33,22 +33,32 @@ function createConnection(deps) {
   // ---------- Anmeldung ----------
   // Reihenfolge: SSH-Agent, Schlüsseldateien, dann Passwort (Sitzung -> gespeichert -> nachfragen)
   // opts.keyOnly: nur die Schlüsseldatei aus target.key, kein Agent, kein Passwort (zum Testen)
-  function makeAuthHandler(target, hostName, auth, cache, opts = {}) {
+  // cred: Tresor-Eintrag der Verbindung (lib/vault.js) – liefert Schlüssel, Passphrase und Passwort statt
+  // der eigenen gespeicherten Werte. target ist dann schon mit Benutzer/Schlüsselpfad aus dem Tresor ergänzt.
+  function makeAuthHandler(target, hostName, auth, cache, opts = {}, cred = null) {
     const user = target.user;
     const ckey = credKey(target, hostName);
     const queue = [];
     const agent = opts.keyOnly ? null : agentPath();
     if (agent) queue.push({ type: 'agent' });
-    const keyFiles = target.key ? [expandHome(target.key)] : defaultKeys.filter(f => fs.existsSync(f));
+    if (cred && cred.hasKey) queue.push({ type: 'publickey', vault: true });
+    const keyFiles = target.key ? [expandHome(target.key)] : cred && cred.hasKey ? [] : defaultKeys.filter(f => fs.existsSync(f));
     for (const file of keyFiles) queue.push({ type: 'publickey', file });
 
-    async function unlockKey(file, data) {
-      const id = path.resolve(file);
+    // label: Dateiname bzw. Name des Tresor-Eintrags für die Rückfrage
+    async function unlockKey(id, label, data) {
       const tryPass = pass => { const k = utils.parseKey(data, pass); return k instanceof Error ? null : k; };
       const mem = cache.passphrases.get(id);
       if (mem != null) { const k = tryPass(mem); if (k) return k; cache.passphrases.delete(id); }
       let rejected = false;
-      const saved = passphrases.read(id);
+      // Tresor-Eintrag: dessen Passphrase gilt (wird bei Ablehnung nicht gelöscht – der Eintrag gehört dem Nutzer)
+      const fromVault = cred ? cred.passphrase() : null;
+      if (fromVault != null) {
+        const k = tryPass(fromVault);
+        if (k) { cache.passphrases.set(id, fromVault); return k; }
+        rejected = true;
+      }
+      const saved = cred ? null : passphrases.read(id);
       if (saved != null) {
         const k = tryPass(saved);
         if (k) { cache.passphrases.set(id, saved); return k; }
@@ -60,27 +70,33 @@ function createConnection(deps) {
         const answer = await ask({
           kind: 'secret',
           title: i ? t('conn.wrongPassphrase') : rejected ? t('conn.passphraseChanged') : t('conn.unlockKey'),
-          message: t(i ? 'conn.passphraseRetry' : rejected ? 'conn.passphraseRejected' : 'conn.passphraseProtected', { file: path.basename(file) }),
+          message: t(i ? 'conn.passphraseRetry' : rejected ? 'conn.passphraseRejected' : 'conn.passphraseProtected', { file: label }),
           remember: true,
-          rememberLabel: t('conn.rememberPassphrase'),
+          rememberLabel: cred ? t('vault.rememberInEntry', { name: cred.name }) : t('conn.rememberPassphrase'),
         });
         if (answer == null) return null;
         const value = typeof answer === 'object' ? answer.value : answer;
         const k = tryPass(value);
         if (k) {
           cache.passphrases.set(id, value);
-          if (typeof answer === 'object' && answer.remember) passphrases.write(id, value);
+          if (typeof answer === 'object' && answer.remember) {
+            if (cred) cred.setPassphrase(value); else passphrases.write(id, value);
+          }
           return k;
         }
       }
       return null;
     }
 
-    async function loadKey(file) {
+    async function loadKey(m) {
       let data;
-      try { data = fs.readFileSync(file); } catch { return null; }
+      if (m.vault) data = cred.key();
+      else { try { data = fs.readFileSync(m.file); } catch { return null; } }
+      if (data == null) return null;
       let key = utils.parseKey(data);
-      if (key instanceof Error && /passphrase|encrypted/i.test(key.message)) key = await unlockKey(file, data);
+      if (key instanceof Error && /passphrase|encrypted/i.test(key.message)) {
+        key = m.vault ? await unlockKey('vault:' + cred.id, cred.name, data) : await unlockKey(path.resolve(m.file), path.basename(m.file), data);
+      }
       if (!key || key instanceof Error) return null;
       return Array.isArray(key) ? key[0] : key;
     }
@@ -90,19 +106,20 @@ function createConnection(deps) {
     let savedTried = false;
     let savedRejected = false;
 
+    const hasSaved = !!(hostName || cred);
     async function askPassword() {
-      // Vorheriger Versuch wurde abgelehnt -> diese Quelle verwerfen
+      // Vorheriger Versuch wurde abgelehnt -> diese Quelle verwerfen (Tresor-Passwort bleibt, der Nutzer entscheidet)
       if (auth.source === 'memory') cache.passwords.delete(ckey);
-      if (auth.source === 'saved') { savedRejected = true; passwords.remove(hostName); }
+      if (auth.source === 'saved') { savedRejected = true; if (!cred) passwords.remove(hostName); }
       auth.source = null;
       if (!memTried) {
         memTried = true;
         const m = cache.passwords.get(ckey);
         if (m != null) { auth.source = 'memory'; auth.lastPassword = m; return m; }
       }
-      if (hostName && !savedTried) {
+      if (hasSaved && !savedTried) {
         savedTried = true;
-        const saved = passwords.read(hostName);
+        const saved = cred ? cred.password() : passwords.read(hostName);
         if (saved != null) { auth.source = 'saved'; auth.lastPassword = saved; auth.pending = null; return saved; }
       }
       if (opts.noPrompt) return null;
@@ -111,15 +128,17 @@ function createConnection(deps) {
       const answer = await ask({
         kind: 'secret',
         title: savedRejected && !again ? t('conn.passwordChanged') : again ? t('conn.wrongPassword') : t('conn.login'),
-        message: t(savedRejected && !again ? 'conn.passwordRejected' : again ? 'conn.passwordRetry' : 'conn.passwordPrompt',
-          { user, host: target.host }),
-        remember: !!hostName,
+        message: savedRejected && !again && cred ? t('vault.passwordRejected', { name: cred.name, user, host: target.host })
+          : t(savedRejected && !again ? 'conn.passwordRejected' : again ? 'conn.passwordRetry' : 'conn.passwordPrompt',
+            { user, host: target.host }),
+        remember: hasSaved,
+        ...(cred ? { rememberLabel: t('vault.rememberInEntry', { name: cred.name }) } : {}),
       });
       if (answer == null) return null;
       const value = typeof answer === 'object' ? answer.value : answer;
       auth.source = 'typed';
       auth.lastPassword = value;
-      auth.pending = hostName && typeof answer === 'object' && answer.remember ? value : null;
+      auth.pending = hasSaved && typeof answer === 'object' && answer.remember ? value : null;
       return value;
     }
 
@@ -130,11 +149,11 @@ function createConnection(deps) {
           const m = queue.shift();
           if (!allowed.includes('publickey')) continue;
           if (m.type === 'agent') return next({ type: 'agent', username: user, agent });
-          const key = await loadKey(m.file);
+          const key = await loadKey(m);
           if (key) return next({ type: 'publickey', username: user, key });
         }
         if (opts.keyOnly) return next(false);
-        if (passwordTries < 3 || !memTried || (hostName && !savedTried)) {
+        if (passwordTries < 3 || !memTried || (hasSaved && !savedTried)) {
           if (allowed.includes('password')) {
             const pw = await askPassword();
             if (pw == null) return next(false);
@@ -164,7 +183,11 @@ function createConnection(deps) {
   // ---------- Verbindung zu einem Server (optional über einen Tunnel-Socket) ----------
 
   function connectOne(hop, cache, sock, opts) {
-    const { target, hostName } = hop;
+    const { hostName } = hop;
+    // Verbindung nutzt einen Tresor-Eintrag? Dann Benutzer, Schlüssel und Passwort von dort (lib/vault.js)
+    const linked = vault ? vault.resolve(hop.target, opts) : null;
+    const target = linked ? linked.target : hop.target;
+    const cred = linked ? linked.cred : null;
     const auth = { pending: null, source: null, lastPassword: null };
     return new Promise((resolve, reject) => {
       const client = new Client();
@@ -180,7 +203,10 @@ function createConnection(deps) {
         settled = true;
         // Anmeldung hat geklappt -> Passwort für diese Sitzung behalten, und dauerhaft, falls gewünscht
         if (auth.lastPassword != null) cache.passwords.set(credKey(target, hostName), auth.lastPassword);
-        if (hostName && auth.pending != null) passwords.write(hostName, auth.pending);
+        if (auth.pending != null) {
+          if (cred) cred.setPassword(auth.pending);
+          else if (hostName) passwords.write(hostName, auth.pending);
+        }
         resolve(client);
       });
       client.on('error', fail); // bleibt auch nach „ready“ dran, damit Fehler nicht die App beenden
@@ -202,7 +228,7 @@ function createConnection(deps) {
             verify(r.ok);
           }, () => verify(false));
         },
-        authHandler: makeAuthHandler(target, hostName, auth, cache, opts),
+        authHandler: makeAuthHandler(target, hostName, auth, cache, opts, cred),
       });
     });
   }
@@ -279,6 +305,7 @@ function createConnection(deps) {
       throw new Error(friendlyError(err, target));
     }
     const session = { client, stream, hostName: spec.name || null };
+    const shown = (vault && vault.resolve(target)?.target) || target; // Benutzer ggf. aus dem Tresor
     sessions.set(tabId, session);
     let exited = false;
     let reported = false;
@@ -295,7 +322,7 @@ function createConnection(deps) {
     stream.on('exit', () => { exited = true; });
     stream.on('close', done);
     client.on('close', done);
-    return { user: target.user, host: target.host, port: target.port };
+    return { user: shown.user, host: target.host, port: target.port };
   }
 
   // Nach dem Aufwachen: Lebt die Verbindung noch? Antwortet der Server nicht schnell, wird sie
