@@ -93,6 +93,19 @@ contextBridge.exposeInMainWorld('s3tunnels', {
   onStatus: cb => ipcRenderer.on('tunnels:status', (_e, tabId, st) => cb(tabId, st)),
 });
 
+// Remote Desktop über VNC durch SSH (app/lib/vnc.js, Oberfläche: src/vnc.js)
+contextBridge.exposeInMainWorld('s3vnc', {
+  open: (tabId, opts) => ipcRenderer.invoke('vnc:open', tabId, opts),
+  close: tabId => ipcRenderer.invoke('vnc:close', tabId),
+  scan: tabId => ipcRenderer.invoke('vnc:scan', tabId),
+  settings: hostName => ipcRenderer.invoke('vnc:settings', hostName),
+  hasPassword: hostName => ipcRenderer.invoke('vnc:hasPassword', hostName),
+  savePassword: (hostName, password) => ipcRenderer.invoke('vnc:savePassword', hostName, password),
+  forgetPassword: hostName => ipcRenderer.invoke('vnc:forgetPassword', hostName),
+  clipboardRead: () => ipcRenderer.invoke('vnc:clipboardRead'),
+  clipboardWrite: text => ipcRenderer.invoke('vnc:clipboardWrite', text),
+});
+
 // Hinweis auf neue Version (app/lib/update-check.js, Oberfläche: src/update-notice.js)
 contextBridge.exposeInMainWorld('s3update', {
   check: force => ipcRenderer.invoke('update:check', !!force),

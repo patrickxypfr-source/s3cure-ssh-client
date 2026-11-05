@@ -184,6 +184,7 @@ function closeAllSessions() {
 function closeSession(tabId, { keepTransfers = false } = {}) {
   stopSearch(tabId);
   tunnels.stopAll(tabId);
+  vnc.stopAll(tabId);
   if (keepTransfers) transfers.suspendTab(tabId); else transfers.cancelTab(tabId);
   files.close(tabId);
   const s = sessions.get(tabId);
@@ -520,6 +521,7 @@ ipcMain.handle('hosts:save', (_e, name, host, oldName) => {
   if (host.password) {
     if (!writePassword(name, host.password)) throw new Error(t('main.passwordNotSaved'));
   }
+  vnc.onHostSaved(name, host, oldName); // VNC-Passwort umbenennen/speichern/vergessen
   return hostsForUi();
 });
 ipcMain.handle('hosts:delete', (_e, name) => {
@@ -528,6 +530,7 @@ ipcMain.handle('hosts:delete', (_e, name) => {
   updateJumpRefs(hosts, name, null);
   saveHosts(hosts);
   removePassword(name);
+  vnc.onHostDeleted(name);
   bookmarks.remove(name);
   return hostsForUi();
 });
@@ -551,6 +554,12 @@ ipcMain.handle('pick-key', async () => {
 const tunnels = createTunnelManager({
   ipcMain, shell, getWin: () => win, getSession: id => sessions.get(id), loadHosts, saveHosts,
 });
+// Remote Desktop (VNC) durch die SSH-Verbindung: app/lib/vnc.js, Oberfläche: src/vnc.js
+const vnc = require('./lib/vnc').createVncBridge({
+  getSession: id => sessions.get(id), loadHosts, clipboard,
+  secrets: createSecretStore(path.join(CONFIG_DIR, 'vnc-passwords.json')),
+});
+vnc.register(ipcMain);
 const updateCheck = setupUpdateCheck({ ipcMain, shell, app, configDir: CONFIG_DIR });
 // Automatisches Update (Knopf „Update“ unten links, Update-Fenster mit Fortschritt)
 require('./lib/updater').setupUpdater({

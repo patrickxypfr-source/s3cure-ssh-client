@@ -20,6 +20,8 @@ function hostExtras(host) {
   for (const k of Object.keys(all)) if (k in host) out[k] = all[k];
   // Protokoll SFTP/FTP/FTPS (lib/ftp.js) – nur wenn mitgeschickt (Host-Dialog schickt es immer)
   if ('protocol' in host) Object.assign(out, protocolFields(host));
+  // Remote Desktop (VNC) – nur bei SSH (lib/vnc.js)
+  if ('vnc' in host) out.vnc = out.protocol ? undefined : require('./vnc').vncField(host.vnc);
   return out;
 }
 
