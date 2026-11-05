@@ -10,6 +10,8 @@ const path = require('path');
 const crypto = require('crypto');
 const core = require('./sync-core');
 const { checkPath, friendly } = require('./localfs');
+const i18n = require('./i18n');
+const { t } = i18n;
 
 const posix = path.posix;
 const p = fn => new Promise((res, rej) => fn((e, r) => e ? rej(e) : res(r)));
@@ -21,18 +23,19 @@ const WATCH_POLL = 2500;            // ms zwischen zwei Durchläufen, wenn fs.wa
 const WATCH_RETRY = 5000;           // ms bis zum nächsten Versuch nach einem Fehler
 const MAX_WATCHES = 10;
 
+// Texte erst beim Gebrauch übersetzen (die Sprache kann sich ändern)
 const T = {
-  tooMany: n => `Zu viele Dateien (mehr als ${n.toLocaleString('de-DE')}). Bitte einen kleineren Ordner wählen oder mehr ausschließen.`,
-  cancelled: 'Vergleich abgebrochen.',
-  badRemote: 'Ungültiger Ordner auf dem Server.',
-  badLocal: 'Den Ordner auf diesem Computer gibt es nicht (mehr).',
-  badRel: 'Ungültiger Eintrag in der Liste.',
-  syncTitle: name => `Synchronisieren: ${name}`,
-  watchTitle: name => `Aktuell halten: ${name}`,
-  watchLimit: `Es können höchstens ${MAX_WATCHES} Ordner gleichzeitig beobachtet werden.`,
-  watchSame: 'Dieser Ordner wird schon beobachtet.',
-  offline: 'Keine Verbindung – Änderungen werden nachgeholt, sobald der Server wieder da ist.',
-  errors: n => `${n} Fehler`,
+  tooMany: n => t('sync.tooMany', { max: i18n.fmtNumber(n) }),
+  cancelled: () => t('sync.cancelled'),
+  badRemote: () => t('sync.badRemote'),
+  badLocal: () => t('sync.badLocal'),
+  badRel: () => t('sync.badRel'),
+  syncTitle: name => t('sync.jobSync', { name }),
+  watchFiles: n => t('sync.jobWatchFiles', { count: n }),
+  watchLimit: () => t('sync.watchLimit', { max: MAX_WATCHES }),
+  watchSame: () => t('sync.watchSame'),
+  offline: () => t('sync.offline'),
+  errors: (n, rel, error) => t('sync.errorsFirst', { count: n, rel, error }),
 };
 
 // ---------- Ordner einlesen ----------
@@ -42,7 +45,7 @@ async function walkLocal(root, matcher, state) {
   const out = new Map();
   const queue = [''];
   while (queue.length) {
-    if (state && state.cancelled) throw new Error(T.cancelled);
+    if (state && state.cancelled) throw new Error(T.cancelled());
     const rel = queue.shift();
     const abs = rel ? path.join(root, ...rel.split('/')) : root;
     let dirents;
@@ -73,7 +76,7 @@ async function walkRemote(sftp, root, matcher, state) {
   let failure = null;
   const worker = async () => {
     while (!failure) {
-      if (state && state.cancelled) { failure = new Error(T.cancelled); return; }
+      if (state && state.cancelled) { failure = new Error(T.cancelled()); return; }
       const rel = queue.shift();
       if (rel === undefined) {
         if (active === 0) return;
@@ -158,7 +161,7 @@ function hashRemoteExec(client, root, rels) {
 async function remoteMkdirp(sftp, dir, made) {
   if (dir === '/' || made.has(dir)) return;
   const st = await p(cb => sftp.stat(dir, cb)).catch(() => null);
-  if (st) { if (!st.isDirectory()) throw new Error(`„${dir}“ ist auf dem Server eine Datei, kein Ordner.`); made.add(dir); return; }
+  if (st) { if (!st.isDirectory()) throw new Error(t('sync.remoteIsFile', { path: dir })); made.add(dir); return; }
   await remoteMkdirp(sftp, posix.dirname(dir), made);
   await p(cb => sftp.mkdir(dir, cb)).catch(async err => {
     const again = await p(cb => sftp.stat(dir, cb)).catch(() => null); // gleichzeitig angelegt?
@@ -178,7 +181,7 @@ async function removeRemote(sftp, remote) {
 const toLocal = (root, rel) => path.join(root, ...rel.split('/'));
 const toRemote = (root, rel) => posix.join(root, rel);
 const checkRemoteRoot = r => {
-  if (typeof r !== 'string' || !r.startsWith('/') || r.includes('\0')) throw new Error(T.badRemote);
+  if (typeof r !== 'string' || !r.startsWith('/') || r.includes('\0')) throw new Error(T.badRemote());
   return posix.normalize(r);
 };
 
@@ -216,7 +219,7 @@ function register({ ipcMain, shell, getSftp, getClient, sftpError, transfers, ge
     const localRoot = checkPath(opts.localRoot);
     const remoteRoot = checkRemoteRoot(opts.remoteRoot);
     const lst = await fsp.stat(localRoot).catch(() => null);
-    if (!lst || !lst.isDirectory()) throw new Error(T.badLocal);
+    if (!lst || !lst.isDirectory()) throw new Error(T.badLocal());
     const sftp = await getSftp(tabId);
     const matcher = core.makeMatcher(core.parsePatterns(opts.excludes || core.DEFAULT_EXCLUDES));
     const id = String(opts.compareId || crypto.randomUUID());
@@ -245,12 +248,12 @@ function register({ ipcMain, shell, getSftp, getClient, sftpError, transfers, ge
         let client = null;
         try { client = getClient(tabId); } catch {}
         for (let i = 0; i < rels.length; i += 200) {
-          if (state.cancelled) throw new Error(T.cancelled);
+          if (state.cancelled) throw new Error(T.cancelled());
           const chunk = rels.slice(i, i + 200);
           const map = client && hashInfo.method === 'exec' ? await hashRemoteExec(client, remoteRoot, chunk) : null;
           if (!map) hashInfo.method = 'sftp';
           for (const rel of chunk) {
-            if (state.cancelled) throw new Error(T.cancelled);
+            if (state.cancelled) throw new Error(T.cancelled());
             let r = map ? map.get(rel) : null;
             if (!r && !map) r = await hashRemoteSftp(sftp, toRemote(remoteRoot, rel)).catch(() => null);
             const l = await hashLocal(toLocal(localRoot, rel)).catch(() => null);
@@ -286,7 +289,7 @@ function register({ ipcMain, shell, getSftp, getClient, sftpError, transfers, ge
     const remoteRoot = checkRemoteRoot(opts.remoteRoot);
     const ops = Array.isArray(opts.ops) ? opts.ops : [];
     const ACTIONS = ['upload', 'download', 'deleteRemote', 'deleteLocal'];
-    for (const op of ops) if (!core.safeRel(op.rel) || !ACTIONS.includes(op.action)) throw new Error(T.badRel);
+    for (const op of ops) if (!core.safeRel(op.rel) || !ACTIONS.includes(op.action)) throw new Error(T.badRel());
     if (!ops.length) return { uploaded: 0, downloaded: 0, deleted: 0, errors: [] };
     const matcher = core.makeMatcher(core.parsePatterns(opts.excludes || core.DEFAULT_EXCLUDES));
     const sftp = await getSftp(tabId);
@@ -345,7 +348,7 @@ function register({ ipcMain, shell, getSftp, getClient, sftpError, transfers, ge
     }
     // Auf das Ende aller Übertragungen warten; Fehler einzelner Dateien zählen mit
     try {
-      await job.finish(res.errors.length ? new Error(T.errors(res.errors.length) + ': ' + res.errors[0].rel + ' – ' + res.errors[0].error) : null);
+      await job.finish(res.errors.length ? new Error(T.errors(res.errors.length, res.errors[0].rel, res.errors[0].error)) : null);
     } catch (err) {
       if (job.cancelled) throw clean(err);
       if (!res.errors.length) res.errors.push({ rel: '', error: clean(err).message });
@@ -419,12 +422,12 @@ function register({ ipcMain, shell, getSftp, getClient, sftpError, transfers, ge
     let sftp;
     try { sftp = await getSftp(w.tabId); } catch {
       list.forEach(t => w.pending.add(t.rel));
-      w.error = T.offline; w.busy = false; publish();
+      w.error = T.offline(); w.busy = false; publish();
       scheduleFlush(w, WATCH_RETRY);
       return;
     }
     const files = list.filter(t => !t.isDir);
-    const job = transfers.start(w.tabId, 'upload', files.length === 1 ? posix.basename(files[0].rel) : T.watchTitle(`${files.length} Dateien`));
+    const job = transfers.start(w.tabId, 'upload', files.length === 1 ? posix.basename(files[0].rel) : T.watchFiles(files.length));
     publish();
     let failed = null;
     try {
@@ -502,9 +505,9 @@ function register({ ipcMain, shell, getSftp, getClient, sftpError, transfers, ge
     const localRoot = checkPath(opts.localRoot);
     const remoteRoot = checkRemoteRoot(opts.remoteRoot);
     const st = await fsp.stat(localRoot).catch(() => null);
-    if (!st || !st.isDirectory()) throw new Error(T.badLocal);
-    if (watches.size >= MAX_WATCHES) throw new Error(T.watchLimit);
-    for (const w of watches.values()) if (w.tabId === tabId && w.localRoot === localRoot && w.remoteRoot === remoteRoot) throw new Error(T.watchSame);
+    if (!st || !st.isDirectory()) throw new Error(T.badLocal());
+    if (watches.size >= MAX_WATCHES) throw new Error(T.watchLimit());
+    for (const w of watches.values()) if (w.tabId === tabId && w.localRoot === localRoot && w.remoteRoot === remoteRoot) throw new Error(T.watchSame());
     await getSftp(tabId); // Verbindung muss stehen
     const matcher = core.makeMatcher(core.parsePatterns(opts.excludes || core.DEFAULT_EXCLUDES));
     const w = {

@@ -8,7 +8,7 @@
   const cleanMsg = err => String(err?.message || err).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const PLATFORMS = { darwin: 'Mac', win32: 'Windows', linux: 'Linux' };
-  const n = (count, one, many) => `${count} ${count === 1 ? one : many}`;
+  const n = (key, count) => t(key, { count });
 
   // ---------- kleiner eigener Dialog ----------
 
@@ -44,34 +44,32 @@
 
   function openExport() {
     const d = dialog(`
-      <h2>Alles exportieren</h2>
-      <p class="bk-text">Verbindungen, Befehlsknöpfe, Lesezeichen, Einstellungen und bekannte Server kommen in eine Datei –
-        z. B. für einen neuen Computer. Die Datei wird mit einem Passwort verschlüsselt. Ohne dieses Passwort lässt sie sich
-        nicht öffnen – gut merken!</p>
-      ${toggleHtml('secrets', 'Gespeicherte Passwörter und Passphrasen mitnehmen')}
-      <label>Passwort für das Backup <span class="muted">(mind. ${MIN_PW} Zeichen)</span><input name="pw" type="password" autocomplete="new-password"></label>
-      <label>Passwort wiederholen<input name="pw2" type="password" autocomplete="new-password"></label>
+      <h2>${t('backup.exportTitle')}</h2>
+      <p class="bk-text">${t('backup.exportText')}</p>
+      ${toggleHtml('secrets', t('backup.exportSecrets'))}
+      <label>${t('backup.pwLabel')} <span class="muted">${t('backup.pwMin', { min: MIN_PW })}</span><input name="pw" type="password" autocomplete="new-password"></label>
+      <label>${t('backup.pwRepeat')}<input name="pw2" type="password" autocomplete="new-password"></label>
       <p class="bk-error" hidden></p>
       <div class="actions">
-        <button type="button" class="btn" data-cancel-bk>Abbrechen</button>
-        <button type="submit" class="btn primary">Exportieren …</button>
+        <button type="button" class="btn" data-cancel-bk>${t('common.cancel')}</button>
+        <button type="submit" class="btn primary">${t('backup.exportBtn')}</button>
       </div>`, 'bk-dialog');
     d.$('[name=pw]').focus();
     d.form.addEventListener('submit', async e => {
       e.preventDefault();
       const pw = d.$('[name=pw]').value;
-      if (pw.length < MIN_PW) return d.setError(`Das Passwort muss mindestens ${MIN_PW} Zeichen haben.`);
-      if (pw !== d.$('[name=pw2]').value) return d.setError('Die beiden Passwörter sind nicht gleich.');
+      if (pw.length < MIN_PW) return d.setError(t('backup.pwTooShort', { min: MIN_PW }));
+      if (pw !== d.$('[name=pw2]').value) return d.setError(t('backup.pwMismatch'));
       d.setError('');
       d.busy(true);
       try {
         const r = await B.exportAll({ password: pw, secrets: d.$('[name=secrets]').checked });
         if (!r) { d.busy(false); return; } // Speichern abgebrochen
         d.close();
-        const lines = [n(r.hosts, 'Verbindung', 'Verbindungen')];
-        if (d.$('[name=secrets]').checked) lines.push(n(r.passwords, 'Passwort', 'Passwörter/Passphrasen'));
-        if (r.missing) lines.push(`${n(r.missing, 'gespeichertes Passwort', 'gespeicherte Passwörter')} nicht lesbar – fehlt im Backup`);
-        info('Backup gespeichert', `${lines.join(', ')} – verschlüsselt gespeichert.`, r.file);
+        const lines = [n('backup.nHosts', r.hosts)];
+        if (d.$('[name=secrets]').checked) lines.push(n('backup.nSecrets', r.passwords));
+        if (r.missing) lines.push(n('backup.missing', r.missing));
+        info(t('backup.savedTitle'), t('backup.savedMsg', { list: lines.join(', ') }), r.file);
       } catch (err) { d.busy(false); d.setError(cleanMsg(err)); }
     });
   }
@@ -83,13 +81,13 @@
     try { picked = await B.pick(); } catch (err) { showError(cleanMsg(err)); return; }
     if (!picked) return;
     const d = dialog(`
-      <h2>Backup öffnen</h2>
-      <p class="bk-text">Passwort für „<b class="bk-file"></b>“ eingeben.</p>
-      <label>Passwort<input name="pw" type="password" autocomplete="current-password"></label>
+      <h2>${t('backup.openTitle')}</h2>
+      <p class="bk-text">${t('backup.openText')}</p>
+      <label>${t('backup.password')}<input name="pw" type="password" autocomplete="current-password"></label>
       <p class="bk-error" hidden></p>
       <div class="actions">
-        <button type="button" class="btn" data-cancel-bk>Abbrechen</button>
-        <button type="submit" class="btn primary">Öffnen</button>
+        <button type="button" class="btn" data-cancel-bk>${t('common.cancel')}</button>
+        <button type="submit" class="btn primary">${t('common.open')}</button>
       </div>`, 'bk-dialog');
     d.$('.bk-file').textContent = picked.name;
     d.$('[name=pw]').focus();
@@ -109,52 +107,54 @@
     });
   }
 
-  const names = list => (list.length ? `<div class="bk-names">${list.slice(0, 8).map(n => `„${esc(n)}“`).join(', ')}${list.length > 8 ? ` und ${list.length - 8} weitere` : ''}</div>` : '');
+  const names = list => (list.length ? `<div class="bk-names">${list.slice(0, 8).map(x => t('backup.quoted', { name: esc(x) })).join(', ')}${list.length > 8 ? ' ' + t('backup.andMore', { count: list.length - 8 }) : ''}</div>` : '');
 
   function diffRow(title, ic, diff) {
     const parts = [];
-    if (diff.added.length) parts.push(`<b class="bk-new">${diff.added.length} neu</b>`);
-    if (diff.changed.length) parts.push(`<b class="bk-chg">${diff.changed.length} anders als hier</b>`);
-    if (diff.unchanged) parts.push(`${diff.unchanged} gleich`);
-    if (!parts.length) parts.push('keine');
+    if (diff.added.length) parts.push(`<b class="bk-new">${t('backup.nNew', { count: diff.added.length })}</b>`);
+    if (diff.changed.length) parts.push(`<b class="bk-chg">${t('backup.nChanged', { count: diff.changed.length })}</b>`);
+    if (diff.unchanged) parts.push(t('backup.nSame', { count: diff.unchanged }));
+    if (!parts.length) parts.push(t('backup.none'));
     return `<div class="bk-row">${icon(ic)}<div><div class="bk-row-t">${title}: ${parts.join(' · ')}</div>
-      ${diff.added.length ? `<div class="bk-sub">Neu: ${names(diff.added)}</div>` : ''}
-      ${diff.changed.length ? `<div class="bk-sub">Anders: ${names(diff.changed)}</div>` : ''}</div></div>`;
+      ${diff.added.length ? `<div class="bk-sub">${t('backup.newLabel')} ${names(diff.added)}</div>` : ''}
+      ${diff.changed.length ? `<div class="bk-sub">${t('backup.changedLabel')} ${names(diff.changed)}</div>` : ''}</div></div>`;
   }
 
   function showPreview(picked, { token, preview: p }) {
-    const when = p.created ? new Date(p.created).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : 'unbekannt';
-    const from = PLATFORMS[p.platform] ? ` auf einem ${PLATFORMS[p.platform]}` : '';
+    const when = p.created ? new Date(p.created).toLocaleString(I18N.locale, { dateStyle: 'medium', timeStyle: 'short' }) : t('backup.unknown');
+    const from = PLATFORMS[p.platform]
+      ? t('backup.previewFromPlatform', { when: esc(when), platform: PLATFORMS[p.platform] })
+      : t('backup.previewFrom', { when: esc(when) });
     const removedAll = [...p.hosts.removed, ...p.snippets.removed.filter(n => !p.hosts.removed.includes(n))];
     const d = dialog(`
-      <h2>Was wird importiert?</h2>
-      <p class="bk-text">Backup vom ${esc(when)}${from}.</p>
+      <h2>${t('backup.previewTitle')}</h2>
+      <p class="bk-text">${from}</p>
       <div class="bk-rows">
-        ${diffRow('Verbindungen', 'server', p.hosts)}
-        ${diffRow('Befehlsknöpfe', 'bolt', p.snippets)}
-        <div class="bk-row">${icon('shieldCheck')}<div><div class="bk-row-t">Bekannte Server: ${p.knownHosts.added ? `<b class="bk-new">${p.knownHosts.added} neu</b>` : 'nichts Neues'}</div></div></div>
-        <div class="bk-row">${icon('sliders')}<div><div class="bk-row-t">Einstellungen: ${p.settings.changed ? `<b class="bk-chg">${p.settings.changed} anders als hier</b>` : 'gleich'}</div></div></div>
-        ${p.bookmarks ? `<div class="bk-row">${icon('star')}<div><div class="bk-row-t">Lesezeichen: ${p.bookmarks.changed ? '<b class="bk-chg">anders als hier</b>' : 'gleich'}</div></div></div>` : ''}
-        ${p.secrets ? `<div class="bk-row">${icon('lock')}<div><div class="bk-row-t">${n(p.secrets.passwords, 'Passwort', 'Passwörter')}, ${n(p.secrets.passphrases, 'Passphrase', 'Passphrasen')} im Backup</div>
-          ${toggleHtml('secrets', 'Gespeicherte Passwörter übernehmen', true)}</div></div>` : ''}
+        ${diffRow(t('backup.hosts'), 'server', p.hosts)}
+        ${diffRow(t('backup.snippets'), 'bolt', p.snippets)}
+        <div class="bk-row">${icon('shieldCheck')}<div><div class="bk-row-t">${t('backup.knownHosts')}: ${p.knownHosts.added ? `<b class="bk-new">${t('backup.nNew', { count: p.knownHosts.added })}</b>` : t('backup.nothingNew')}</div></div></div>
+        <div class="bk-row">${icon('sliders')}<div><div class="bk-row-t">${t('backup.settings')}: ${p.settings.changed ? `<b class="bk-chg">${t('backup.nChanged', { count: p.settings.changed })}</b>` : t('backup.same')}</div></div></div>
+        ${p.bookmarks ? `<div class="bk-row">${icon('star')}<div><div class="bk-row-t">${t('backup.bookmarks')}: ${p.bookmarks.changed ? `<b class="bk-chg">${t('backup.differs')}</b>` : t('backup.same')}</div></div></div>` : ''}
+        ${p.secrets ? `<div class="bk-row">${icon('lock')}<div><div class="bk-row-t">${t('backup.secretsInBackup', { passwords: n('backup.nPasswords', p.secrets.passwords), passphrases: n('backup.nPassphrases', p.secrets.passphrases) })}</div>
+          ${toggleHtml('secrets', t('backup.takeSecrets'), true)}</div></div>` : ''}
       </div>
       <div class="seg bk-mode">
-        <button type="button" data-mode="merge" class="on">Zusammenführen</button>
-        <button type="button" data-mode="replace">Alles ersetzen</button>
+        <button type="button" data-mode="merge" class="on">${t('backup.merge')}</button>
+        <button type="button" data-mode="replace">${t('backup.replaceAll')}</button>
       </div>
       <div class="bk-mode-merge">
-        <p class="bk-text">Neues kommt dazu, alles andere hier bleibt erhalten.</p>
-        ${toggleHtml('overwrite', 'Bei gleichem Namen die Version aus dem Backup nehmen', true)}
+        <p class="bk-text">${t('backup.mergeText')}</p>
+        ${toggleHtml('overwrite', t('backup.overwrite'), true)}
       </div>
       <div class="bk-mode-replace" hidden>
-        <p class="bk-text bk-warn">Verbindungen und Befehlsknöpfe werden genau wie im Backup.
-          ${removedAll.length ? `Dabei werden gelöscht: ${names(removedAll)}` : 'Hier wird dabei nichts gelöscht.'}</p>
+        <p class="bk-text bk-warn">${t('backup.replaceText')}
+          ${removedAll.length ? `${t('backup.replaceDeletes')} ${names(removedAll)}` : t('backup.replaceNothing')}</p>
       </div>
-      <p class="bk-text bk-small">Vorher legt die App automatisch eine Sicherung des jetzigen Stands an.</p>
+      <p class="bk-text bk-small">${t('backup.safetyNote')}</p>
       <p class="bk-error" hidden></p>
       <div class="actions">
-        <button type="button" class="btn" data-cancel-bk>Abbrechen</button>
-        <button type="submit" class="btn primary">Importieren</button>
+        <button type="button" class="btn" data-cancel-bk>${t('common.cancel')}</button>
+        <button type="submit" class="btn primary">${t('backup.importBtn')}</button>
       </div>`, 'bk-dialog bk-preview');
     let mode = 'merge';
     for (const b of d.form.querySelectorAll('.bk-mode button')) {
@@ -171,8 +171,8 @@
       e.preventDefault();
       if (mode === 'replace' && removedAll.length) {
         const ok = await askLocal({
-          kind: 'confirm', title: 'Wirklich ersetzen?', danger: true, okLabel: 'Ersetzen',
-          message: `${removedAll.length} Einträge, die nicht im Backup sind, werden gelöscht.`, detail: removedAll.join('\n'),
+          kind: 'confirm', title: t('backup.replaceQ'), danger: true, okLabel: t('backup.replace'),
+          message: t('backup.replaceMsg', { count: removedAll.length }), detail: removedAll.join('\n'),
         });
         if (!ok) return;
       }
@@ -186,10 +186,10 @@
         reloadUi();
         const msg = [];
         const h = r.hosts.added.length + (mode === 'merge' && !d.$('[name=overwrite]').checked ? 0 : r.hosts.changed.length);
-        msg.push(`${n(h, 'Verbindung', 'Verbindungen')} übernommen`);
-        if (r.knownHosts) msg.push(n(r.knownHosts, 'bekannter Server', 'bekannte Server'));
-        if (r.secrets.saved) msg.push(n(r.secrets.saved, 'Passwort', 'Passwörter'));
-        info('Import fertig', msg.join(', ') + '.', [...r.warnings, r.safetyCopy ? `Sicherung des vorherigen Stands:\n${r.safetyCopy}` : ''].filter(Boolean).join('\n\n'));
+        msg.push(n('backup.hostsTaken', h));
+        if (r.knownHosts) msg.push(n('backup.nKnownHosts', r.knownHosts));
+        if (r.secrets.saved) msg.push(n('backup.nPasswords', r.secrets.saved));
+        info(t('backup.importDone'), msg.join(', ') + '.', [...r.warnings, r.safetyCopy ? t('backup.safetyCopy', { path: r.safetyCopy }) : ''].filter(Boolean).join('\n\n'));
       } catch (err) { d.busy(false); d.setError(cleanMsg(err)); }
     });
   }
@@ -201,18 +201,17 @@
 
   function openSyncSetup(onDone) {
     const d = dialog(`
-      <h2>Abgleich einrichten</h2>
-      <p class="bk-text">Wähle einen Ordner, den dein Cloud-Dienst abgleicht – z. B. iCloud Drive oder OneDrive.
-        Dort legt die App eine verschlüsselte Datei ab. Auf dem anderen Computer denselben Ordner und dasselbe Passwort wählen.</p>
-      <label>Ordner<div class="row"><input name="folder" class="grow" readonly placeholder="Noch kein Ordner gewählt"><button type="button" class="btn" data-pick>Wählen …</button></div></label>
+      <h2>${t('backup.syncSetupTitle')}</h2>
+      <p class="bk-text">${t('backup.syncSetupText')}</p>
+      <label>${t('backup.folder')}<div class="row"><input name="folder" class="grow" readonly placeholder="${t('backup.noFolder')}"><button type="button" class="btn" data-pick>${t('common.choose')}</button></div></label>
       <p class="bk-text bk-small bk-folder-hint" hidden></p>
-      <label>Passwort für die Abgleich-Datei<input name="pw" type="password" autocomplete="new-password"></label>
-      <label class="bk-pw2">Passwort wiederholen<input name="pw2" type="password" autocomplete="new-password"></label>
-      ${toggleHtml('secrets', 'Gespeicherte Passwörter mit abgleichen')}
+      <label>${t('backup.syncPw')}<input name="pw" type="password" autocomplete="new-password"></label>
+      <label class="bk-pw2">${t('backup.pwRepeat')}<input name="pw2" type="password" autocomplete="new-password"></label>
+      ${toggleHtml('secrets', t('backup.syncSecrets'))}
       <p class="bk-error" hidden></p>
       <div class="actions">
-        <button type="button" class="btn" data-cancel-bk>Abbrechen</button>
-        <button type="submit" class="btn primary">Einschalten</button>
+        <button type="button" class="btn" data-cancel-bk>${t('common.cancel')}</button>
+        <button type="submit" class="btn primary">${t('backup.enable')}</button>
       </div>`, 'bk-dialog');
     let folder = null;
     let exists = false;
@@ -227,8 +226,8 @@
         const hint = d.$('.bk-folder-hint');
         hint.hidden = false;
         hint.textContent = exists
-          ? 'Hier gibt es schon eine Abgleich-Datei. Gib das Passwort ein, das du auf dem anderen Computer gewählt hast.'
-          : `Hier wird eine neue Abgleich-Datei angelegt. Wähle ein Passwort (mind. ${MIN_PW} Zeichen).`;
+          ? t('backup.folderExists')
+          : t('backup.folderNew', { min: MIN_PW });
         d.$('.bk-pw2').hidden = exists;
         d.$('[name=pw]').focus();
       } catch (err) { d.setError(cleanMsg(err)); }
@@ -236,9 +235,9 @@
     d.form.addEventListener('submit', async e => {
       e.preventDefault();
       const pw = d.$('[name=pw]').value;
-      if (!folder) return d.setError('Bitte zuerst einen Ordner wählen.');
-      if (!exists && pw.length < MIN_PW) return d.setError(`Das Passwort muss mindestens ${MIN_PW} Zeichen haben.`);
-      if (!exists && pw !== d.$('[name=pw2]').value) return d.setError('Die beiden Passwörter sind nicht gleich.');
+      if (!folder) return d.setError(t('backup.pickFolderFirst'));
+      if (!exists && pw.length < MIN_PW) return d.setError(t('backup.pwTooShort', { min: MIN_PW }));
+      if (!exists && pw !== d.$('[name=pw2]').value) return d.setError(t('backup.pwMismatch'));
       d.setError('');
       d.busy(true);
       try {
@@ -252,9 +251,11 @@
   }
 
   function timeText(iso) {
-    const t = new Date(iso);
-    const today = new Date().toDateString() === t.toDateString();
-    return today ? 'heute ' + t.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : t.toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+    const d = new Date(iso);
+    const today = new Date().toDateString() === d.toDateString();
+    return today
+      ? t('backup.today', { time: d.toLocaleTimeString(I18N.locale, { hour: '2-digit', minute: '2-digit' }) })
+      : d.toLocaleString(I18N.locale, { dateStyle: 'short', timeStyle: 'short' });
   }
 
   function renderSync() {
@@ -270,34 +271,35 @@
     syncBox.querySelector('[name=sync-secrets]').checked = !!st.secrets;
     const line = syncBox.querySelector('.bk-sync-status');
     line.className = 'bk-sync-status';
-    if (st.running) line.textContent = 'Gleiche ab …';
+    if (st.running) line.textContent = t('backup.syncing');
     else if (st.lastError) { line.textContent = st.lastError; line.classList.add('err'); }
     else if (st.waiting) line.textContent = st.waiting;
     else if (st.lastSync) {
-      line.textContent = `Zuletzt abgeglichen: ${timeText(st.lastSync)}` + (st.applied ? ` · ${st.applied} Änderungen übernommen` : '');
+      line.textContent = st.applied
+        ? t('backup.lastSyncApplied', { time: timeText(st.lastSync), count: st.applied })
+        : t('backup.lastSync', { time: timeText(st.lastSync) });
       line.classList.add('ok');
-    } else line.textContent = 'Noch nicht abgeglichen.';
+    } else line.textContent = t('backup.notYet');
     const conf = syncBox.querySelector('.bk-sync-conflicts');
     conf.hidden = !st.conflicts?.length || !!st.lastError;
-    if (!conf.hidden) conf.textContent = `Auf beiden Computern geändert – jeweils die neuere Version übernommen: ${st.conflicts.join(', ')}.`;
+    if (!conf.hidden) conf.textContent = t('backup.conflicts', { list: st.conflicts.join(', ') });
   }
 
   function renderSection(box) {
     box.className = 'bk-section';
     box.innerHTML = `
       <div class="bk-block">
-        <h4>Backup & Umzug</h4>
-        <p class="settings-desc">Alle Verbindungen (mit Gruppen, Farben, Tunneln und Sprung-Servern), Befehlsknöpfe, Lesezeichen,
-          Einstellungen und bekannten Server in einer verschlüsselten Datei – z. B. für einen neuen Computer.</p>
+        <h4>${t('backup.sectionTitle')}</h4>
+        <p class="settings-desc">${t('backup.sectionDesc')}</p>
         <div class="bk-btns">
-          <button type="button" class="btn" data-b="export">${icon('upload')}Alles exportieren …</button>
-          <button type="button" class="btn" data-b="import">${icon('download')}Importieren …</button>
+          <button type="button" class="btn" data-b="export">${icon('upload')}${t('backup.exportAll')}</button>
+          <button type="button" class="btn" data-b="import">${icon('download')}${t('backup.importDots')}</button>
         </div>
       </div>
       <div class="bk-block bk-sync">
         <div class="settings-row">
-          <div class="settings-label">Verbindungen über einen Cloud-Ordner abgleichen
-            <small>Hält Verbindungen, Befehlsknöpfe und Lesezeichen auf mehreren Computern gleich – über iCloud Drive, OneDrive o. Ä.</small></div>
+          <div class="settings-label">${t('backup.syncLabel')}
+            <small>${t('backup.syncHint')}</small></div>
           ${toggleHtml('sync-on', '')}
         </div>
         <div class="bk-sync-details" hidden>
@@ -305,12 +307,12 @@
           <div class="bk-sync-status"></div>
           <div class="bk-sync-conflicts" hidden></div>
           <div class="settings-row">
-            <div class="settings-label">Gespeicherte Passwörter mit abgleichen<small>Liegen in der Datei nur verschlüsselt.</small></div>
+            <div class="settings-label">${t('backup.syncSecrets')}<small>${t('backup.syncSecretsHint')}</small></div>
             ${toggleHtml('sync-secrets', '')}
           </div>
           <div class="bk-btns">
-            <button type="button" class="btn" data-b="sync-now">${icon('sync')}Jetzt abgleichen</button>
-            <button type="button" class="btn ghost" data-b="sync-change">Ordner oder Passwort ändern …</button>
+            <button type="button" class="btn" data-b="sync-now">${icon('sync')}${t('backup.syncNow')}</button>
+            <button type="button" class="btn ghost" data-b="sync-change">${t('backup.syncChange')}</button>
           </div>
         </div>
       </div>`;
@@ -321,7 +323,7 @@
     onToggle.addEventListener('change', async () => {
       if (onToggle.checked) { onToggle.checked = false; openSyncSetup(renderSync); return; }
       onToggle.checked = true;
-      const ok = await askLocal({ kind: 'confirm', title: 'Abgleich ausschalten?', message: 'Die Datei im Cloud-Ordner bleibt liegen. Deine Verbindungen hier bleiben, wie sie sind.', okLabel: 'Ausschalten' });
+      const ok = await askLocal({ kind: 'confirm', title: t('backup.disableQ'), message: t('backup.disableMsg'), okLabel: t('backup.disable') });
       if (!ok) return;
       try { syncState = await B.syncDisable(); } catch (err) { showError(cleanMsg(err)); }
       renderSync();
@@ -344,7 +346,7 @@
   B.onChanged(what => reloadUi(what || {}));
 
   registerSettingsSection({
-    id: 'backup', title: 'Backup', icon: 'cloud', order: 80,
+    id: 'backup', title: t('backup.title'), icon: 'cloud', order: 80,
     render: renderSection,
   });
 

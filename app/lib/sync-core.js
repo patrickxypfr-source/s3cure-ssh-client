@@ -1,6 +1,8 @@
 // Reine Vergleichslogik für „Ordner synchronisieren“ und „Server-Ordner aktuell halten“
 // (ohne Dateizugriff, damit sie sich leicht testen lässt). Benutzt von lib/sync.js.
 
+const { t } = require('./i18n');
+
 // Standard-Ausschlüsse: werden nie verglichen oder übertragen
 const DEFAULT_EXCLUDES = ['node_modules', '.git', '.DS_Store', 'Thumbs.db', 'desktop.ini'];
 // Zeitunterschied, der noch als „gleich“ gilt (Server speichern nur ganze Sekunden, FAT 2 s)
@@ -118,21 +120,21 @@ function hashCandidates(local, remote) {
 // Liefert { action: 'upload'|'download'|'deleteRemote'|'deleteLocal'|null, checked, warn }
 function suggest(item, mode, del) {
   const s = item.status;
-  if (s === 'typeClash') return { action: null, checked: false, warn: 'Auf einer Seite Datei, auf der anderen Ordner – bitte von Hand klären' };
+  if (s === 'typeClash') return { action: null, checked: false, warn: t('syncCore.warnTypeClash') };
   if (mode === 'up') {
     if (s === 'onlyLocal' || s === 'localNewer' || s === 'differ') return { action: 'upload', checked: true };
-    if (s === 'remoteNewer') return { action: 'upload', checked: false, warn: 'Die Server-Datei ist neuer und würde überschrieben' };
+    if (s === 'remoteNewer') return { action: 'upload', checked: false, warn: t('syncCore.warnRemoteNewer') };
     if (s === 'onlyRemote') return del ? { action: 'deleteRemote', checked: true } : { action: null, checked: false };
   }
   if (mode === 'down') {
     if (s === 'onlyRemote' || s === 'remoteNewer' || s === 'differ') return { action: 'download', checked: true };
-    if (s === 'localNewer') return { action: 'download', checked: false, warn: 'Die Datei auf diesem Computer ist neuer und würde überschrieben' };
+    if (s === 'localNewer') return { action: 'download', checked: false, warn: t('syncCore.warnLocalNewer') };
     if (s === 'onlyLocal') return del ? { action: 'deleteLocal', checked: true } : { action: null, checked: false };
   }
   if (mode === 'both') {
     if (s === 'onlyLocal' || s === 'localNewer') return { action: 'upload', checked: true };
     if (s === 'onlyRemote' || s === 'remoteNewer') return { action: 'download', checked: true };
-    if (s === 'differ') return { action: 'upload', checked: false, warn: 'Gleiche Zeit, aber anderer Inhalt – bitte Richtung wählen' };
+    if (s === 'differ') return { action: 'upload', checked: false, warn: t('syncCore.warnDiffer') };
   }
   return { action: null, checked: false };
 }

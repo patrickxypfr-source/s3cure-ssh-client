@@ -230,7 +230,7 @@ The update window shows **what's new**, and the first time a new version starts,
 - Optional **App Lock** with password or Touch ID
 - **Keys & Servers:** manage known servers and your own SSH keys, warning when a server key changes
 - **Agent forwarding** and connecting via **proxy** (SOCKS5/HTTP)
-- **Backup & migration:** export/import everything encrypted, optionally sync via iCloud/OneDrive
+- **Backup & Migration:** export/import everything encrypted, optionally sync via iCloud/OneDrive
 
 </details>
 

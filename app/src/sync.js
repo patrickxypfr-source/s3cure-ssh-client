@@ -16,90 +16,98 @@ window.SyncTools = (() => {
   const DEFAULT_EXCLUDES = 'node_modules, .git, .DS_Store, Thumbs.db';
   const ROW_LIMIT = 3000; // mehr Zeilen werden nicht einzeln gezeigt (aber trotzdem synchronisiert)
 
-  // Alle Texte an einer Stelle (für die spätere Übersetzung)
+  // Alle Texte an einer Stelle (Wörterbuch: src/locales, Schlüssel sync.*)
+  const fmt = n => I18N.fmtNumber(n);
   const T = {
-    btn: 'Synchronisieren',
-    btnTitle: 'Ordner links (dieser Computer) und rechts (Server) vergleichen und abgleichen',
-    menuSync: 'Vergleichen & synchronisieren …',
-    menuWatch: 'Server-Ordner aktuell halten …',
-    menuStopWatch: 'Beobachten dieses Ordners beenden',
-    needPane: 'Bitte zuerst „Mein Computer“ öffnen und links den Ordner wählen.',
-    title: 'Ordner synchronisieren',
-    here: 'Dieser Computer',
-    server: 'Server',
-    modes: { up: 'Computer → Server', down: 'Server → Computer', both: 'Beide (neuere gewinnt)' },
-    modeTitles: {
-      up: 'Server so machen wie diesen Computer: Neues und Geändertes hochladen',
-      down: 'Diesen Computer so machen wie den Server: Neues und Geändertes herunterladen',
-      both: 'In beide Richtungen: jeweils die neuere Datei gewinnt',
+    btn: t('sync.run'),
+    btnTitle: t('sync.btnTitle'),
+    menuSync: t('sync.menuSync'),
+    menuWatch: t('sync.menuWatch'),
+    menuStopWatch: t('sync.menuStopWatch'),
+    needPane: t('sync.needPane'),
+    title: t('sync.title'),
+    here: t('sync.here'),
+    server: t('sync.server'),
+    modes: { up: t('sync.modeUp'), down: t('sync.modeDown'), both: t('sync.modeBoth') },
+    modeTitles: { up: t('sync.modeUpTitle'), down: t('sync.modeDownTitle'), both: t('sync.modeBothTitle') },
+    checksum: t('sync.checksum'),
+    del: t('sync.del'),
+    delTitle: { up: t('sync.delTitleUp'), down: t('sync.delTitleDown'), both: t('sync.delTitleBoth') },
+    delWarn: { up: t('sync.delWarnUp'), down: t('sync.delWarnDown') },
+    excl: t('sync.excl'),
+    exclTitle: t('sync.exclTitle'),
+    compareAgain: t('sync.compareAgain'),
+    scanning: (l, r) => t('sync.scanning', { local: fmt(l), remote: fmt(r) }),
+    hashing: (a, b) => t('sync.hashing', { done: fmt(a), total: fmt(b) }),
+    stop: t('sync.stop'),
+    nothing: t('sync.nothing'),
+    nothingFilter: t('sync.nothingFilter'),
+    sameCount: n => t('sync.sameCount', { count: n }),
+    more: n => t('sync.more', { count: n }),
+    filters: {
+      all: t('sync.filterAll'), onlyLocal: t('sync.filterOnlyLocal'), onlyRemote: t('sync.filterOnlyRemote'),
+      localNewer: t('sync.filterLocalNewer'), remoteNewer: t('sync.filterRemoteNewer'), differ: t('sync.filterDiffer'), typeClash: t('sync.filterTypeClash'),
     },
-    checksum: 'Inhalt per Prüfsumme vergleichen (langsamer, genauer)',
-    del: 'Gelöschtes auch drüben löschen',
-    delTitle: { up: 'Was es nur auf dem Server gibt, wird dort gelöscht', down: 'Was es nur auf diesem Computer gibt, kommt in den Papierkorb', both: 'Bei „Beide“ wird nie gelöscht' },
-    delWarn: { up: 'Achtung: Dateien, die es nur auf dem Server gibt, werden dort endgültig gelöscht.', down: 'Achtung: Dateien, die es nur auf diesem Computer gibt, kommen in den Papierkorb.' },
-    excl: 'Ausschließen',
-    exclTitle: 'Namen oder Muster, durch Komma getrennt, z. B. node_modules, *.log, build/ oder pfad/datei.txt',
-    compareAgain: 'Neu vergleichen',
-    scanning: (l, r) => `Lese Ordner … ${l.toLocaleString('de-DE')} hier · ${r.toLocaleString('de-DE')} auf dem Server`,
-    hashing: (a, b) => `Berechne Prüfsummen … ${a.toLocaleString('de-DE')} von ${b.toLocaleString('de-DE')}`,
-    stop: 'Stopp',
-    nothing: 'Alles gleich – es gibt nichts zu synchronisieren.',
-    nothingFilter: 'In dieser Ansicht gibt es keine Einträge.',
-    sameCount: n => `${n.toLocaleString('de-DE')} gleich`,
-    more: n => `… und ${n.toLocaleString('de-DE')} weitere Einträge (werden mit synchronisiert, wenn angehakt)`,
-    filters: { all: 'Alle', onlyLocal: 'Nur hier', onlyRemote: 'Nur Server', localNewer: 'Hier neuer', remoteNewer: 'Server neuer', differ: 'Unterschiedlich', typeClash: 'Konflikt' },
     status: {
-      onlyLocal: 'Nur auf diesem Computer', onlyRemote: 'Nur auf dem Server', localNewer: 'Hier neuer',
-      remoteNewer: 'Server neuer', differ: 'Unterschiedlich', typeClash: 'Datei ↔ Ordner',
+      onlyLocal: t('sync.statusOnlyLocal'), onlyRemote: t('sync.statusOnlyRemote'), localNewer: t('sync.filterLocalNewer'),
+      remoteNewer: t('sync.filterRemoteNewer'), differ: t('sync.filterDiffer'), typeClash: t('sync.statusTypeClash'),
     },
-    actions: { upload: 'Hochladen →', download: '← Herunterladen', deleteRemote: 'Auf Server löschen', deleteLocal: 'In den Papierkorb', none: 'Nichts tun' },
-    files: n => `${n.toLocaleString('de-DE')} Datei${n === 1 ? '' : 'en'}`,
-    summary: (u, d, x, size) => [u && `${u} hochladen`, d && `${d} herunterladen`, x && `${x} löschen`].filter(Boolean).join(' · ') + (size ? ` · ${formatSize(size)}` : ''),
-    noneSelected: 'Nichts ausgewählt',
-    cancel: 'Abbrechen',
-    run: 'Synchronisieren',
-    colPath: 'Pfad', colLocal: 'Dieser Computer', colRemote: 'Server', colAction: 'Aktion',
-    delConfirmTitle: 'Wirklich löschen?',
+    actions: {
+      upload: t('sync.actUpload'), download: t('sync.actDownload'), deleteRemote: t('sync.actDeleteRemote'),
+      deleteLocal: t('sync.actDeleteLocal'), none: t('sync.actNone'),
+    },
+    files: n => t('sync.files', { count: n }),
+    summary: (u, d, x, size) => [u && t('sync.sumUpload', { count: u }), d && t('sync.sumDownload', { count: d }), x && t('sync.sumDelete', { count: x })]
+      .filter(Boolean).join(' · ') + (size ? ` · ${formatSize(size)}` : ''),
+    noneSelected: t('sync.noneSelected'),
+    cancel: t('common.cancel'),
+    run: t('sync.run'),
+    toggleAll: t('sync.toggleAll'),
+    colPath: t('sync.colPath'), colLocal: t('sync.here'), colRemote: t('sync.server'), colAction: t('sync.colAction'),
+    delConfirmTitle: t('sync.delConfirmTitle'),
     delConfirm: (r, l) => [
-      r && `${r === 1 ? '1 Element wird' : `${r} Elemente werden`} auf dem Server endgültig gelöscht. Das lässt sich nicht rückgängig machen.`,
-      l && `${l === 1 ? '1 Element' : `${l} Elemente`} auf diesem Computer ${l === 1 ? 'kommt' : 'kommen'} in den Papierkorb.`,
+      r && t('sync.delConfirmRemote', { count: r }),
+      l && t('sync.delConfirmLocal', { count: l }),
     ].filter(Boolean).join('\n'),
-    delOk: 'Löschen und synchronisieren',
+    delOk: t('sync.delOk'),
+    prefixServer: t('sync.prefixServer'),
+    prefixHere: t('sync.prefixHere'),
+    andMore: n => t('sync.andMore', { count: n }),
     done: r => {
-      const parts = [r.uploaded && `${r.uploaded} hochgeladen`, r.downloaded && `${r.downloaded} heruntergeladen`, r.deleted && `${r.deleted} gelöscht`].filter(Boolean);
-      return 'Synchronisiert' + (parts.length ? ': ' + parts.join(' · ') : '');
+      const parts = [r.uploaded && t('sync.uploaded', { count: r.uploaded }), r.downloaded && t('sync.downloaded', { count: r.downloaded }), r.deleted && t('sync.deleted', { count: r.deleted })].filter(Boolean);
+      return parts.length ? t('sync.doneWith', { list: parts.join(' · ') }) : t('sync.done');
     },
-    errTitle: 'Synchronisieren mit Fehlern',
-    errMsg: n => `${n} Element${n === 1 ? '' : 'e'} konnten nicht übertragen werden:`,
-    watchTitle: 'Server-Ordner aktuell halten?',
-    watchMsg: (l, r) => `Solange die App offen ist, werden neue und geänderte Dateien aus „${l}“ automatisch nach „${r}“ auf dem Server hochgeladen. Gelöschte Dateien bleiben auf dem Server.\n\nTipp: Vorher einmal „Synchronisieren“, damit beide Ordner gleich sind.`,
-    watchDetail: (l, r, ex) => `Dieser Computer:  ${l}\nServer:           ${r}\nAusgeschlossen:   ${ex || '–'}`,
-    watchOk: 'Beobachten starten',
-    watchStarted: name => `Beobachte „${name}“ – Änderungen werden automatisch hochgeladen`,
-    watchStopped: name => `Beobachten von „${name}“ beendet`,
-    liveWatch: (n, last) => `Beobachtet ${n} Ordner · ${last ? 'letzte Übertragung ' + last : 'noch nichts übertragen'}`,
-    liveExt: (n, last) => `${n} Datei${n === 1 ? '' : 'en'} extern geöffnet${last ? ' · hochgeladen ' + last : ''}`,
-    details: 'Details',
-    popWatch: 'Beobachtete Ordner',
-    popExt: 'Extern geöffnete Dateien',
-    stopBtn: 'Stopp',
-    endBtn: 'Beenden',
-    showBtn: 'Öffnen',
-    uploadNow: 'Jetzt hochladen',
-    uploads: n => `${n} hochgeladen`,
-    lastAt: t => `zuletzt ${t}`,
-    pollMode: 'prüft alle paar Sekunden',
-    extStates: { watching: 'wartet auf Speichern', uploading: 'lädt hoch …', error: 'Fehler', conflict: 'nicht hochgeladen' },
-    compareLocal: name => name ? `Mit „${name}“ (dieser Computer) vergleichen` : 'Mit lokaler Datei vergleichen …',
-    compareRemote: name => `Mit „${name}“ (Server) vergleichen`,
-    compareTwo: 'Diese 2 Dateien vergleichen',
-    tooBig: name => `„${name}“ ist zu groß zum Vergleichen (höchstens 2 MB).`,
+    errTitle: t('sync.errTitle'),
+    errMsg: n => t('sync.errMsg', { count: n }),
+    watchTitle: t('sync.watchConfirmTitle'),
+    watchMsg: (l, r) => t('sync.watchMsg', { local: l, remote: r }),
+    watchDetail: (l, r, ex) => t('sync.watchDetail', { local: l, remote: r, excludes: ex || '–' }),
+    watchOk: t('sync.watchOk'),
+    watchStarted: name => t('sync.watchStarted', { name }),
+    watchStopped: name => t('sync.watchStopped', { name }),
+    liveWatch: (n, last) => (last ? t('sync.liveWatchLast', { count: n, time: last }) : t('sync.liveWatchNone', { count: n })),
+    liveExt: (n, last) => (last ? t('sync.liveExtUploaded', { count: n, time: last }) : t('sync.liveExt', { count: n })),
+    details: t('sync.details'),
+    popWatch: t('sync.popWatch'),
+    popExt: t('sync.popExt'),
+    stopBtn: t('sync.stop'),
+    endBtn: t('sync.endBtn'),
+    showBtn: t('common.open'),
+    uploadNow: t('sync.uploadNow'),
+    uploads: n => t('sync.uploaded', { count: n }),
+    lastAt: time => t('sync.lastAt', { time }),
+    pollMode: t('sync.pollMode'),
+    extStates: { watching: t('sync.extWatching'), uploading: t('sync.extUploading'), error: t('sync.extError'), conflict: t('sync.extConflict') },
+    compareLocal: name => (name ? t('sync.compareLocalNamed', { name }) : t('sync.compareLocalPick')),
+    compareRemote: name => t('sync.compareRemote', { name }),
+    compareTwo: t('sync.compareTwo'),
+    tooBig: name => t('sync.tooBig', { name }),
   };
 
   const cleanMsg = err => String(err?.message || err).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
   const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
-  const time = ms => new Date(ms).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  const time = ms => new Date(ms).toLocaleTimeString(I18N.locale, { hour: '2-digit', minute: '2-digit' });
   const baseName = s => String(s).split(/[\\/]/).filter(Boolean).pop() || s;
   const excludesText = () => lsGet('sync:excludes', DEFAULT_EXCLUDES);
   const excludesList = text => String(text).split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
@@ -194,7 +202,7 @@ window.SyncTools = (() => {
         <div class="sync-list">
           <table>
             <thead><tr>
-              <th class="ck"><input type="checkbox" data-s="all" title="Alle an/aus"></th>
+              <th class="ck"><input type="checkbox" data-s="all" title="${T.toggleAll}"></th>
               <th class="st"></th><th>${T.colPath}</th><th class="side">${T.colLocal}</th><th class="side">${T.colRemote}</th><th class="act">${T.colAction}</th>
             </tr></thead>
             <tbody></tbody>
@@ -347,7 +355,7 @@ window.SyncTools = (() => {
       b.className = 'sync-chip' + (d.filter === k ? ' on' : '') + (k !== 'all' ? ' st-' + k : '');
       b.disabled = k !== 'all' && !n;
       b.innerHTML = '<span class="dot"></span>';
-      b.append(T.filters[k], Object.assign(document.createElement('b'), { textContent: n.toLocaleString('de-DE') }));
+      b.append(T.filters[k], Object.assign(document.createElement('b'), { textContent: fmt(n) }));
       b.addEventListener('click', () => { d.filter = k; renderFilters(d); renderRows(d); });
       box.appendChild(b);
     }
@@ -464,8 +472,8 @@ window.SyncTools = (() => {
     const delL = ops.filter(o => o.action === 'deleteLocal');
     if (delR.length || delL.length) {
       const list = [...delR, ...delL];
-      const names = list.slice(0, 8).map(o => (o.action === 'deleteRemote' ? 'Server:  ' : 'Hier:    ') + o.rel + (o.isDir ? '/' : '')).join('\n')
-        + (list.length > 8 ? `\n… und ${list.length - 8} weitere` : '');
+      const names = list.slice(0, 8).map(o => (o.action === 'deleteRemote' ? T.prefixServer : T.prefixHere) + o.rel + (o.isDir ? '/' : '')).join('\n')
+        + (list.length > 8 ? '\n' + T.andMore(list.length - 8) : '');
       // Dialog liegt über dem Synchronisieren-Fenster (askLocal, renderer.js)
       const ok = await askLocal({ kind: 'confirm', title: T.delConfirmTitle, message: T.delConfirm(delR.length, delL.length), detail: names, okLabel: T.delOk, danger: true });
       if (!ok || dlg !== d) return;
@@ -480,7 +488,7 @@ window.SyncTools = (() => {
       if (r.errors.length) {
         askLocal({
           kind: 'info', title: T.errTitle, message: T.errMsg(r.errors.length),
-          detail: r.errors.slice(0, 10).map(e => `${e.rel}: ${e.error}`).join('\n') + (r.errors.length > 10 ? `\n… und ${r.errors.length - 10} weitere` : ''),
+          detail: r.errors.slice(0, 10).map(e => `${e.rel}: ${e.error}`).join('\n') + (r.errors.length > 10 ? '\n' + T.andMore(r.errors.length - 10) : ''),
         });
       }
     } catch (err) { showError(err); }

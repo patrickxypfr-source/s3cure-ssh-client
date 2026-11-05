@@ -17,6 +17,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
+const { t } = require('./i18n');
 
 const FORMAT = 's3cure-backup';
 const EXT = 's3cure-backup';
@@ -26,7 +27,14 @@ const MIN_PASSWORD = 8;
 // Diese Einstellungen gehören zum Gerät und kommen nicht ins Backup
 const LOCAL_SETTINGS = /^(sync|session)\./;
 
-class BackupError extends Error {}
+// code: z. B. WRONG_PASSWORD – damit andere Stellen nicht am (übersetzten) Text erkennen müssen
+class BackupError extends Error {
+  constructor(message, code) {
+    super(message);
+    if (code) this.code = code;
+  }
+}
+const WRONG_PASSWORD = 'WRONG_PASSWORD';
 
 // ---------- Verschlüsselung ----------
 
@@ -54,7 +62,7 @@ function encryptWithKey(payload, { key, kdf }) {
   const data = Buffer.concat([cipher.update(JSON.stringify(payload), 'utf8'), cipher.final()]);
   return JSON.stringify({
     ...head,
-    hinweis: 'Verschlüsseltes Backup des S3cure SSH Client. Öffnen über Einstellungen → Backup & Umzug → Importieren.',
+    hinweis: t('backup.fileHint'),
     iv: iv.toString('base64'), tag: cipher.getAuthTag().toString('base64'), data: data.toString('base64'),
   }) + '\n';
 }
@@ -65,16 +73,16 @@ async function encrypt(payload, password) {
 
 function parseHead(text) {
   let head;
-  try { head = JSON.parse(text); } catch { throw new BackupError('Das ist keine S3cure-Backup-Datei.'); }
-  if (!head || head.format !== FORMAT) throw new BackupError('Das ist keine S3cure-Backup-Datei.');
+  try { head = JSON.parse(text); } catch { throw new BackupError(t('backup.notBackup')); }
+  if (!head || head.format !== FORMAT) throw new BackupError(t('backup.notBackup'));
   if (head.version !== 1 || head.cipher !== 'aes-256-gcm' || !head.kdf || head.kdf.name !== 'scrypt') {
-    throw new BackupError('Diese Backup-Datei stammt aus einer neueren Version und kann hier nicht geöffnet werden.');
+    throw new BackupError(t('backup.newerVersion'));
   }
   const { N, r, p } = head.kdf;
   // Grenzen, damit eine manipulierte Datei die App nicht lahmlegt
   if (!Number.isInteger(N) || N < 2 ** 14 || N > 2 ** 20 || (N & (N - 1)) || !Number.isInteger(r) || r < 1 || r > 16
     || !Number.isInteger(p) || p < 1 || p > 4 || 128 * N * r > 256 * 1024 * 1024) {
-    throw new BackupError('Die Backup-Datei ist beschädigt.');
+    throw new BackupError(t('backup.damaged'));
   }
   return head;
 }
@@ -92,11 +100,11 @@ async function decrypt(text, password, keyCache = null) {
     decipher.setAuthTag(Buffer.from(head.tag, 'base64'));
     plain = Buffer.concat([decipher.update(Buffer.from(head.data, 'base64')), decipher.final()]).toString('utf8');
   } catch {
-    throw new BackupError('Falsches Passwort – oder die Datei ist beschädigt.');
+    throw new BackupError(t('backup.wrongPassword'), WRONG_PASSWORD);
   }
   let payload;
-  try { payload = JSON.parse(plain); } catch { throw new BackupError('Die Backup-Datei ist beschädigt.'); }
-  if (!payload || typeof payload !== 'object') throw new BackupError('Die Backup-Datei ist beschädigt.');
+  try { payload = JSON.parse(plain); } catch { throw new BackupError(t('backup.damaged')); }
+  if (!payload || typeof payload !== 'object') throw new BackupError(t('backup.damaged'));
   return { payload, key: k };
 }
 
@@ -214,7 +222,7 @@ function collect(data, { secrets = false } = {}) {
 // ---------- Import: Vorschau und Übernehmen ----------
 
 function cleanPayload(p) {
-  if (p.kind !== 's3cure-backup-daten') throw new BackupError('Die Backup-Datei ist beschädigt.');
+  if (p.kind !== 's3cure-backup-daten') throw new BackupError(t('backup.damaged'));
   const hosts = {};
   for (const [name, h] of Object.entries(isObj(p.hosts) ? p.hosts : {})) {
     if (isObj(h) && typeof h.host === 'string' && name.length <= 300) hosts[name] = h;
@@ -329,14 +337,14 @@ function apply(data, b, opts = {}) {
     };
     for (const [name, v] of Object.entries(b.secrets.passwords)) if (name in hosts) put(data.hasPassword, data.writePassword, name, v);
     for (const [p, v] of Object.entries(b.secrets.passphrases)) put(data.hasPassphrase, data.writePassphrase, p, v);
-    if (result.secrets.failed) result.warnings.push(`${result.secrets.failed} Passwörter konnten nicht gespeichert werden (Schlüsselbund nicht verfügbar).`);
+    if (result.secrets.failed) result.warnings.push(t('backup.secretsFailed', { count: result.secrets.failed }));
   }
   return result;
 }
 
 // ---------- IPC ----------
 
-const cleanMsg = err => (err instanceof BackupError ? err.message : 'Fehler: ' + (err && err.message || err));
+const cleanMsg = err => (err instanceof BackupError ? err.message : t('backup.errorPrefix', { message: err && err.message || err }));
 
 function register({ ipcMain, dialog, app, getWin, ...ctx }) {
   const data = createData(ctx);
@@ -344,10 +352,10 @@ function register({ ipcMain, dialog, app, getWin, ...ctx }) {
 
   ipcMain.handle('backup:export', async (_e, opts = {}) => {
     const password = String(opts.password || '');
-    if (password.length < MIN_PASSWORD) throw new BackupError(`Das Passwort muss mindestens ${MIN_PASSWORD} Zeichen haben.`);
+    if (password.length < MIN_PASSWORD) throw new BackupError(t('backup.pwTooShort', { min: MIN_PASSWORD }));
     const day = new Date().toISOString().slice(0, 10);
     const r = await dialog.showSaveDialog(getWin(), {
-      title: 'Backup speichern',
+      title: t('backup.saveDialog'),
       defaultPath: path.join(app.getPath('documents'), `S3cure-Backup-${day}.${EXT}`),
       filters: [{ name: 'S3cure-Backup', extensions: [EXT] }],
     });
@@ -365,14 +373,14 @@ function register({ ipcMain, dialog, app, getWin, ...ctx }) {
 
   ipcMain.handle('backup:pick', async () => {
     const r = await dialog.showOpenDialog(getWin(), {
-      title: 'Backup importieren', buttonLabel: 'Öffnen',
+      title: t('backup.importDialog'), buttonLabel: t('common.open'),
       defaultPath: app.getPath('documents'),
-      filters: [{ name: 'S3cure-Backup', extensions: [EXT] }, { name: 'Alle Dateien', extensions: ['*'] }],
+      filters: [{ name: 'S3cure-Backup', extensions: [EXT] }, { name: t('backup.allFiles'), extensions: ['*'] }],
       properties: ['openFile'],
     });
     if (r.canceled || !r.filePaths[0]) return null;
     const file = r.filePaths[0];
-    if (fs.statSync(file).size > MAX_FILE) throw new BackupError('Die Datei ist zu groß für ein Backup.');
+    if (fs.statSync(file).size > MAX_FILE) throw new BackupError(t('backup.tooBig'));
     parseHead(fs.readFileSync(file, 'utf8'));
     return { file, name: path.basename(file) };
   });
@@ -391,7 +399,7 @@ function register({ ipcMain, dialog, app, getWin, ...ctx }) {
 
   ipcMain.handle('backup:apply', (_e, token, opts) => {
     const b = pending.get(token);
-    if (!b) throw new Error('Das Backup ist nicht mehr geöffnet. Bitte noch einmal importieren.');
+    if (!b) throw new Error(t('backup.notOpen'));
     pending.delete(token);
     const result = apply(data, b, opts || {});
     if (ctx.onApplied) ctx.onApplied();
@@ -403,5 +411,5 @@ function register({ ipcMain, dialog, app, getWin, ...ctx }) {
 
 module.exports = {
   register, createData, collect, cleanPayload, preview, apply,
-  encrypt, encryptWithKey, decrypt, deriveKey, parseHead, BackupError, EXT, MIN_PASSWORD, writeAtomic, homeRel, homeAbs,
+  encrypt, encryptWithKey, decrypt, deriveKey, parseHead, BackupError, WRONG_PASSWORD, EXT, MIN_PASSWORD, writeAtomic, homeRel, homeAbs,
 };

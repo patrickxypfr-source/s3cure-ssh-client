@@ -19,6 +19,7 @@ const os = require('os');
 const crypto = require('crypto');
 const backup = require('./backup');
 const { createSecretStore } = require('./secrets');
+const { t } = require('./i18n');
 
 const FILE_NAME = 'S3cure-Abgleich.s3cure-backup';
 const COPY_RE = /^S3cure-Abgleich[ _-]?(\(\d+\)|\d+|.*[Kk]onflikt.*|.*conflict.*)\.s3cure-backup$/;
@@ -61,12 +62,12 @@ function payloadFromItems(items, meta, withSecrets) {
 
 // Lesbarer Name eines Eintrags für Statusmeldungen
 function label(k) {
-  if (k.startsWith('host:')) return `Verbindung „${k.slice(5)}“`;
-  if (k.startsWith('snip:')) return `Befehlsknöpfe von „${k.slice(5)}“`;
-  if (k.startsWith('pw:')) return `Passwort von „${k.slice(3)}“`;
-  if (k.startsWith('pp:')) return 'Schlüssel-Passphrase';
-  if (k === 'bm') return 'Lesezeichen';
-  return 'Host-Schlüssel';
+  if (k.startsWith('host:')) return t('cloudSync.labelHost', { name: k.slice(5) });
+  if (k.startsWith('snip:')) return t('cloudSync.labelSnippets', { name: k.slice(5) });
+  if (k.startsWith('pw:')) return t('cloudSync.labelPassword', { name: k.slice(3) });
+  if (k.startsWith('pp:')) return t('cloudSync.labelPassphrase');
+  if (k === 'bm') return t('cloudSync.labelBookmarks');
+  return t('cloudSync.labelHostKey');
 }
 
 // Vorschlag für den Ordner-Dialog
@@ -169,12 +170,12 @@ function create({ configDir, data, send = () => {}, platform = process.platform 
   async function runOnce() {
     if (!cfg.enabled || !cfg.folder) return;
     const password = getPassword();
-    if (!password) throw new backup.BackupError('Das Passwort für den Abgleich fehlt (Schlüsselbund). Bitte den Abgleich neu einrichten.');
-    if (!fs.existsSync(cfg.folder)) throw new backup.BackupError(`Der Ordner „${cfg.folder}“ ist gerade nicht erreichbar.`);
+    if (!password) throw new backup.BackupError(t('cloudSync.noPassword'));
+    if (!fs.existsSync(cfg.folder)) throw new backup.BackupError(t('cloudSync.folderOffline', { folder: cfg.folder }));
     const file = remoteFile();
     // iCloud: Datei liegt nur als Platzhalter vor und wird noch geladen -> nichts überschreiben
     if (!fs.existsSync(file) && fs.existsSync(path.join(cfg.folder, `.${FILE_NAME}.icloud`))) {
-      status.waiting = 'Die Abgleich-Datei wird noch aus iCloud geladen …';
+      status.waiting = t('cloudSync.icloudWaiting');
       return;
     }
     status.waiting = null;
@@ -299,8 +300,8 @@ function create({ configDir, data, send = () => {}, platform = process.platform 
           await runOnce();
           status.lastError = null;
         } catch (err) {
-          status.lastError = err instanceof backup.BackupError ? err.message : 'Abgleich fehlgeschlagen: ' + (err && err.message || err);
-          if (/Falsches Passwort/.test(status.lastError)) status.lastError = 'Das gespeicherte Passwort passt nicht (mehr) zur Abgleich-Datei. Bitte den Abgleich neu einrichten.';
+          status.lastError = err instanceof backup.BackupError ? err.message : t('cloudSync.failed', { message: err && err.message || err });
+          if (err && err.code === backup.WRONG_PASSWORD) status.lastError = t('cloudSync.wrongStored');
         }
         lastSig = signature();
       } while (again);
@@ -337,18 +338,18 @@ function create({ configDir, data, send = () => {}, platform = process.platform 
     folderInfo: folder => ({ folder, exists: fs.existsSync(path.join(folder, FILE_NAME)) }),
 
     async enable({ folder, password, secrets: withSecrets }) {
-      if (!folder || !fs.existsSync(folder)) throw new backup.BackupError('Bitte einen vorhandenen Ordner wählen.');
+      if (!folder || !fs.existsSync(folder)) throw new backup.BackupError(t('cloudSync.pickFolder'));
       password = String(password || '');
       const file = path.join(folder, FILE_NAME);
       keyCache = null;
       if (fs.existsSync(file)) {
         // Vorhandene Datei (vom anderen Computer): Passwort muss passen
         const r = await readRemote(file, password).catch(err => {
-          throw new backup.BackupError(/Falsches Passwort/.test(err.message) ? 'Das Passwort passt nicht zur vorhandenen Abgleich-Datei in diesem Ordner.' : err.message);
+          throw new backup.BackupError(err && err.code === backup.WRONG_PASSWORD ? t('cloudSync.wrongPassword') : err.message);
         });
         keyCache = r.key;
       } else if (password.length < backup.MIN_PASSWORD) {
-        throw new backup.BackupError(`Das Passwort muss mindestens ${backup.MIN_PASSWORD} Zeichen haben.`);
+        throw new backup.BackupError(t('backup.pwTooShort', { min: backup.MIN_PASSWORD }));
       }
       memPassword = secrets.write('password', password) ? null : password;
       if (cfg.folder !== folder) { try { fs.unlinkSync(stateFile); } catch {} } // neuer Ordner = erster Abgleich
@@ -393,7 +394,7 @@ function register({ ipcMain, dialog, getWin, send, configDir, data, platform }) 
   ipcMain.handle('sync:status', () => s.status());
   ipcMain.handle('sync:pick-folder', wrap(async () => {
     const r = await dialog.showOpenDialog(getWin(), {
-      title: 'Ordner für den Abgleich wählen', buttonLabel: 'Diesen Ordner nehmen',
+      title: t('cloudSync.pickTitle'), buttonLabel: t('cloudSync.pickButton'),
       defaultPath: s.suggestFolder(), properties: ['openDirectory', 'createDirectory'],
     });
     return r.canceled || !r.filePaths[0] ? null : s.folderInfo(r.filePaths[0]);
