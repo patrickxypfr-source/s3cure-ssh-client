@@ -43,6 +43,7 @@ function createFilesAdapter({ configDir, loadHosts, ask, passwords, sshSftp }) {
   return {
     isFtpSpec: spec => !!ftpTarget(spec),
     isFtp: tabId => ftpTabs.has(tabId),
+    ftpTabIds: () => [...ftpTabs.keys()],
     connect,
     close,
     forget: tabId => caches.delete(tabId),

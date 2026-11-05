@@ -14,8 +14,13 @@ How to write a section (for contributors):
 
 ## [Unreleased]
 
+## 1.4.0 – 2026-11-05
+
 ### Improved
 - **A look with a bit of depth:** Buttons, switches, input fields and cards now look slightly three-dimensional – buttons gently stand out and press in when clicked, input fields are slightly recessed. In light and dark mode; everything works the same as before.
+
+### Fixed
+- After switching the language (window reload), old connections and tunnels stayed open in the background – they are now closed properly.
 
 ## 1.3.0 – 2026-11-05
 

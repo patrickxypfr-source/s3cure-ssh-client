@@ -26,7 +26,7 @@ Ein moderner SSH- & SFTP-Client für macOS, Windows und Linux. Kostenlos, Open S
 
 <br><br>
 
-<img src="docs/screenshots/terminal.png" alt="S3cure SSH Client – Terminal mit eigenen Befehlsknöpfen" width="920">
+<img src="docs/screenshots/de/terminal.png" alt="S3cure SSH Client – Terminal mit eigenen Befehlsknöpfen" width="920">
 
 </div>
 
@@ -95,9 +95,9 @@ Die App zeigt neue Versionen selbst an – **ein Klick auf „Update“** lädt,
 
 | Server und eigener PC nebeneinander | Dateien direkt auf dem Server bearbeiten |
 |:---:|:---:|
-| <img src="docs/screenshots/dateien.png" alt="Dateibrowser mit „Mein Computer“"> | <img src="docs/screenshots/editor.png" alt="Eingebauter Editor"> |
+| <img src="docs/screenshots/de/dateien.png" alt="Dateibrowser mit „Mein Computer“"> | <img src="docs/screenshots/de/editor.png" alt="Eingebauter Editor"> |
 | **Port-Weiterleitung (Tunnel)** | **Terminal mit Befehlsknöpfen und Gruppen** |
-| <img src="docs/screenshots/tunnel.png" alt="Tunnel"> | <img src="docs/screenshots/terminal.png" alt="Terminal"> |
+| <img src="docs/screenshots/de/tunnel.png" alt="Tunnel"> | <img src="docs/screenshots/de/terminal.png" alt="Terminal"> |
 
 <sub>Alle Screenshots zeigen Demo-Daten.</sub>
 

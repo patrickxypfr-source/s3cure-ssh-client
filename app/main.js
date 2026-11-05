@@ -177,6 +177,10 @@ ipcMain.handle('ssh:connect', (_e, tabId, spec, cols, rows) => {
   });
 });
 
+function closeAllSessions() {
+  for (const id of new Set([...sessions.keys(), ...files.ftpTabIds()])) closeSession(id);
+}
+
 function closeSession(tabId, { keepTransfers = false } = {}) {
   stopSearch(tabId);
   tunnels.stopAll(tabId);
@@ -593,7 +597,13 @@ function createWindow() {
   // Links aus dem Terminal im normalen Browser öffnen, nicht in der App
   win.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
   session.track(win);
-  win.on('closed', () => { for (const id of [...sessions.keys()]) closeSession(id); win = null; });
+  win.on('closed', () => { closeAllSessions(); win = null; });
+  // Fenster wird neu geladen (z. B. nach dem Umstellen der Sprache): Die Oberfläche vergisst
+  // ihre Tabs – also auch hier alle Verbindungen, Tunnel und Übertragungen sauber beenden.
+  win.webContents.on('did-start-navigation', (...args) => {
+    const d = args[0] && typeof args[0] === 'object' && 'isMainFrame' in args[0] ? args[0] : { isMainFrame: args[3], isSameDocument: args[2] };
+    if (d.isMainFrame && !d.isSameDocument) closeAllSessions();
+  });
 }
 
 // Einstellungen und Terminal-Extras (eigene Dateien in lib/)
