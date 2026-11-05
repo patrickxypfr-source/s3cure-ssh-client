@@ -4,7 +4,7 @@
 // Eingehängt in renderer.js über TermExtra.attach/detach/update.
 (() => {
   const X = window.mysshTerm;
-  const MOD = IS_MAC ? 'Cmd' : 'Strg';
+  const MOD = IS_MAC ? 'Cmd' : t('termExtra.ctrl');
 
   Object.assign(ICON_PATHS, {
     split: 'M5 4.5h14A2.5 2.5 0 0 1 21.5 7v10a2.5 2.5 0 0 1-2.5 2.5H5A2.5 2.5 0 0 1 2.5 17V7A2.5 2.5 0 0 1 5 4.5z M12 4.5v15',
@@ -43,19 +43,19 @@
       'term.scrollback': 10000, 'term.copyOnSelect': false, 'term.rightClickPaste': true,
     },
     fields: [
-      { key: 'term.fontSize', type: 'range', label: 'Schriftgröße', min: MIN_SIZE, max: MAX_SIZE, unit: 'pt',
-        hint: `Auch mit ${MOD} + Plus / Minus, ${MOD}+0 = Standard` },
-      { key: 'term.fontFamily', type: 'select', label: 'Schriftart', hint: 'Nur installierte Schriften werden angeboten.',
-        options: current => [['', 'Standard'], ...FONTS
+      { key: 'term.fontSize', type: 'range', label: t('termExtra.fontSize'), min: MIN_SIZE, max: MAX_SIZE, unit: 'pt',
+        hint: t('termExtra.fontSizeHint', { mod: MOD }) },
+      { key: 'term.fontFamily', type: 'select', label: t('termExtra.fontFamily'), hint: t('termExtra.fontFamilyHint'),
+        options: current => [['', t('termExtra.fontDefault')], ...FONTS
           .map(f => [f, fontInstalled(f)])
           .filter(([f, ok]) => ok || f === current)
-          .map(([f, ok]) => [f, ok ? f : f + ' (nicht installiert)'])] },
-      { key: 'term.cursorStyle', type: 'segment', label: 'Cursor', options: [['block', 'Block'], ['bar', 'Strich'], ['underline', 'Unterstrich']] },
-      { key: 'term.cursorBlink', type: 'toggle', label: 'Cursor blinkt' },
-      { key: 'term.scrollback', type: 'select', label: 'Verlauf (Zeilen zum Zurückscrollen)',
-        options: [[1000, '1.000'], [5000, '5.000'], [10000, '10.000'], [50000, '50.000'], [100000, '100.000']] },
-      { key: 'term.copyOnSelect', type: 'toggle', label: 'Kopieren beim Markieren', hint: 'Markierter Text landet sofort in der Zwischenablage.' },
-      { key: 'term.rightClickPaste', type: 'toggle', label: 'Rechtsklick fügt ein', hint: 'Ist Text markiert, kopiert der Rechtsklick ihn stattdessen.' },
+          .map(([f, ok]) => [f, ok ? f : t('termExtra.fontMissing', { font: f })])] },
+      { key: 'term.cursorStyle', type: 'segment', label: 'Cursor', options: [['block', t('termExtra.cursorBlock')], ['bar', t('termExtra.cursorBar')], ['underline', t('termExtra.cursorUnderline')]] },
+      { key: 'term.cursorBlink', type: 'toggle', label: t('termExtra.cursorBlink') },
+      { key: 'term.scrollback', type: 'select', label: t('termExtra.scrollback'),
+        options: [1000, 5000, 10000, 50000, 100000].map(n => [n, I18N.fmtNumber(n)]) },
+      { key: 'term.copyOnSelect', type: 'toggle', label: t('termExtra.copyOnSelect'), hint: t('termExtra.copyOnSelectHint') },
+      { key: 'term.rightClickPaste', type: 'toggle', label: t('termExtra.rightClickPaste'), hint: t('termExtra.rightClickPasteHint') },
     ],
   });
 
@@ -177,12 +177,13 @@
 
   // ---------- Werkzeugleiste ----------
 
+  const splitTitle = () => t('termExtra.splitTitle', { max: MAX_PANES, keys: IS_MAC ? 'Cmd+D' : t('termExtra.splitKeys') });
   const tools = document.createElement('div');
   tools.id = 'term-tools';
   tools.innerHTML = `
-    <button class="btn ghost" data-t="split" data-icon="split" title="Weiteres Terminal daneben öffnen – bis zu ${MAX_PANES} (${IS_MAC ? 'Cmd+D' : 'Strg+Umschalt+D'})"><span class="lbl">Teilen</span></button>
-    <button class="btn ghost" data-t="log" data-icon="record" title="Alles, was im Terminal passiert, als Textdatei mitschreiben"><span class="lbl">Mitschnitt</span></button>
-    <button class="btn ghost" data-t="all" data-icon="broadcast" title="Tastatureingaben gleichzeitig an alle verbundenen Terminals schicken"><span class="lbl">An alle</span></button>`;
+    <button class="btn ghost" data-t="split" data-icon="split" title="${splitTitle()}"><span class="lbl">${t('termExtra.split')}</span></button>
+    <button class="btn ghost" data-t="log" data-icon="record" title="${t('termExtra.logTitle')}"><span class="lbl">${t('termExtra.log')}</span></button>
+    <button class="btn ghost" data-t="all" data-icon="broadcast" title="${t('termExtra.allTitle')}"><span class="lbl">${t('termExtra.all')}</span></button>`;
   applyIcons(tools);
   document.getElementById('view-switch').before(tools);
   const tbtn = name => tools.querySelector(`[data-t=${name}]`);
@@ -197,12 +198,12 @@
     tbtn('split').classList.toggle('on', n > 0);
     tbtn('split').disabled = !open && !n;
     tbtn('split').title = n
-      ? `${n + 1} Terminals – klicken für Anordnung, weiteres Terminal oder Schließen`
-      : `Weiteres Terminal daneben öffnen – bis zu ${MAX_PANES} (${IS_MAC ? 'Cmd+D' : 'Strg+Umschalt+D'})`;
+      ? t('termExtra.splitMenuTitle', { n: n + 1 })
+      : splitTitle();
     tbtn('log').classList.toggle('rec', !!x.log);
     tbtn('log').disabled = !open && !x.log;
-    tbtn('log').lastChild.textContent = x.log ? 'Mitschnitt stoppen' : 'Mitschnitt';
-    tbtn('log').title = x.log ? `Mitschnitt läuft:\n${x.log}\nKlicken zum Beenden` : 'Alles, was im Terminal passiert, als Textdatei mitschreiben';
+    tbtn('log').lastChild.textContent = x.log ? t('termExtra.logStop') : t('termExtra.log');
+    tbtn('log').title = x.log ? t('termExtra.logRunningTitle', { file: x.log }) : t('termExtra.logTitle');
   }
 
   const activeX = () => xs.get(activeId);
@@ -238,7 +239,7 @@
     const cur = S('term.fontSize');
     const size = step === 0 ? DEFAULT_SIZE : Math.max(MIN_SIZE, Math.min(MAX_SIZE, cur + step));
     if (size !== cur) Settings.set({ 'term.fontSize': size });
-    if (xs.size) showToast(`Schriftgröße ${size} pt`, null, 1200);
+    if (xs.size) showToast(t('termExtra.fontSizeToast', { size }), null, 1200);
   });
 
   // ---------- Suche ----------
@@ -265,11 +266,11 @@
     bar.className = 'xt-search';
     bar.innerHTML = `
       <span class="xt-search-ic">${icon('search')}</span>
-      <input placeholder="Im Terminal suchen" spellcheck="false" autocomplete="off">
+      <input placeholder="${t('termExtra.searchPlaceholder')}" spellcheck="false" autocomplete="off">
       <span class="xt-count"></span>
-      <button class="mini-btn" data-s="prev" title="Vorheriger Treffer (Umschalt+Enter)">${icon('chevUp')}</button>
-      <button class="mini-btn" data-s="next" title="Nächster Treffer (Enter)">${icon('down')}</button>
-      <button class="mini-btn" data-s="close" title="Suche schließen (Esc)">${icon('close')}</button>`;
+      <button class="mini-btn" data-s="prev" title="${t('termExtra.searchPrev')}">${icon('chevUp')}</button>
+      <button class="mini-btn" data-s="next" title="${t('termExtra.searchNext')}">${icon('down')}</button>
+      <button class="mini-btn" data-s="close" title="${t('termExtra.searchClose')}">${icon('close')}</button>`;
     x.tab.el.appendChild(bar);
     const input = bar.querySelector('input');
     input.addEventListener('input', () => { x.searchQuery = input.value; runSearch(x, 0); });
@@ -300,8 +301,8 @@
     if (!x.searchBar) return;
     const el = x.searchBar.querySelector('.xt-count');
     if (!r || !x.searchQuery) el.textContent = '';
-    else if (!r.resultCount) el.textContent = 'Keine Treffer';
-    else el.textContent = r.resultIndex >= 0 ? `${r.resultIndex + 1} von ${r.resultCount}` : `${r.resultCount} Treffer`;
+    else if (!r.resultCount) el.textContent = t('termExtra.noMatches');
+    else el.textContent = r.resultIndex >= 0 ? t('termExtra.matchOf', { index: r.resultIndex + 1, total: r.resultCount }) : t('termExtra.matches', { count: r.resultCount });
   }
 
   function openSearch(x) {
@@ -364,7 +365,7 @@
   function addDivider(x, vertical, pos, onMove, onReset) {
     const d = document.createElement('div');
     d.className = 'xt-divider ' + (vertical ? 'xt-v' : 'xt-h');
-    d.title = 'Ziehen zum Verschieben, Doppelklick = gleich groß';
+    d.title = t('termExtra.dividerTitle');
     d.reposition = () => {
       const { at, from, to } = pos();
       Object.assign(d.style, vertical
@@ -454,14 +455,14 @@
   async function addPane(x) {
     const tab = x.tab;
     if (tab.state !== 'open') return;
-    if (x.splits.length + 1 >= MAX_PANES) { showToast(`Höchstens ${MAX_PANES} Terminals pro Tab`); return; }
+    if (x.splits.length + 1 >= MAX_PANES) { showToast(t('termExtra.maxPanes', { max: MAX_PANES })); return; }
     const id = crypto.randomUUID();
     const el = document.createElement('div');
     el.className = 'xt-pane xt-second';
     const close = document.createElement('button');
     close.className = 'mini-btn xt-pane-close';
     close.type = 'button';
-    close.title = 'Dieses Terminal schließen';
+    close.title = t('termExtra.closePane');
     close.innerHTML = icon('close');
     tab.el.appendChild(el);
 
@@ -482,7 +483,7 @@
     layoutPanes(x);
     fitTab(x);
     update(tab);
-    term.write(`\x1b[90mÖffne weiteres Terminal …\x1b[0m\r\n`);
+    term.write(`\x1b[90m${t('termExtra.opening')}\x1b[0m\r\n`);
     try {
       await X.splitOpen(tab.id, id, term.cols, term.rows);
       if (!x.splits.includes(split)) { X.splitClose(id); return; } // inzwischen wieder geschlossen
@@ -515,7 +516,7 @@
   }
 
   async function closePane(x, s) {
-    const ok = await askLocal({ kind: 'confirm', title: 'Terminal schließen?', message: 'Was in diesem Terminal gerade läuft, wird beendet.', okLabel: 'Schließen', danger: true });
+    const ok = await askLocal({ kind: 'confirm', title: t('termExtra.closePaneQ'), message: t('termExtra.closePaneMsg'), okLabel: t('common.close'), danger: true });
     if (!ok || !x.splits.includes(s)) return;
     X.splitClose(s.id);
     removeSplit(x, s);
@@ -524,7 +525,7 @@
   async function closeAllPanes(x) {
     const n = x.splits.length;
     if (!n) return;
-    const ok = await askLocal({ kind: 'confirm', title: n === 1 ? 'Zweites Terminal schließen?' : `${n} zusätzliche Terminals schließen?`, message: 'Was dort gerade läuft, wird beendet. Das Haupt-Terminal bleibt offen.', okLabel: 'Schließen', danger: true });
+    const ok = await askLocal({ kind: 'confirm', title: t('termExtra.closeAllQ', { count: n }), message: t('termExtra.closeAllMsg'), okLabel: t('common.close'), danger: true });
     if (!ok) return;
     for (const s of [...x.splits]) { X.splitClose(s.id); removeSplit(x, s); }
   }
@@ -543,14 +544,14 @@
     const mode = modeOf(x);
     const cur = m => (mode === m ? 'xt-cur' : '');
     const entries = [];
-    if (n < MAX_PANES) entries.push(['Weiteres Terminal öffnen', () => addPane(x), '', 'plus'], null);
-    entries.push(['Nebeneinander', () => setLayout(x, 'cols'), cur('cols'), 'layoutCols']);
-    entries.push(['Untereinander', () => setLayout(x, 'rows'), cur('rows'), 'layoutRows']);
-    if (n >= 3) entries.push(['Raster 2×2', () => setLayout(x, 'grid'), cur('grid'), 'layoutGrid']);
+    if (n < MAX_PANES) entries.push([t('termExtra.menuAdd'), () => addPane(x), '', 'plus'], null);
+    entries.push([t('termExtra.menuCols'), () => setLayout(x, 'cols'), cur('cols'), 'layoutCols']);
+    entries.push([t('termExtra.menuRows'), () => setLayout(x, 'rows'), cur('rows'), 'layoutRows']);
+    if (n >= 3) entries.push([t('termExtra.menuGrid'), () => setLayout(x, 'grid'), cur('grid'), 'layoutGrid']);
     entries.push(null);
     const focused = splitOf(x, x.focus);
-    if (focused) entries.push(['Aktives Terminal schließen …', () => closePane(x, focused), '', 'close']);
-    entries.push([n === 2 ? 'Zweites Terminal schließen …' : 'Alle zusätzlichen schließen …', () => closeAllPanes(x), 'danger', 'close']);
+    if (focused) entries.push([t('termExtra.menuCloseActive'), () => closePane(x, focused), '', 'close']);
+    entries.push([n === 2 ? t('termExtra.menuCloseSecond') : t('termExtra.menuCloseAll'), () => closeAllPanes(x), 'danger', 'close']);
     const r = btn.getBoundingClientRect();
     openMenu(entries, r.left, r.bottom + 6);
   }
@@ -572,7 +573,7 @@
       x.log = file;
       tab.tabEl.classList.add('xt-rec');
       if (activeId === tab.id) update(tab);
-      showToast('Mitschnitt läuft – ' + file.split(/[\\/]/).pop());
+      showToast(t('termExtra.logRunning', { file: file.split(/[\\/]/).pop() }));
       tab.term.focus();
     } catch (err) { showError(err); }
   }
@@ -584,16 +585,16 @@
       x.tab.tabEl.classList.remove('xt-rec');
       if (activeId === id) update(x.tab);
     }
-    showToast('Mitschnitt gespeichert: ' + file.split(/[\\/]/).pop(), [IS_MAC ? 'Im Finder zeigen' : 'Im Ordner zeigen', () => api.showFile(file)], 6000);
+    showToast(t('termExtra.logSaved', { file: file.split(/[\\/]/).pop() }), [IS_MAC ? t('termExtra.showInFinder') : t('termExtra.showInFolder'), () => api.showFile(file)], 6000);
   });
-  X.onLogError((_id, msg) => showError('Mitschnitt konnte nicht geschrieben werden: ' + msg));
+  X.onLogError((_id, msg) => showError(t('termExtra.logWriteFailed', { error: msg })));
 
   // ---------- An alle senden ----------
 
   const badge = document.createElement('div');
   badge.className = 'xt-broadcast-badge';
   badge.hidden = true;
-  badge.innerHTML = `${icon('broadcast')}<span></span><button>Ausschalten</button>`;
+  badge.innerHTML = `${icon('broadcast')}<span></span><button>${t('termExtra.broadcastOff')}</button>`;
   badge.querySelector('button').addEventListener('click', () => setBroadcast(false));
   document.getElementById('terminals').appendChild(badge);
 
@@ -614,7 +615,8 @@
     document.body.classList.toggle('xt-broadcast', broadcast);
     tbtn('all').classList.toggle('alert', broadcast);
     badge.hidden = !broadcast;
-    if (broadcast) badge.querySelector('span').textContent = `An alle senden ist an – Tastatureingaben gehen an ${targets().length} Terminals`;
+    if (broadcast) badge.querySelector('span').textContent = t('termExtra.broadcastOn', { n: targets().length });
+
   }
 
   function setBroadcast(on) {

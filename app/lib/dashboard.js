@@ -2,6 +2,8 @@
 // Alles läuft über eigene exec-Kanäle der bestehenden Verbindung – nichts wird in die Shell getippt.
 // sudo nur, wenn nötig und ohne Passwort möglich (sudo -n). Geht das nicht, bekommt die Oberfläche
 // den passenden Befehl zurück, damit sie ihn im Terminal ausführen kann (dort fragt sudo nach dem Passwort).
+const i18n = require('./i18n');
+
 const TIMEOUT = 15000;
 const DU_TIMEOUT = 180000;
 const MAX_OUT = 2 * 1024 * 1024;
@@ -16,7 +18,7 @@ const sq = v => `'${String(v).replace(/'/g, `'\\''`)}'`;
 function exec(client, cmd, { timeout = TIMEOUT, onStream } = {}) {
   return new Promise((resolve, reject) => {
     client.exec(cmd, (err, stream) => {
-      if (err) return reject(new Error('Befehl konnte nicht gestartet werden: ' + err.message));
+      if (err) return reject(new Error(i18n.t('dashboard.execFailed', { error: err.message })));
       let out = '', errOut = '', done = false;
       const finish = (code, extra = {}) => {
         if (done) return;
@@ -163,7 +165,7 @@ function register(ipcMain, sessions) {
 
   function client(tabId) {
     const s = sessions.get(tabId);
-    if (!s || !s.client) throw new Error('Nicht verbunden.');
+    if (!s || !s.client) throw new Error(i18n.t('dashboard.notConnected'));
     return s;
   }
 
@@ -187,8 +189,8 @@ function register(ipcMain, sessions) {
       ...r, via: 'user', needsAdmin: true,
       terminal: p.sudo === 'password' ? `sudo ${cmd}` : null,
       hint: p.sudo === 'password'
-        ? `${label} braucht Administratorrechte. Dein Benutzer darf sudo nur mit Passwort benutzen – das geht hier nicht im Hintergrund.`
-        : `${label} braucht Administratorrechte, und dein Benutzer darf sudo auf diesem Server nicht benutzen. Melde dich als Administrator (root) an oder frag den Betreiber des Servers.`,
+        ? i18n.t('dashboard.needsAdminPass', { label })
+        : i18n.t('dashboard.needsAdminNone', { label }),
     };
   }
 
@@ -201,35 +203,35 @@ function register(ipcMain, sessions) {
     const p = await probe(s);
     if (!p.systemd) return { available: false, list: [] };
     const r = await exec(s.client, LIST_UNITS);
-    if (r.timeout) throw new Error('Der Server hat nicht rechtzeitig geantwortet.');
+    if (r.timeout) throw new Error(i18n.t('dashboard.serverTimeout'));
     return { available: true, list: parseUnits(r.out) };
   });
 
   ipcMain.handle('dash:serviceAction', async (_e, tabId, unit, action) => {
-    if (!UNIT_RE.test(String(unit))) throw new Error('Ungültiger Dienstname.');
-    if (!ACTIONS.includes(action)) throw new Error('Unbekannte Aktion.');
+    if (!UNIT_RE.test(String(unit))) throw new Error(i18n.t('dashboard.badUnit'));
+    if (!ACTIONS.includes(action)) throw new Error(i18n.t('dashboard.badAction'));
     const s = client(tabId);
-    const verb = { start: 'Starten', stop: 'Stoppen', restart: 'Neustarten' }[action];
-    const r = await asAdmin(s, `systemctl --no-ask-password ${action} ${sq(unit)}`, `${verb} eines Dienstes`);
+    const label = { start: () => i18n.t('dashboard.labelStart'), stop: () => i18n.t('dashboard.labelStop'), restart: () => i18n.t('dashboard.labelRestart') }[action]();
+    const r = await asAdmin(s, `systemctl --no-ask-password ${action} ${sq(unit)}`, label);
     if (r.needsAdmin) return { ok: false, needsAdmin: true, hint: r.hint, terminal: r.terminal ? `sudo systemctl ${action} ${unit}` : null, detail: errText(r) };
-    if (r.timeout) return { ok: false, error: 'Der Server hat nicht rechtzeitig geantwortet. Der Dienst braucht vielleicht länger – bitte gleich noch einmal aktualisieren.' };
-    if (r.code !== 0) return { ok: false, error: errText(r) || `Fehlercode ${r.code}` };
+    if (r.timeout) return { ok: false, error: i18n.t('dashboard.serviceTimeout') };
+    if (r.code !== 0) return { ok: false, error: errText(r) || i18n.t('dashboard.errorCode', { code: r.code }) };
     return { ok: true, via: r.via };
   });
 
   ipcMain.handle('dash:serviceLogs', async (_e, tabId, unit, lines = 200) => {
-    if (!UNIT_RE.test(String(unit))) throw new Error('Ungültiger Dienstname.');
+    if (!UNIT_RE.test(String(unit))) throw new Error(i18n.t('dashboard.badUnit'));
     const n = Math.max(10, Math.min(2000, Number(lines) || 200));
     const s = client(tabId);
     const p = await probe(s);
-    if (!p.journal) return { text: '', hint: 'Auf diesem Server gibt es kein journalctl.' };
+    if (!p.journal) return { text: '', hint: i18n.t('dashboard.noJournal') };
     const cmd = `journalctl -u ${sq(unit)} -n ${n} --no-pager -o short-iso 2>&1`;
     let r = await exec(s.client, cmd);
     let via = 'user';
     const restricted = t => /insufficient permissions|No journal files were opened|not seeing messages from other users/i.test(t);
     if (!p.root && restricted(r.out) && p.sudo === 'nopass') { r = await exec(s.client, `sudo -n ${cmd}`); via = 'sudo'; }
     let hint = '';
-    if (restricted(r.out)) hint = 'Ohne Administratorrechte sind nicht alle Logs sichtbar. Im Terminal geht es mit: sudo journalctl -u ' + unit;
+    if (restricted(r.out)) hint = i18n.t('dashboard.journalRestricted', { cmd: 'sudo journalctl -u ' + unit });
     return { text: r.out, via, hint, timeout: !!r.timeout };
   });
 
@@ -237,7 +239,7 @@ function register(ipcMain, sessions) {
   const dockerSudo = new WeakMap();
   async function docker(s, args, opts) {
     const p = await probe(s);
-    if (!p.docker) return { code: 127, out: '', err: 'docker fehlt' };
+    if (!p.docker) return { code: 127, out: '', err: i18n.t('dashboard.dockerMissing') };
     if (dockerSudo.get(s)) return exec(s.client, `sudo -n docker ${args}`, opts);
     let r = await exec(s.client, `docker ${args}`, opts);
     if (r.code !== 0 && dockerDenied(r) && !p.root && p.sudo === 'nopass') {
@@ -254,34 +256,34 @@ function register(ipcMain, sessions) {
     const r = await docker(s, `ps -a --no-trunc --format '{{json .}}'`);
     if (r.code !== 0) {
       if (dockerDenied(r)) return { available: true, list: [], denied: true, hint: p.sudo === 'password'
-        ? 'Dein Benutzer darf Docker nicht direkt benutzen, und sudo geht nur mit Passwort. Im Terminal geht es mit: sudo docker ps'
-        : 'Dein Benutzer darf Docker nicht benutzen. Ein Administrator kann dich mit „sudo usermod -aG docker ' + (p.user || 'BENUTZER') + '“ freischalten (danach neu anmelden).' };
-      if (dockerDown(r)) return { available: true, list: [], down: true, hint: 'Docker ist installiert, läuft aber gerade nicht.' };
-      return { available: true, list: [], hint: errText(r) || 'Docker hat nicht geantwortet.' };
+        ? i18n.t('dashboard.dockerDeniedPass', { cmd: 'sudo docker ps' })
+        : i18n.t('dashboard.dockerDenied', { cmd: 'sudo usermod -aG docker ' + (p.user || i18n.t('dashboard.userPlaceholder')) }) };
+      if (dockerDown(r)) return { available: true, list: [], down: true, hint: i18n.t('dashboard.dockerDown') };
+      return { available: true, list: [], hint: errText(r) || i18n.t('dashboard.dockerNoAnswer') };
     }
     return { available: true, list: parseContainers(r.out).map(c => ({ ...c, id: c.id.slice(0, 12) })) };
   });
 
   ipcMain.handle('dash:containerAction', async (_e, tabId, id, action) => {
-    if (!CONTAINER_RE.test(String(id))) throw new Error('Ungültiger Container-Name.');
-    if (!ACTIONS.includes(action)) throw new Error('Unbekannte Aktion.');
+    if (!CONTAINER_RE.test(String(id))) throw new Error(i18n.t('dashboard.badContainer'));
+    if (!ACTIONS.includes(action)) throw new Error(i18n.t('dashboard.badAction'));
     const s = client(tabId);
     const r = await docker(s, `${action} ${sq(id)}`, { timeout: 60000 });
-    if (r.timeout) return { ok: false, error: 'Docker hat nicht rechtzeitig geantwortet – bitte gleich noch einmal aktualisieren.' };
+    if (r.timeout) return { ok: false, error: i18n.t('dashboard.dockerTimeout') };
     if (r.code !== 0) {
       const p = await probe(s);
-      if (dockerDenied(r) && p.sudo === 'password') return { ok: false, needsAdmin: true, hint: 'Dafür braucht Docker Administratorrechte, und sudo geht nur mit Passwort.', terminal: `sudo docker ${action} ${id}` };
-      return { ok: false, error: errText(r) || `Fehlercode ${r.code}` };
+      if (dockerDenied(r) && p.sudo === 'password') return { ok: false, needsAdmin: true, hint: i18n.t('dashboard.dockerNeedsAdmin'), terminal: `sudo docker ${action} ${id}` };
+      return { ok: false, error: errText(r) || i18n.t('dashboard.errorCode', { code: r.code }) };
     }
     return { ok: true };
   });
 
   ipcMain.handle('dash:containerLogs', async (_e, tabId, id, lines = 200) => {
-    if (!CONTAINER_RE.test(String(id))) throw new Error('Ungültiger Container-Name.');
+    if (!CONTAINER_RE.test(String(id))) throw new Error(i18n.t('dashboard.badContainer'));
     const n = Math.max(10, Math.min(2000, Number(lines) || 200));
     const s = client(tabId);
     const r = await docker(s, `logs --tail ${n} --timestamps ${sq(id)} 2>&1`);
-    return { text: r.out || r.err, timeout: !!r.timeout, hint: r.code !== 0 && dockerDenied(r) ? 'Keine Berechtigung für Docker.' : '' };
+    return { text: r.out || r.err, timeout: !!r.timeout, hint: r.code !== 0 && dockerDenied(r) ? i18n.t('dashboard.dockerNoPermission') : '' };
   });
 
   ipcMain.handle('dash:system', async (_e, tabId) => {
@@ -293,7 +295,7 @@ function register(ipcMain, sessions) {
   // Größte Ordner (du). useSudo nur auf ausdrücklichen Wunsch und nur ohne Passwort.
   ipcMain.handle('dash:bigDirs', async (_e, tabId, dir, useSudo) => {
     dir = String(dir || '/').trim() || '/';
-    if (dir.length > 1000 || /[\0\n\r]/.test(dir)) throw new Error('Ungültiger Ordner.');
+    if (dir.length > 1000 || /[\0\n\r]/.test(dir)) throw new Error(i18n.t('dashboard.badDir'));
     const s = client(tabId);
     const p = await probe(s);
     const sudo = useSudo && !p.root && p.sudo === 'nopass' ? 'sudo -n ' : '';
@@ -308,10 +310,11 @@ function register(ipcMain, sessions) {
     const sorted = r.out.split('\n').sort((a, b) => (parseInt(b, 10) || 0) - (parseInt(a, 10) || 0)).join('\n');
     const res = parseDu(sorted, dir);
     if (!res.dirs.length && res.total == null) {
-      if (r.timeout) throw new Error('Das Zählen hat zu lange gedauert. Bitte einen kleineren Ordner wählen.');
-      throw new Error(`Der Ordner „${dir}“ konnte nicht gelesen werden.`);
+      if (r.timeout) throw new Error(i18n.t('dashboard.duTimeout'));
+      throw new Error(i18n.t('dashboard.duUnreadable', { dir }));
     }
-    return { ...res, dir, incomplete: /denied|Keine Berechtigung/i.test(r.err), canSudo: !p.root && p.sudo === 'nopass', usedSudo: !!sudo, timeout: !!r.timeout };
+    return { ...res, dir, incomplete: /denied|Keine Berechtigung/i.test(r.err), // i18n-ignore (Ausgabe von du)
+ canSudo: !p.root && p.sudo === 'nopass', usedSudo: !!sudo, timeout: !!r.timeout };
   });
 
   ipcMain.handle('dash:cancel', (_e, tabId) => { const s = sessions.get(tabId); const c = s && running.get(s); if (c) c(); return !!c; });

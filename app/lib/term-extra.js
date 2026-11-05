@@ -7,6 +7,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { AnsiStripper } = require('./ansi-strip');
+const i18n = require('./i18n');
 
 function register({ app, ipcMain, dialog, shell, sessions, getWin, platform }) {
   const splits = new Map(); // Split-ID -> { tabId, stream }
@@ -19,10 +20,10 @@ function register({ app, ipcMain, dialog, shell, sessions, getWin, platform }) {
 
   ipcMain.handle('split:open', (_e, tabId, splitId, cols, rows) => {
     const s = sessions.get(tabId);
-    if (!s) throw new Error('Nicht verbunden.');
+    if (!s) throw new Error(i18n.t('termExtra.notConnected'));
     return new Promise((resolve, reject) => {
       s.client.shell({ term: 'xterm-256color', cols, rows }, (err, stream) => {
-        if (err) return reject(new Error('Zweites Terminal konnte nicht geöffnet werden: ' + err.message));
+        if (err) return reject(new Error(i18n.t('termExtra.splitFailed', { error: err.message })));
         splits.set(splitId, { tabId, stream });
         stream.on('data', d => send('split:data', splitId, d));
         stream.stderr.on('data', d => send('split:data', splitId, d));
@@ -52,39 +53,40 @@ function register({ app, ipcMain, dialog, shell, sessions, getWin, platform }) {
     log.detach();
     const rest = log.strip.end();
     if (rest) log.out.write(rest);
-    log.out.end(`\n# Mitschnitt beendet: ${new Date().toLocaleString('de-DE')}${reason ? ' (' + reason + ')' : ''}\n`);
+    const when = new Date().toLocaleString(i18n.locale());
+    log.out.end('\n' + (reason ? i18n.t('termExtra.logEndedReason', { when, reason }) : i18n.t('termExtra.logEnded', { when })) + '\n');
     send('log:stopped', id, log.file);
     return log.file;
   }
 
   ipcMain.handle('log:start', async (_e, id, title) => {
     const stream = streamFor(id);
-    if (!stream) throw new Error('Nicht verbunden.');
+    if (!stream) throw new Error(i18n.t('termExtra.notConnected'));
     if (logs.has(id)) return logs.get(id).file;
     const stamp = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
-    const safe = String(title || 'Sitzung').replace(/[^\w.@-]+/g, '_').slice(0, 60);
+    const safe = String(title || i18n.t('termExtra.sessionFallback')).replace(/[^\w.@-]+/g, '_').slice(0, 60);
     const docs = app.getPath('documents') || os.homedir();
     const r = await dialog.showSaveDialog(getWin(), {
-      title: 'Mitschnitt speichern unter',
-      buttonLabel: 'Mitschnitt starten',
+      title: i18n.t('termExtra.logSaveTitle'),
+      buttonLabel: i18n.t('termExtra.logSaveButton'),
       defaultPath: path.join(docs, `S3cure-${safe}-${stamp}.txt`),
-      filters: [{ name: 'Textdatei', extensions: ['txt', 'log'] }],
+      filters: [{ name: i18n.t('termExtra.textFile'), extensions: ['txt', 'log'] }],
     });
     if (r.canceled || !r.filePath) return null;
     // Zwischen Dialog und Antwort könnte die Verbindung weg sein
     const live = streamFor(id);
-    if (!live) throw new Error('Die Verbindung wurde inzwischen beendet.');
+    if (!live) throw new Error(i18n.t('termExtra.connGone'));
 
     const out = fs.createWriteStream(r.filePath, { flags: 'w', mode: 0o600 });
     await new Promise((res, rej) => { out.once('open', res); out.once('error', rej); });
     const strip = new AnsiStripper();
     const onData = d => { const t = strip.push(d); if (t) out.write(t); };
-    const onClose = () => stopLog(id, 'Verbindung beendet');
+    const onClose = () => stopLog(id, i18n.t('termExtra.reasonConnClosed'));
     live.on('data', onData);
     live.stderr.on('data', onData);
     live.once('close', onClose);
     out.on('error', err => { send('log:error', id, err.message); stopLog(id); });
-    out.write(`# Mitschnitt ${title || ''} – gestartet ${new Date().toLocaleString('de-DE')}\n\n`);
+    out.write(i18n.t('termExtra.logHeader', { title: title || '', when: new Date().toLocaleString(i18n.locale()) }) + '\n\n');
     logs.set(id, {
       file: r.filePath, out, strip,
       detach: () => { live.off('data', onData); live.stderr.off('data', onData); live.off('close', onClose); },
@@ -116,7 +118,8 @@ function register({ app, ipcMain, dialog, shell, sessions, getWin, platform }) {
     });
   });
 
-  app.on('before-quit', () => { for (const id of [...logs.keys()]) stopLog(id, 'App beendet'); });
+  app.on('before-quit', () => { for (const id of [...logs.keys()]) stopLog(id, i18n.t('termExtra.reasonAppQuit'));
+ });
 }
 
 module.exports = { register };

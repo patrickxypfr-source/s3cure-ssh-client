@@ -9,6 +9,7 @@
 // Lokale Ports werden immer nur an 127.0.0.1 gebunden (nicht im Netzwerk erreichbar).
 const net = require('net');
 const crypto = require('crypto');
+const i18n = require('./i18n'); // i18n.t – „t“ ist hier oft ein Tunnel
 
 const LOCAL_BIND = '127.0.0.1';
 const TYPES = ['local', 'remote', 'dynamic'];
@@ -30,17 +31,17 @@ function normalizeTunnel(t) {
   const num = v => (v === '' || v == null ? NaN : Number(v));
   if (type === 'local' || type === 'dynamic') {
     out.localPort = num(t.localPort);
-    if (!isPort(out.localPort)) throw new Error('Bitte einen lokalen Port zwischen 1 und 65535 angeben.');
+    if (!isPort(out.localPort)) throw new Error(i18n.t('tunnels.errLocalPort'));
   }
   if (type === 'remote') {
     out.remotePort = num(t.remotePort);
-    if (!isPort(out.remotePort)) throw new Error('Bitte einen Port auf dem Server zwischen 1 und 65535 angeben.');
+    if (!isPort(out.remotePort)) throw new Error(i18n.t('tunnels.errRemotePort'));
   }
   if (type === 'local' || type === 'remote') {
     out.targetHost = String(t.targetHost || '').trim() || (type === 'local' ? 'localhost' : '127.0.0.1');
-    if (/\s/.test(out.targetHost)) throw new Error('Die Zieladresse darf keine Leerzeichen enthalten.');
+    if (/\s/.test(out.targetHost)) throw new Error(i18n.t('tunnels.errTargetSpace'));
     out.targetPort = num(t.targetPort);
-    if (!isPort(out.targetPort)) throw new Error('Bitte einen Ziel-Port zwischen 1 und 65535 angeben.');
+    if (!isPort(out.targetPort)) throw new Error(i18n.t('tunnels.errTargetPort'));
   }
   if (type === 'local') out.web = WEB.includes(t.web) ? t.web : '';
   return out;
@@ -56,25 +57,25 @@ function tunnelsOf(host) {
 
 function describe(t) {
   if (t.type === 'local') return `localhost:${t.localPort} → ${t.targetHost}:${t.targetPort}`;
-  if (t.type === 'remote') return `Server:${t.remotePort} → ${t.targetHost}:${t.targetPort} (hier)`;
-  return `SOCKS-Proxy auf localhost:${t.localPort}`;
+  if (t.type === 'remote') return i18n.t('tunnels.descRemote', { remotePort: t.remotePort, host: t.targetHost, port: t.targetPort });
+  return i18n.t('tunnels.descDynamic', { port: t.localPort });
 }
 
 // ---------- Laufende Tunnel ----------
 
 function friendlyListenError(err, port) {
-  if (err && err.code === 'EADDRINUSE') return `Port ${port} ist schon belegt (anderes Programm oder anderer Tab).`;
-  if (err && err.code === 'EACCES') return `Port ${port} darf nicht benutzt werden. Nimm einen Port über 1024.`;
-  return 'Tunnel konnte nicht starten: ' + (err && err.message || err);
+  if (err && err.code === 'EADDRINUSE') return i18n.t('tunnels.errInUse', { port });
+  if (err && err.code === 'EACCES') return i18n.t('tunnels.errAccess', { port });
+  return i18n.t('tunnels.errStart', { error: err && err.message || err });
 }
 
 function friendlyForwardError(err, host, port) {
   const msg = String(err && err.message || err);
-  if (/Connection refused|ECONNREFUSED/i.test(msg)) return `${host}:${port} lehnt ab (läuft dort ein Dienst?).`;
-  if (/administratively prohibited|prohibited/i.test(msg)) return 'Der Server erlaubt keine Weiterleitung (AllowTcpForwarding).';
-  if (/not found|ENOTFOUND|resolve/i.test(msg)) return `Adresse „${host}“ nicht gefunden.`;
-  if (/Not connected|No response/i.test(msg)) return 'Verbindung zum Server ist weg.';
-  return `${host}:${port} nicht erreichbar: ${msg}`;
+  if (/Connection refused|ECONNREFUSED/i.test(msg)) return i18n.t('tunnels.errRefused', { host, port });
+  if (/administratively prohibited|prohibited/i.test(msg)) return i18n.t('tunnels.errProhibited');
+  if (/not found|ENOTFOUND|resolve/i.test(msg)) return i18n.t('tunnels.errNotFound', { host });
+  if (/Not connected|No response/i.test(msg)) return i18n.t('tunnels.errConnGone');
+  return i18n.t('tunnels.errUnreachable', { host, port, error: msg });
 }
 
 function createTunnelManager({ ipcMain, shell, getWin, getSession, loadHosts, saveHosts }) {
@@ -254,8 +255,8 @@ function createTunnelManager({ ipcMain, shell, getWin, getSession, loadHosts, sa
         if (err) {
           run.state = 'error';
           run.error = /prohibited|denied|refused|failed/i.test(err.message)
-            ? `Server erlaubt Port ${run.cfg.remotePort} nicht (belegt oder Weiterleitung verboten).`
-            : 'Tunnel konnte nicht starten: ' + err.message;
+            ? i18n.t('tunnels.errRemoteDenied', { port: run.cfg.remotePort })
+            : i18n.t('tunnels.errStart', { error: err.message });
           return resolve();
         }
         if (run.stopped) { st.client.unforwardIn('localhost', port, () => {}); return resolve(); }
@@ -269,10 +270,10 @@ function createTunnelManager({ ipcMain, shell, getWin, getSession, loadHosts, sa
 
   async function start(tabId, tunnelId) {
     const st = tabState(tabId);
-    if (!st) throw new Error('Keine aktive Verbindung in diesem Tab.');
-    if (!st.hostName) throw new Error('Tunnel gibt es nur für gespeicherte Verbindungen.');
+    if (!st) throw new Error(i18n.t('tunnels.errNoSession'));
+    if (!st.hostName) throw new Error(i18n.t('tunnels.errOnlySaved'));
     const cfg = tunnelsOf(loadHosts()[st.hostName]).find(t => t.id === tunnelId);
-    if (!cfg) throw new Error('Diesen Tunnel gibt es nicht mehr.');
+    if (!cfg) throw new Error(i18n.t('tunnels.errGone'));
     if (st.running.has(tunnelId)) stop(tabId, tunnelId, false);
 
     const run = { cfg, state: 'starting', error: null, warning: null, sockets: new Set(), total: 0, server: null, boundPort: null, stopped: false };
@@ -324,7 +325,7 @@ function createTunnelManager({ ipcMain, shell, getWin, getSession, loadHosts, sa
 
   function saveList(hostName, mutate) {
     const hosts = loadHosts();
-    if (!hosts[hostName]) throw new Error(`Keine Verbindung namens „${hostName}“ gespeichert.`);
+    if (!hosts[hostName]) throw new Error(i18n.t('tunnels.errNoHost', { name: hostName }));
     const list = tunnelsOf(hosts[hostName]);
     const next = mutate(list);
     hosts[hostName] = { ...hosts[hostName], tunnels: next };
@@ -364,7 +365,8 @@ function createTunnelManager({ ipcMain, shell, getWin, getSession, loadHosts, sa
   // Nur Adressen von laufenden lokalen Tunneln öffnen – nie beliebige URLs aus der Oberfläche
   ipcMain.handle('tunnels:open', (_e, tabId, tunnelId) => {
     const run = tabs.get(tabId)?.running.get(tunnelId);
-    if (!run || run.state !== 'active' || run.cfg.type !== 'local') throw new Error('Der Tunnel läuft nicht.');
+    if (!run || run.state !== 'active' || run.cfg.type !== 'local') throw new Error(i18n.t('tunnels.errNotRunning'));
+
     const proto = run.cfg.web === 'https' ? 'https' : 'http';
     return shell.openExternal(`${proto}://127.0.0.1:${run.boundPort}/`);
   });

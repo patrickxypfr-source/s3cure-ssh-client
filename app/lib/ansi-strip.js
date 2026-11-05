@@ -3,6 +3,7 @@
 // (Rücktaste, Wagenrücklauf und „Zeile löschen“ werden berücksichtigt).
 // Die Ausgabe kommt in Stücken – angefangene Codes werden über Stücke hinweg gemerkt.
 const { StringDecoder } = require('string_decoder');
+const i18n = require('./i18n');
 
 const ALT_SCREEN = /^\?(1049|1047|47)$/;
 
@@ -90,7 +91,7 @@ class AnsiStripper {
       let out = '';
       if (enter && this.line.length) out = this.flush();
       this.alt = enter;
-      if (enter) { this.line = []; this.col = 0; return out + '[… Vollbild-Programm, Inhalt nicht mitgeschrieben …]\n'; }
+      if (enter) { this.line = []; this.col = 0; return out + i18n.t('ansiStrip.fullscreen') + '\n'; }
       this.line = []; this.col = 0;
       return '';
     }
