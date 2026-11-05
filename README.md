@@ -221,6 +221,7 @@ The update window shows **what's new**, and the first time a new version starts,
 - Password, SSH key (also with passphrase) or SSH agent
 - **Generate SSH keys** and install them on the server with one click
 - **Manage keys:** all SSH keys from `~/.ssh` with type, fingerprint and passphrase status – copy the public key, show in Finder/Explorer, generate a new one, install on a server
+- **Credential vault:** save user name, password and SSH key (file or stored in the vault, with passphrase) once as an entry like “Company login” and use it for many connections – change it once, it applies everywhere. Strong password generator, show/copy only on request (clipboard is cleared after 30 s), optionally only after unlocking with the app password or Touch ID
 - Jump host (ProxyJump)
 - **Connect via proxy:** SOCKS5 or HTTP (CONNECT), with login, globally or per connection – also combined with a jump host
 - **Agent forwarding** per connection (e.g. `git pull` on the server using the key from your own computer)

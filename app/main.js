@@ -115,12 +115,12 @@ function renamePassword(oldName, newName) {
   savePasswordStore(store);
 }
 
-// Verbindungen für die Oberfläche, mit Hinweis ob ein Passwort gespeichert ist
+// Verbindungen für die Oberfläche, mit Hinweis ob ein Passwort gespeichert ist (und Tresor-Eintrag)
 function hostsForUi() {
   const hosts = loadHosts();
   const store = loadPasswordStore();
   for (const name of Object.keys(hosts)) hosts[name] = { ...hosts[name], hasPassword: name in store };
-  return hosts;
+  return vault.decorateHosts(hosts);
 }
 
 // 'user@host:port' -> Zielobjekt (wie im CLI)
@@ -180,6 +180,11 @@ function friendlyError(err, target) {
   return t('main.errConnect', { msg });
 }
 
+// Tresor für Zugangsdaten (Einträge, die mehrere Verbindungen nutzen): app/lib/vault.js
+const vault = require('./lib/vault').createVault({
+  configDir: CONFIG_DIR, secrets: createSecretStore(path.join(CONFIG_DIR, 'vault-secrets.json')), loadHosts, saveHosts, expandHome,
+});
+
 // Verbindungsaufbau, Sprung-Server, Wachhalten: app/lib/connection.js
 const passphrases = createSecretStore(path.join(CONFIG_DIR, 'passphrases.json'));
 // ssh:data, ssh:closed, ssh:lost (immer mit Tab-ID vorne) nur an das Fenster des Tabs
@@ -190,7 +195,7 @@ proxies.register(ipcMain);
 const connection = createConnection({
   loadHosts, parseTarget, expandHome, ask, verifyHostKey, friendlyError, sessions, send: sendToTab, proxies,
   passwords: { read: readPassword, write: writePassword, remove: removePassword },
-  passphrases, defaultKeys: DEFAULT_KEYS,
+  passphrases, defaultKeys: DEFAULT_KEYS, vault,
 });
 
 ipcMain.handle('ssh:connect', (e, tabId, spec, cols, rows) => {
@@ -254,7 +259,7 @@ function sshSftp(tabId) {
 
 // Dateizugriff je Tab: SFTP oder FTP/FTPS mit denselben Funktionen (app/lib/files-adapter.js, app/lib/ftp.js)
 const files = require('./lib/files-adapter').createFilesAdapter({
-  configDir: CONFIG_DIR, loadHosts, ask, sshSftp,
+  configDir: CONFIG_DIR, loadHosts, ask, sshSftp, vault,
   passwords: { read: readPassword, write: writePassword, remove: removePassword },
 });
 const getSftp = tabId => files.get(tabId);
@@ -549,6 +554,7 @@ ipcMain.on('search:cancel', (_e, tabId) => stopSearch(tabId));
 
 ipcMain.handle('hosts:list', () => hostsForUi());
 ipcMain.handle('hosts:save', (_e, name, host, oldName) => {
+  if (host.credential && !vault.has(host.credential)) throw new Error(t('vault.errGone')); // Tresor-Eintrag inzwischen gelöscht
   const hosts = loadHosts();
   const prev = hosts[oldName || name] || {}; // weitere Felder (z. B. Tunnel) behalten
   if (oldName && oldName !== name) { delete hosts[oldName]; renamePassword(oldName, name); snippetStore.rename(oldName, name); updateJumpRefs(hosts, oldName, name); bookmarks.rename(oldName, name); }
@@ -619,6 +625,8 @@ appLock.register(ipcMain, {
     for (const key of unlockQueue.splice(0)) createWindow({ key });
   },
 });
+// Tresor: Liste, Bearbeiten, Anzeigen/Kopieren (optional erst nach Entsperren)
+require('./lib/vault').register({ ipcMain, clipboard, app, appLock, vault });
 
 // ---------- Fenster ----------
 
@@ -741,7 +749,7 @@ ipcMain.handle('i18n:reload', () => {
 
 // Backup & Umzug (app/lib/backup.js)
 const backupApi = require('./lib/backup').register({
-  ipcMain, dialog, app, getWin: currentWin, configDir: CONFIG_DIR, loadHosts, saveHosts, settingsStore, snippetStore, passphrases,
+  ipcMain, dialog, app, getWin: currentWin, configDir: CONFIG_DIR, loadHosts, saveHosts, settingsStore, snippetStore, passphrases, vault,
   passwords: { names: () => Object.keys(loadPasswordStore()), read: readPassword, write: writePassword, remove: removePassword },
 });
 // Abgleich über einen Cloud-Ordner (app/lib/cloud-sync.js)

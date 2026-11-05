@@ -20,6 +20,10 @@ So wird ein Abschnitt geschrieben (für Mitwirkende):
 - **Sitzung wiederherstellen mit allen Fenstern:** Nach einem Neustart oder Update sind alle Fenster wieder da – mit Position, Größe und ihren Tabs.
 - **Remote Desktop (VNC):** Neue Ansicht „Desktop“ neben Terminal, Dateien und Übersicht – zeigt den Bildschirm des Servers. Die Verbindung läuft verschlüsselt durch SSH, ein VNC-Port muss nicht ins Netz geöffnet werden. Einstellbar pro Verbindung (Adresse oder Display wie „:1“, Passwort, Bildqualität, „Nur ansehen“). In der Ansicht: Anpassen oder 1:1, Vollbild, Strg+Alt+Entf, Zwischenablage hin und her und eine Tastatur-Hilfe.
 - **VNC-Server finden:** Ein Klick prüft, ob auf dem Server ein VNC-Server läuft, und schlägt die Ports vor. Läuft keiner, sagt die App verständlich, wie man ihn einrichtet (TigerVNC, x11vnc, Raspberry Pi).
+- **Tresor für Zugangsdaten:** Benutzername, Passwort und SSH-Schlüssel einmal als Eintrag speichern (z. B. „Firmen-Login“) und im Verbindungs-Dialog unter „Zugangsdaten“ für beliebig viele Verbindungen auswählen. Änderst du das Passwort im Eintrag, gilt es sofort für alle – auch für FTP/FTPS und Sprung-Server. Den Schlüssel kannst du als Datei angeben oder verschlüsselt im Tresor ablegen.
+- Den Tresor findest du in den Einstellungen und unter „Schlüssel & Server“: Suche, Anlegen, Bearbeiten, Löschen (mit Hinweis, welche Verbindungen den Eintrag nutzen) und **starke Passwörter erzeugen** mit einstellbarer Länge.
+- Geheimnisse werden nie einfach so angezeigt: „Anzeigen“ blendet sie nach 10 Sekunden wieder aus, „Kopieren“ leert die Zwischenablage nach 30 Sekunden. Mit eingeschalteter App-Sperre kannst du festlegen, dass vorher nach App-Passwort bzw. Touch ID gefragt wird.
+- Backup und Cloud-Abgleich nehmen die Tresor-Einträge mit – Passwörter und Schlüssel nur mit dem Häkchen „Passwörter mitnehmen“ bzw. „Passwörter mit abgleichen“.
 
 ### Verbessert
 - Jedes Fenster ist für sich: Übertragungen, Tunnel, Rückfragen und Meldungen erscheinen im Fenster des jeweiligen Tabs. Wer ein Fenster schließt, beendet nur dessen Verbindungen.

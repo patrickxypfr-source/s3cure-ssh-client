@@ -61,7 +61,7 @@ function hostItem(name) {
   const connected = [...tabs.values()].some(t => t.spec.name === name && t.state === 'open');
   li.innerHTML = `
     <span class="host-avatar">${icon('server')}<span class="host-dot ${connected ? 'on' : ''}"></span></span>
-    <div class="host-text"><div class="host-name"><span class="host-name-text"></span>${h.hasPassword ? `<span class="pw-badge" title="${t('host.pwSaved')}">${icon('lock')}</span>` : ''}</div><div class="host-addr"></div></div>
+    <div class="host-text"><div class="host-name"><span class="host-name-text"></span>${h.hasPassword || h.credentialName ? `<span class="pw-badge" title="${h.credentialName ? '' : t('host.pwSaved')}">${icon('lock')}</span>` : ''}</div><div class="host-addr"></div></div>
     <div class="host-actions">
       <button class="mini-btn" data-act="files" title="${t('host.openFiles')}">${icon('folder')}</button>
       <button class="mini-btn" data-act="edit" title="${t('common.edit')}">${icon('edit')}</button>
@@ -69,6 +69,7 @@ function hostItem(name) {
     </div>`;
   if (connected) li.classList.add('connected');
   li.querySelector('.host-name-text').textContent = name;
+  if (h.credentialName) li.querySelector('.pw-badge').title = t('vault.hostBadge', { name: h.credentialName }); // Tresor: src/vault.js
   li.querySelector('.host-addr').textContent = `${h.user}@${h.host}${h.port !== 22 ? ':' + h.port : ''}`;
   li.title = t('host.dblClickConnect');
   li.addEventListener('dblclick', () => openTab({ name }, name));

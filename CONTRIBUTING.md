@@ -20,7 +20,7 @@ Es gibt zwei Arten von Tests, beide mit dem in Node eingebauten `node:test` (kei
 | Befehl | Was wird geprüft | Dauer |
 |---|---|---|
 | `npm test` | **Einheitentests** in `app/test/unit/`: einzelne Funktionen ohne Fenster und ohne Netz – z. B. Versionsvergleich für Updates, Import aus `~/.ssh/config`, Platzhalter in Befehlsknöpfen, Tunnel-Eingaben, Schlüssel erzeugen, „Was ist neu?“, Fenster-Zuordnung und Sitzung | wenige Sekunden |
-| `npm run test:integration` | **Integrationstest** in `app/test/integration/`: startet die echte App (Electron) und einen eigenen SSH-Server, verbindet sich, führt einen Befehl im Terminal aus, öffnet Ordner, lädt Dateien hoch und herunter und speichert im Editor. `windows.test.mjs`: mehrere Fenster – Tab verschieben ohne Neuverbinden, Übertragung im zweiten Fenster, Fenster schließen, Tab herausziehen, Neustart mit allen Fenstern; dazu Remote Desktop (VNC) gegen einen eigenen VNC-Server: Bild, Maus, Tastatur, Zwischenablage | ca. 1 Minute |
+| `npm run test:integration` | **Integrationstest** in `app/test/integration/`: startet die echte App (Electron) und einen eigenen SSH-Server, verbindet sich, führt einen Befehl im Terminal aus, öffnet Ordner, lädt Dateien hoch und herunter und speichert im Editor. `windows.test.mjs`: mehrere Fenster – Tab verschieben ohne Neuverbinden, Übertragung im zweiten Fenster, Fenster schließen, Tab herausziehen, Neustart mit allen Fenstern; dazu Remote Desktop (VNC) gegen einen eigenen VNC-Server: Bild, Maus, Tastatur, Zwischenablage; `vault.test.mjs` prüft den Tresor (Eintrag mit Schlüssel anlegen, Verbindung verknüpfen und verbinden, Kopieren nach Entsperren, Löschen) | ca. 1 Minute |
 
 ### Integrationstest einrichten
 

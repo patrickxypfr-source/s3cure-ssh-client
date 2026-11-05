@@ -20,6 +20,10 @@ How to write a section (for contributors):
 - **Restore session with all windows:** after a restart or update, all windows are back – with their position, size and tabs.
 - **Remote desktop (VNC):** New “Desktop” view next to Terminal, Files and Overview – shows the server’s screen. The connection runs encrypted through SSH, no VNC port has to be opened to the network. Set up per connection (address or display like “:1”, password, picture quality, view only). In the view: fit or 1:1, full screen, Ctrl+Alt+Del, clipboard both ways and keyboard help.
 - **Find VNC servers:** One click checks whether a VNC server runs on the server and suggests the ports. If none is running, the app explains clearly how to set one up (TigerVNC, x11vnc, Raspberry Pi).
+- **Credential vault:** save user name, password and SSH key once as an entry (e.g. “Company login”) and pick it for as many connections as you like under “Credentials” in the connection dialog. Change the password in the entry and it applies to all of them right away – including FTP/FTPS and jump servers. The key can be a file or stored encrypted in the vault.
+- You’ll find the vault in Settings and under “Keys & Servers”: search, create, edit, delete (showing which connections use the entry) and **generate strong passwords** with an adjustable length.
+- Secrets are never shown just like that: “Show” hides them again after 10 seconds, “Copy” clears the clipboard after 30 seconds. With the app lock turned on, you can choose to be asked for the app password or Touch ID first.
+- Backup and cloud sync include the vault entries – passwords and keys only with the “Include saved passwords” or “Also sync saved passwords” checkbox.
 
 ### Improved
 - Each window stands on its own: transfers, tunnels, questions and messages appear in the window of their tab. Closing a window only ends that window’s connections.

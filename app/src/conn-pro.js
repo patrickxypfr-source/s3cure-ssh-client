@@ -348,11 +348,14 @@
     b.append(t('connPro.footLabel'));
     b.addEventListener('click', () => {
       const r = b.getBoundingClientRect();
-      openMenu([
+      const items = [
+        // Tresor für Zugangsdaten: src/vault.js
+        ...(window.Vault ? [[t('vault.menu'), () => Settings.open('vault'), '', 'vault']] : []),
         [t('connPro.menuKnown'), () => Settings.open('knownhosts'), '', 'shield'],
         [t('connPro.menuKeys'), () => Settings.open('sshkeys'), '', 'key'],
         [t('connPro.menuProxy'), () => Settings.open('proxy'), '', 'globe'],
-      ], r.left, r.top - 4 - 3 * 32);
+      ];
+      openMenu(items, r.left, r.top - 4 - items.length * 32);
     });
     foot.insertBefore(b, foot.firstChild);
   }

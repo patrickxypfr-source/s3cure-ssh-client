@@ -10,7 +10,7 @@ Desktop-SSH/SFTP-Client (Electron) für macOS, Windows und Linux (AppImage). Obe
 - Mehrere Fenster: `app/lib/windows.js` (welcher Tab gehört zu welchem Fenster; Ereignisse eines Tabs mit `windows.sendTab(tabId, …)`, allgemeine mit `sendAll`, Dialoge an `windows.current()` – nie ein festes `win`), `app/lib/window-tabs.js` (Tab verschieben), Oberfläche `app/src/windows.js`. Verbindungen gehören dem Hauptprozess, ein Fenster zeigt sie nur an.
 - `app/tools/win-finish.mjs` – Icon/Infos in die Windows-exe (nutzt macOS-Werkzeuge `sips`/`ditto`).
 - `myssh.py` – älteres Python-CLI. `server/s3` – Verwaltungsskript für den Server des Nutzers.
-- Konfiguration: `~/.myssh/hosts.json`, `known_hosts`, `passwords.json` (verschlüsselt). Testhaken: `S3CURE_CONFIG_DIR`, `S3CURE_PLATFORM` (`darwin`/`win32`/`linux`).
+- Konfiguration: `~/.myssh/hosts.json`, `known_hosts`, `passwords.json` (verschlüsselt). Tresor für Zugangsdaten: `app/lib/vault.js` + `app/src/vault.js`, `vault.json` (Metadaten) und `vault-secrets.json` (verschlüsselt); Verbindungen verweisen per `credential: '<id>'` darauf. Testhaken: `S3CURE_CONFIG_DIR`, `S3CURE_PLATFORM` (`darwin`/`win32`/`linux`).
 - Tests: `app/test/unit/*.test.js` (`npm test`), `app/test/integration/` (`xvfb-run -a npm run test:integration`, Electron + lokaler sshd). Anleitung: `CONTRIBUTING.md`.
 - `CHANGELOG.md` + `CHANGELOG.en.md`: Nutzer-sichtbare Änderungen unter „Unveröffentlicht“ / „Unreleased“ eintragen (deutsch + englisch) – wird Release-Text und „Was ist neu?“ in der App.
 

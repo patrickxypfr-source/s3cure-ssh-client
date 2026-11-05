@@ -221,6 +221,7 @@ Das Update-Fenster zeigt dabei, **was neu** ist, und nach dem ersten Start einer
 - Passwort, SSH-Schlüssel (auch mit Passphrase) oder SSH-Agent
 - **SSH-Schlüssel erzeugen** und mit einem Klick auf den Server übertragen
 - **Schlüssel verwalten:** alle SSH-Schlüssel aus `~/.ssh` mit Typ, Fingerprint und Passphrase-Status – öffentlichen Schlüssel kopieren, im Finder/Explorer zeigen, neuen erzeugen, auf einen Server übertragen
+- **Tresor für Zugangsdaten:** Benutzername, Passwort und SSH-Schlüssel (Datei oder im Tresor gespeichert, mit Passphrase) einmal als Eintrag wie „Firmen-Login“ speichern und für viele Verbindungen nutzen – einmal ändern, gilt überall. Starke Passwörter erzeugen, Anzeigen/Kopieren nur auf Wunsch (Zwischenablage wird nach 30 s geleert), auf Wunsch erst nach Entsperren mit App-Passwort oder Touch ID
 - Sprung-Server (ProxyJump)
 - **Verbindung über Proxy:** SOCKS5 oder HTTP (CONNECT), mit Anmeldung, global oder pro Verbindung – auch zusammen mit Sprung-Server
 - **Agent-Weiterleitung** pro Verbindung (z. B. `git pull` auf dem Server mit dem Schlüssel vom eigenen Rechner)

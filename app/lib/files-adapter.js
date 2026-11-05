@@ -5,7 +5,7 @@ const path = require('path');
 const { t } = require('./i18n');
 const { openFtp, parseFtpUrl, isFtpProtocol, createCertStore, PROTOCOLS } = require('./ftp');
 
-function createFilesAdapter({ configDir, loadHosts, ask, passwords, sshSftp }) {
+function createFilesAdapter({ configDir, loadHosts, ask, passwords, sshSftp, vault }) {
   const ftpTabs = new Map();   // Tab-ID -> FTP-Adapter
   const caches = new Map();    // Tab-ID -> Passwörter im Arbeitsspeicher (Neu verbinden ohne Nachfragen)
   const certs = createCertStore(path.join(configDir, 'ftp_certs.json'));
@@ -20,13 +20,26 @@ function createFilesAdapter({ configDir, loadHosts, ask, passwords, sshSftp }) {
     return parseFtpUrl(spec.text);
   }
 
+  // Tresor-Eintrag (lib/vault.js): Benutzer und Passwort von dort. Ein abgelehntes Tresor-Passwort
+  // wird nicht gelöscht; „Merken“ nach der Rückfrage speichert es im Eintrag (gilt für alle verknüpften Verbindungen).
+  function withVault(target) {
+    const linked = vault ? vault.resolve(target) : null;
+    if (!linked) return { target, passwords };
+    const { cred } = linked;
+    return {
+      target: linked.target,
+      passwords: { read: () => cred.password(), write: (_name, v) => cred.setPassword(v), remove: () => {} },
+    };
+  }
+
   async function connect(tabId, spec) {
-    const target = ftpTarget(spec);
-    if (!target) throw new Error(t('files.noFtp'));
+    const found = ftpTarget(spec);
+    if (!found) throw new Error(t('files.noFtp'));
+    const { target, passwords: pw } = withVault(found);
     close(tabId);
     if (!caches.has(tabId)) caches.set(tabId, new Map());
     const adapter = await openFtp(target, {
-      ask, passwords, certs, cache: caches.get(tabId), hostName: spec.name || null,
+      ask, passwords: pw, certs, cache: caches.get(tabId), hostName: spec.name || null,
     });
     ftpTabs.set(tabId, adapter);
     return {
