@@ -227,6 +227,9 @@ Das Update-Fenster zeigt dabei, **was neu** ist, und nach dem ersten Start einer
 - **Agent-Weiterleitung** pro Verbindung (z. B. `git pull` auf dem Server mit dem Schlüssel vom eigenen Rechner)
 - Import aus `~/.ssh/config`
 - **Port-Weiterleitung:** lokal, remote und SOCKS-Proxy – auf Wunsch automatisch beim Verbinden
+- **Datenbank-Ansicht (PostgreSQL):** Tabellen ansehen, sortieren und durchsuchen, Zellen ändern und Zeilen löschen (nur über den Primärschlüssel, immer mit Rückfrage), SQL ausführen, CSV-Export – durch den SSH-Tunnel, die Datenbank muss nie offen im Netz sein. Zugangsdaten mit einem Klick aus der `.env` des Servers
+- **Sicherheits-Check:** Note A–F pro Server – Root-Anmeldung, Passwort-Anmeldung, Firewall, fail2ban, Updates, automatische Updates, offene Ports (z. B. Datenbank öffentlich), Zertifikate, Uhrzeit. „Beheben“ zeigt den genauen Befehl und führt ihn nach Bestätigung sichtbar im Terminal aus
+- **.env-Verwaltung:** findet alle `.env`-Dateien auf dem Server, Werte standardmäßig verdeckt, Vergleich mit `.env.example` (fehlende Schlüssel per Klick), Speichern mit automatischem Backup auf dem Server, Backups zurückholen
 - **Lokales Terminal:** ein Tab mit der Konsole des eigenen Computers (zsh/bash, unter Windows PowerShell) direkt neben den Servern – Knopf neben „+“ oder Cmd/Strg+Umschalt+T
 - **Alle Server auf einen Blick:** eine Karte pro Server mit CPU, Arbeitsspeicher, Platte und ausgefallenen Diensten, im Hintergrund geprüft; Mitteilung, wenn ein Server ausfällt, die Platte voll wird oder ein Dienst ausfällt
 - **Mitteilung, wenn ein langer Befehl fertig ist:** Build oder Update starten, in ein anderes Programm wechseln – S3cure sagt Bescheid, wenn es durch ist

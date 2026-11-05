@@ -148,18 +148,20 @@ function createConnection(deps) {
         while (queue.length) {
           const m = queue.shift();
           if (!allowed.includes('publickey')) continue;
-          if (m.type === 'agent') return next({ type: 'agent', username: user, agent });
+          if (m.type === 'agent') { auth.method = 'agent'; return next({ type: 'agent', username: user, agent }); }
           const key = await loadKey(m);
-          if (key) return next({ type: 'publickey', username: user, key });
+          if (key) { auth.method = 'publickey'; return next({ type: 'publickey', username: user, key }); }
         }
         if (opts.keyOnly) return next(false);
         if (passwordTries < 3 || !memTried || (hasSaved && !savedTried)) {
           if (allowed.includes('password')) {
             const pw = await askPassword();
             if (pw == null) return next(false);
+            auth.method = 'password';
             return next({ type: 'password', username: user, password: pw });
           }
           if (allowed.includes('keyboard-interactive')) {
+            auth.method = 'keyboard-interactive';
             return next({
               type: 'keyboard-interactive', username: user,
               prompt: async (_name, _instr, _lang, prompts, finish) => {
@@ -205,6 +207,7 @@ function createConnection(deps) {
       };
       client.on('ready', () => {
         settled = true;
+        client.authMethod = auth.method || null; // womit angemeldet (für den Sicherheits-Check)
         // Anmeldung hat geklappt -> Passwort für diese Sitzung behalten, und dauerhaft, falls gewünscht
         if (auth.lastPassword != null) cache.passwords.set(credKey(target, hostName), auth.lastPassword);
         if (auth.pending != null) {
@@ -327,7 +330,7 @@ function createConnection(deps) {
     stream.on('exit', () => { exited = true; });
     stream.on('close', done);
     client.on('close', done);
-    return { user: shown.user, host: target.host, port: target.port };
+    return { user: shown.user, host: target.host, port: target.port, auth: client.authMethod || null };
   }
 
   // Nach dem Aufwachen: Lebt die Verbindung noch? Antwortet der Server nicht schnell, wird sie

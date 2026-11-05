@@ -283,3 +283,34 @@ contextBridge.exposeInMainWorld('s3watch', {
   notify: (title, body, tabId) => ipcRenderer.send('notify:show', { title, body, tabId }),
   onNotifyClick: cb => ipcRenderer.on('notify:clicked', (_e, tabId) => cb(tabId)),
 });
+
+// Sicherheits-Check (app/lib/security-check.js, Oberfläche: src/security-check.js)
+contextBridge.exposeInMainWorld('s3sec', {
+  scan: (tabId, opts) => ipcRenderer.invoke('sec:scan', tabId, opts),
+});
+
+// .env-Dateien (app/lib/env-files.js, Oberfläche: src/env-manager.js)
+contextBridge.exposeInMainWorld('s3env', {
+  find: tabId => ipcRenderer.invoke('env:find', tabId),
+  read: (tabId, file) => ipcRenderer.invoke('env:read', tabId, file),
+  write: (tabId, file, text, mtime) => ipcRenderer.invoke('env:write', tabId, file, text, mtime),
+  backups: (tabId, file) => ipcRenderer.invoke('env:backups', tabId, file),
+  restore: (tabId, file, name) => ipcRenderer.invoke('env:restore', tabId, file, name),
+});
+
+// Datenbank-Ansicht (app/lib/db.js, Oberfläche: src/db-view.js)
+contextBridge.exposeInMainWorld('s3db', {
+  config: key => ipcRenderer.invoke('db:config', key),
+  forget: key => ipcRenderer.invoke('db:forget', key),
+  detect: tabId => ipcRenderer.invoke('db:detect', tabId),
+  connect: (tabId, key, cfg) => ipcRenderer.invoke('db:connect', tabId, key, cfg),
+  close: tabId => ipcRenderer.invoke('db:close', tabId),
+  tables: tabId => ipcRenderer.invoke('db:tables', tabId),
+  table: (tabId, opts) => ipcRenderer.invoke('db:table', tabId, opts),
+  update: (tabId, opts) => ipcRenderer.invoke('db:update', tabId, opts),
+  remove: (tabId, opts) => ipcRenderer.invoke('db:delete', tabId, opts),
+  query: (tabId, sql) => ipcRenderer.invoke('db:query', tabId, sql),
+  isReadOnly: sql => ipcRenderer.invoke('db:isReadOnly', sql),
+  exportCsv: data => ipcRenderer.invoke('db:export', data),
+});
+

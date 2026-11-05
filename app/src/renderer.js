@@ -250,6 +250,7 @@ function updateToolbar() {
   window.TermExtra?.update(tab);
   window.Dashboard?.update(tab); // Ansicht „Übersicht“ (dashboard.js)
   window.Desktop?.update(tab); // Ansicht „Desktop“ – Remote Desktop über VNC (vnc.js)
+  window.DbView?.update(tab); // Ansicht „Datenbank“ – PostgreSQL durch SSH (db-view.js)
   if (!tab) return;
   const texts = {
     connecting: t('app.statusConnecting'),
@@ -420,6 +421,7 @@ function disposeTab(tab) {
   window.SyncTools?.detach(tab);
   window.Dashboard?.detach(tab);
   window.Desktop?.detach(tab);
+  window.DbView?.detach(tab);
   tab.term.dispose();
   tab.el.remove();
   tab.files.el.remove();

@@ -51,6 +51,8 @@ const snippetStore = snippets.register(ipcMain, { configDir: CONFIG_DIR, dialog,
 const bookmarks = require('./lib/bookmarks').register({ ipcMain, configDir: CONFIG_DIR });
 monitor.register(ipcMain, sessions);
 require('./lib/dashboard').register(ipcMain, sessions); // Übersicht: Dienste, Docker, System
+require('./lib/security-check').register(ipcMain, sessions); // Übersicht → Sicherheit (src/security-check.js)
+require('./lib/env-files').register(ipcMain, sessions); // Übersicht → .env (src/env-manager.js)
 
 // ---------- gespeicherte Verbindungen ----------
 
@@ -200,6 +202,11 @@ const connection = createConnection({
 
 // Lokales Terminal (Shell des eigenen Computers): app/lib/local-term.js, Oberfläche: src/local-term.js
 const localTerm = require('./lib/local-term').createLocalTerm({ send: sendToTab, platform: process.platform, lang: () => i18n.lang() });
+// Datenbank-Ansicht (PostgreSQL durch SSH): app/lib/db.js, Oberfläche: src/db-view.js
+const db = require('./lib/db').register({
+  ipcMain, sessions, dialog, getWin: currentWin, configDir: CONFIG_DIR,
+  secrets: createSecretStore(path.join(CONFIG_DIR, 'db-passwords.json')),
+});
 
 ipcMain.handle('ssh:connect', (e, tabId, spec, cols, rows) => {
   windows.setOwner(tabId, e.sender); // dieser Tab gehört ab jetzt diesem Fenster
@@ -228,6 +235,7 @@ function closeTabs(tabIds) {
 
 function closeSession(tabId, { keepTransfers = false } = {}) {
   localTerm.close(tabId);
+  db.close(tabId);
   stopSearch(tabId);
   tunnels.stopAll(tabId);
   vnc.stopAll(tabId);

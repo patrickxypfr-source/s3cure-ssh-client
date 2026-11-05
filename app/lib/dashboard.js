@@ -320,4 +320,4 @@ function register(ipcMain, sessions) {
   ipcMain.handle('dash:cancel', (_e, tabId) => { const s = sessions.get(tabId); const c = s && running.get(s); if (c) c(); return !!c; });
 }
 
-module.exports = { register, parseProbe, parseUnits, parseContainers, parseSystem, parseDu, UNIT_RE, CONTAINER_RE, PROBE };
+module.exports = { register, exec, sections, sq, parseProbe, parseUnits, parseContainers, parseSystem, parseDu, UNIT_RE, CONTAINER_RE, PROBE };

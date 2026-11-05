@@ -60,6 +60,8 @@ window.Dashboard = (() => {
   document.getElementById('view-switch').appendChild(viewBtn);
   viewBtn.addEventListener('click', () => setView('dash'));
 
+  const extras = []; // weitere Bereiche (addSection)
+
   // ---------- Aufbau pro Tab ----------
 
   function build(tab) {
@@ -71,6 +73,7 @@ window.Dashboard = (() => {
           <button data-sec="system">${icon('gauge')}System</button>
           <button data-sec="services">${icon('server')}${t('dashboard.services')}<span class="dash-badge" hidden></span></button>
           <button data-sec="docker">${icon('container')}Docker</button>
+          ${extras.map(x => `<button data-sec="${x.id}">${icon(x.icon)}${x.label}</button>`).join('')}
         </div>
         <span class="spacer"></span>
         <span class="dash-updated"></span>
@@ -81,6 +84,7 @@ window.Dashboard = (() => {
         <section data-sec="system" hidden></section>
         <section data-sec="services" hidden></section>
         <section data-sec="docker" hidden></section>
+        ${extras.map(x => `<section data-sec="${x.id}" hidden></section>`).join('')}
       </div>`;
     document.getElementById('terminals').appendChild(root);
     const st = {
@@ -93,6 +97,7 @@ window.Dashboard = (() => {
     buildSystem(st);
     buildServices(st);
     buildDocker(st);
+    for (const x of extras) x.build?.(st, sec(st, x.id));
     return st;
   }
 
@@ -138,6 +143,8 @@ window.Dashboard = (() => {
     if (st.sec === 'system' && (force || !st.system)) jobs.push(loadSystem(st));
     if (p.systemd && (st.sec === 'services' || force || !st.services)) jobs.push(loadServices(st));
     if (p.docker && (st.sec === 'docker' || force || !st.containers)) jobs.push(loadContainers(st));
+    const x = extras.find(e => e.id === st.sec);
+    if (x) jobs.push(Promise.resolve().then(() => x.show?.(st, sec(st, x.id), force)).catch(err => console.error(err)));
     await Promise.all(jobs);
     st.updated = new Date();
     render(st);
@@ -168,7 +175,7 @@ window.Dashboard = (() => {
     const nav = st.root.querySelector('.dash-nav');
     nav.querySelector('[data-sec=services]').hidden = !p?.systemd;
     nav.querySelector('[data-sec=docker]').hidden = !p?.docker;
-    nav.hidden = !ok || (!p.systemd && !p.docker); // nur System -> kein Umschalter nötig
+    nav.hidden = !ok || (!p.systemd && !p.docker && !extras.length); // nur System -> kein Umschalter nötig
     for (const b of nav.querySelectorAll('[data-sec]')) b.classList.toggle('on', b.dataset.sec === st.sec);
     for (const s of st.root.querySelectorAll('section[data-sec]')) s.hidden = !ok || s.dataset.sec !== st.sec;
     st.root.querySelector('[data-a=refresh]').disabled = !connected;
@@ -664,5 +671,10 @@ window.Dashboard = (() => {
     return list;
   });
 
-  return { update, detach, openSection };
+  // Weitere Bereiche aus eigenen Dateien (z. B. Sicherheit, .env):
+  // Dashboard.addSection({ id, label, icon, build(st, el), show(st, el, force) }) – vor dem ersten Tab aufrufen.
+  // st.tab ist der Tab, st.probe das Ergebnis von dash:probe (root, sudo …).
+  function addSection(x) { if (!extras.some(e => e.id === x.id)) extras.push(x); }
+
+  return { update, detach, openSection, addSection };
 })();
