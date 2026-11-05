@@ -175,12 +175,14 @@ Das Update-Fenster zeigt dabei, **was neu** ist, und nach dem ersten Start einer
 - Mehrere Verbindungen in Tabs, helles und dunkles Design, einklappbare Seitenleiste
 - **Automatisch neu verbinden** nach WLAN-Wechsel, Ruhezustand oder Verbindungsabbruch
 - Suche im Terminal, anklickbare Links, Schriftgröße per Tastatur
-- Geteilte Ansicht: zwei Terminals nebeneinander auf demselben Server
+- **Befehlspalette** (Cmd/Strg+K): Verbindungen, Tabs, Befehlsknöpfe und Aktionen suchen und starten – unscharfe Suche, zuletzt Benutztes oben
+- Geteilte Ansicht: bis zu 4 Terminals auf demselben Server – nebeneinander, untereinander oder 2×2, Trenner verschiebbar
 - Mitschnitt einer Sitzung als Textdatei
 - **An alle senden:** Eingaben gleichzeitig an mehrere Server
-- **Eigene Befehlsknöpfe** pro Server – mit Icons, Rückfrage vor gefährlichen Befehlen, Eingabefeldern (`{name}` im Befehl), Ausklappmenüs, Export/Import als JSON
+- **Eigene Befehlsknöpfe** pro Server – mit Icons, Rückfrage vor gefährlichen Befehlen, Eingabefeldern (`{name}` im Befehl), Ausklappmenüs, Export/Import als JSON – dazu Knöpfe **„Für alle Server“**, die bei jeder Verbindung erscheinen
 - Hilfsleiste für `nano` (Speichern & schließen per Klick)
 - Server-Übersicht in der Leiste: CPU, RAM, Platte, Laufzeit
+- **Ansicht „Übersicht“:** Dienste (systemd) mit Status, Start/Stop/Neustart und Logs, Docker-Container, große Systemwerte, Laufwerke, Prozesse und die größten Ordner – ohne etwas ins Terminal zu tippen
 
 </details>
 
@@ -223,7 +225,8 @@ Das Update-Fenster zeigt dabei, **was neu** ist, und nach dem ersten Start einer
 |---|---|---|
 | Suche im Terminal | <kbd>⌘</kbd> <kbd>F</kbd> | <kbd>Strg</kbd> <kbd>Umschalt</kbd> <kbd>F</kbd> |
 | Schrift größer / kleiner / normal | <kbd>⌘</kbd> <kbd>+</kbd> / <kbd>−</kbd> / <kbd>0</kbd> | <kbd>Strg</kbd> <kbd>+</kbd> / <kbd>−</kbd> / <kbd>0</kbd> |
-| Zweites Terminal daneben | <kbd>⌘</kbd> <kbd>D</kbd> | <kbd>Strg</kbd> <kbd>Umschalt</kbd> <kbd>D</kbd> |
+| Befehlspalette (alles suchen und starten) | <kbd>⌘</kbd> <kbd>K</kbd> | <kbd>Strg</kbd> <kbd>K</kbd> |
+| Weiteres Terminal daneben (bis zu 4) | <kbd>⌘</kbd> <kbd>D</kbd> | <kbd>Strg</kbd> <kbd>Umschalt</kbd> <kbd>D</kbd> |
 | Seitenleiste ein-/ausklappen | <kbd>⌘</kbd> <kbd>B</kbd> | <kbd>Strg</kbd> <kbd>Umschalt</kbd> <kbd>B</kbd> |
 | Datei im Editor speichern | <kbd>⌘</kbd> <kbd>S</kbd> | <kbd>Strg</kbd> <kbd>S</kbd> |
 | Alle Dateien auswählen | <kbd>⌘</kbd> <kbd>A</kbd> | <kbd>Strg</kbd> <kbd>A</kbd> |

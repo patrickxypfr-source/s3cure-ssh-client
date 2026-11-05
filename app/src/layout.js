@@ -201,5 +201,8 @@
   try { start = localStorage.getItem(KEY) === '1'; } catch {}
   setCollapsed(start, false);
 
-  window.Layout = { fitToolbar: queueFit, setSidebarCollapsed: setCollapsed, isSidebarCollapsed: isCollapsed };
+  // Knopf der Werkzeugleiste auslösen – auch wenn er gerade im „⋯“-Menü steckt (z. B. aus der Befehlspalette)
+  const clickTool = el => { if (!el) return; if (el.getClientRects().length) el.click(); else clickAt(el); };
+
+  window.Layout = { fitToolbar: queueFit, setSidebarCollapsed: setCollapsed, isSidebarCollapsed: isCollapsed, clickTool };
 })();

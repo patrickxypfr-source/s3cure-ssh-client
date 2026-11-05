@@ -57,6 +57,7 @@ contextBridge.exposeInMainWorld('myssh', {
   transferList: () => ipcRenderer.invoke('transfer:list'),
   snippetsLoad: () => ipcRenderer.invoke('snippets:load'),
   snippetsSave: (key, profile) => ipcRenderer.invoke('snippets:save', key, profile),
+  snippetsSaveGlobal: profile => ipcRenderer.invoke('snippets:saveGlobal', profile),
   snippetsMigrate: profiles => ipcRenderer.invoke('snippets:migrate', profiles),
   snippetsExport: (name, groups) => ipcRenderer.invoke('snippets:export', name, groups),
   snippetsImport: () => ipcRenderer.invoke('snippets:import'),
@@ -210,4 +211,18 @@ contextBridge.exposeInMainWorld('s3sync', {
   extAnswer: (reqId, value) => ipcRenderer.send('extedit:answer', reqId, value),
   readLocal: file => ipcRenderer.invoke('compare:readLocal', file),
   pickLocal: defaultPath => ipcRenderer.invoke('compare:pickLocal', defaultPath),
+});
+
+// Server-Übersicht: Dienste, Docker, System (app/lib/dashboard.js, Oberfläche: src/dashboard.js)
+contextBridge.exposeInMainWorld('s3dash', {
+  probe: tabId => ipcRenderer.invoke('dash:probe', tabId),
+  services: tabId => ipcRenderer.invoke('dash:services', tabId),
+  serviceAction: (tabId, unit, action) => ipcRenderer.invoke('dash:serviceAction', tabId, unit, action),
+  serviceLogs: (tabId, unit, lines) => ipcRenderer.invoke('dash:serviceLogs', tabId, unit, lines),
+  containers: tabId => ipcRenderer.invoke('dash:containers', tabId),
+  containerAction: (tabId, id, action) => ipcRenderer.invoke('dash:containerAction', tabId, id, action),
+  containerLogs: (tabId, id, lines) => ipcRenderer.invoke('dash:containerLogs', tabId, id, lines),
+  system: tabId => ipcRenderer.invoke('dash:system', tabId),
+  bigDirs: (tabId, dir, useSudo) => ipcRenderer.invoke('dash:bigDirs', tabId, dir, useSudo),
+  cancel: tabId => ipcRenderer.invoke('dash:cancel', tabId),
 });

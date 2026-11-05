@@ -40,6 +40,7 @@ const snippetStore = snippets.register(ipcMain, { configDir: CONFIG_DIR, dialog,
 // Lesezeichen für Ordner (app/lib/bookmarks.js, Oberfläche: src/file-nav.js)
 const bookmarks = require('./lib/bookmarks').register({ ipcMain, configDir: CONFIG_DIR });
 monitor.register(ipcMain, sessions);
+require('./lib/dashboard').register(ipcMain, sessions); // Übersicht: Dienste, Docker, System
 
 // ---------- gespeicherte Verbindungen ----------
 

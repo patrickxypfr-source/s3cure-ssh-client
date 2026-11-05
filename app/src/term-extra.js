@@ -1,6 +1,6 @@
 // S3cure SSH Client – Terminal-Extras
 // Einstellungen fürs Terminal, Schriftgröße per Tastatur, Suche, anklickbare Links,
-// geteilte Ansicht, Mitschnitt und „An alle senden“.
+// geteilte Ansicht (bis zu 4 Terminals: nebeneinander, untereinander oder 2×2), Mitschnitt und „An alle senden“.
 // Eingehängt in renderer.js über TermExtra.attach/detach/update.
 (() => {
   const X = window.mysshTerm;
@@ -11,6 +11,9 @@
     record: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z M12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z',
     broadcast: 'M12 12h.01 M8.5 8.5a5 5 0 0 0 0 7 M15.5 8.5a5 5 0 0 1 0 7 M5.6 5.6a9 9 0 0 0 0 12.8 M18.4 5.6a9 9 0 0 1 0 12.8',
     chevUp: 'M7 14l5-5 5 5',
+    layoutCols: 'M5 4.5h14A2.5 2.5 0 0 1 21.5 7v10a2.5 2.5 0 0 1-2.5 2.5H5A2.5 2.5 0 0 1 2.5 17V7A2.5 2.5 0 0 1 5 4.5z M9 4.5v15 M15 4.5v15',
+    layoutRows: 'M5 4.5h14A2.5 2.5 0 0 1 21.5 7v10a2.5 2.5 0 0 1-2.5 2.5H5A2.5 2.5 0 0 1 2.5 17V7A2.5 2.5 0 0 1 5 4.5z M2.5 12h19',
+    layoutGrid: 'M5 4.5h14A2.5 2.5 0 0 1 21.5 7v10a2.5 2.5 0 0 1-2.5 2.5H5A2.5 2.5 0 0 1 2.5 17V7A2.5 2.5 0 0 1 5 4.5z M12 4.5v15 M2.5 12h19',
   });
 
   // ---------- Einstellungen ----------
@@ -73,19 +76,20 @@
   // ---------- Zustand ----------
 
   const xs = new Map();        // Tab-ID -> Extras des Tabs
-  const splitById = new Map(); // Split-ID -> Split
+  const splitById = new Map(); // Split-ID -> zusätzliches Terminal
+  const MAX_PANES = 4;         // Haupt-Terminal + 3 weitere
   let broadcast = false;
 
   function* allTerms() {
     for (const x of xs.values()) {
       yield { term: x.tab.term, fit: x.tab.fit };
-      if (x.split) yield { term: x.split.term, fit: x.split.fit };
+      for (const s of x.splits) yield { term: s.term, fit: s.fit };
     }
   }
 
   function fitTab(x) {
     try { x.tab.fit.fit(); } catch {}
-    if (x.split) try { x.split.fit.fit(); } catch {}
+    for (const s of x.splits) try { s.fit.fit(); } catch {}
   }
 
   function applyAll() {
@@ -95,7 +99,7 @@
   }
   Settings.onChange((_v, changed) => { if (changed.some(k => k.startsWith('term.'))) applyAll(); });
   darkQuery.addEventListener('change', () => {
-    for (const x of xs.values()) { if (x.split) x.split.term.options.theme = termTheme(); if (x.searchQuery) runSearch(x, 0); }
+    for (const x of xs.values()) { for (const s of x.splits) s.term.options.theme = termTheme(); if (x.searchQuery) runSearch(x, 0); }
   });
 
   // ---------- Gemeinsame Einrichtung pro Terminal ----------
@@ -132,11 +136,11 @@
     // An alle senden
     term.onData(d => { if (broadcast && typed(d)) sendToOthers(d, selfId); });
 
-    // Welches Terminal im Tab zuletzt benutzt wurde (für Suche)
+    // Welches Terminal im Tab zuletzt benutzt wurde (für Suche, Schließen, Fokus-Rahmen)
     term.textarea?.addEventListener('focus', () => {
       x.focus = kind;
       x.panes.main.classList.toggle('xt-focus', kind === 'main');
-      if (x.split) x.split.el.classList.toggle('xt-focus', kind === 'split');
+      for (const s of x.splits) s.el.classList.toggle('xt-focus', s.id === kind);
     });
     return search;
   }
@@ -151,7 +155,9 @@
     tab.el.appendChild(pane);
     pane.appendChild(tab.term.element);
 
-    const x = { tab, panes: { main: pane }, split: null, focus: 'main', log: null, searchTarget: 'main', searchQuery: '' };
+    // splits: weitere Terminals; layout: vom Nutzer gewählte Anordnung (null = automatisch); sizes: Trenner-Positionen
+    const x = { tab, panes: { main: pane }, splits: [], layout: null, sizes: { cols: [], rows: [], grid: { x: 0.5, y: 0.5 } }, dividers: [],
+      focus: 'main', log: null, searchTarget: 'main', searchQuery: '' };
     xs.set(tab.id, x);
     x.search = setupTerm(x, tab.term, pane, tab.id, 'main');
     x.ro = new ResizeObserver(() => requestAnimationFrame(() => fitTab(x)));
@@ -163,7 +169,7 @@
     const x = xs.get(tab.id);
     if (!x) return;
     if (x.log) X.logStop(tab.id);
-    if (x.split) { X.splitClose(x.split.id); removeSplit(x); }
+    for (const s of [...x.splits]) { X.splitClose(s.id); removeSplit(x, s); }
     x.ro.disconnect();
     xs.delete(tab.id);
     updateBroadcastBadge();
@@ -174,7 +180,7 @@
   const tools = document.createElement('div');
   tools.id = 'term-tools';
   tools.innerHTML = `
-    <button class="btn ghost" data-t="split" data-icon="split" title="Zweites Terminal daneben öffnen (${IS_MAC ? 'Cmd+D' : 'Strg+Umschalt+D'})"><span class="lbl">Teilen</span></button>
+    <button class="btn ghost" data-t="split" data-icon="split" title="Weiteres Terminal daneben öffnen – bis zu ${MAX_PANES} (${IS_MAC ? 'Cmd+D' : 'Strg+Umschalt+D'})"><span class="lbl">Teilen</span></button>
     <button class="btn ghost" data-t="log" data-icon="record" title="Alles, was im Terminal passiert, als Textdatei mitschreiben"><span class="lbl">Mitschnitt</span></button>
     <button class="btn ghost" data-t="all" data-icon="broadcast" title="Tastatureingaben gleichzeitig an alle verbundenen Terminals schicken"><span class="lbl">An alle</span></button>`;
   applyIcons(tools);
@@ -187,8 +193,12 @@
     const x = tab && xs.get(tab.id);
     if (!x) return;
     const open = tab.state === 'open';
-    tbtn('split').classList.toggle('on', !!x.split);
-    tbtn('split').disabled = !open && !x.split;
+    const n = x.splits.length;
+    tbtn('split').classList.toggle('on', n > 0);
+    tbtn('split').disabled = !open && !n;
+    tbtn('split').title = n
+      ? `${n + 1} Terminals – klicken für Anordnung, weiteres Terminal oder Schließen`
+      : `Weiteres Terminal daneben öffnen – bis zu ${MAX_PANES} (${IS_MAC ? 'Cmd+D' : 'Strg+Umschalt+D'})`;
     tbtn('log').classList.toggle('rec', !!x.log);
     tbtn('log').disabled = !open && !x.log;
     tbtn('log').lastChild.textContent = x.log ? 'Mitschnitt stoppen' : 'Mitschnitt';
@@ -196,7 +206,7 @@
   }
 
   const activeX = () => xs.get(activeId);
-  tbtn('split').addEventListener('click', () => { const x = activeX(); if (x) toggleSplit(x); });
+  tbtn('split').addEventListener('click', e => { const x = activeX(); if (x) splitClick(x, e.currentTarget); });
   tbtn('log').addEventListener('click', () => { const x = activeX(); if (x) toggleLog(x); });
   tbtn('all').addEventListener('click', () => setBroadcast(!broadcast));
 
@@ -244,9 +254,11 @@
     };
   }
 
+  const splitOf = (x, id) => x.splits.find(s => s.id === id) || null;
   function searchAddonFor(x) {
-    return x.searchTarget === 'split' && x.split ? x.split.search : x.search;
+    return splitOf(x, x.searchTarget)?.search || x.search;
   }
+  const termFor = (x, id) => splitOf(x, id)?.term || x.tab.term;
 
   function buildSearchBar(x) {
     const bar = document.createElement('div');
@@ -294,10 +306,10 @@
 
   function openSearch(x) {
     if (!x.searchBar) buildSearchBar(x);
-    const target = x.split && x.focus === 'split' ? 'split' : 'main';
+    const target = splitOf(x, x.focus) ? x.focus : 'main';
     if (target !== x.searchTarget) { searchAddonFor(x).clearDecorations(); x.searchTarget = target; }
     x.searchBar.hidden = false;
-    const term = target === 'split' ? x.split.term : x.tab.term;
+    const term = termFor(x, target);
     if (term.hasSelection() && !term.getSelection().includes('\n')) { x.searchInput.value = x.searchQuery = term.getSelection(); }
     x.searchInput.focus();
     x.searchInput.select();
@@ -308,104 +320,244 @@
     if (!x.searchBar) return;
     x.searchBar.hidden = true;
     searchAddonFor(x).clearDecorations();
-    (x.searchTarget === 'split' && x.split ? x.split.term : x.tab.term).focus();
+    termFor(x, x.searchTarget).focus();
   }
 
-  // ---------- Geteilte Ansicht ----------
+  // ---------- Geteilte Ansicht (Raster) ----------
+  // Haupt-Terminal + bis zu 3 weitere Shells auf derselben Verbindung. Anordnung:
+  //   cols  nebeneinander (Standard bei 2 Terminals, wie bisher)
+  //   rows  untereinander
+  //   grid  2×2 (Standard ab 3 Terminals; bei 3 geht das dritte über die ganze Breite)
+  // Die Felder liegen absolut im Tab; Trenner verschieben die Anteile, Doppelklick = gleich groß.
+
+  const GAP = 14;
 
   function baseTermOptions() {
     return { lineHeight: 1.15, macOptionIsMeta: true, theme: termTheme(), ...termOptions() };
   }
 
-  async function openSplit(x) {
+  function modeOf(x) {
+    const n = x.splits.length + 1;
+    const want = x.layout || (n >= 3 ? 'grid' : 'cols');
+    return want === 'grid' && n < 3 ? 'cols' : want;
+  }
+
+  // Anteile für nebeneinander/untereinander: bei neuer Anzahl gleichmäßig verteilen
+  function fractions(x, mode, n) {
+    let f = x.sizes[mode];
+    if (f.length !== n) f = x.sizes[mode] = Array(n).fill(1 / n);
+    return f;
+  }
+
+  // Rand innen um den halben Abstand einrücken, außen bündig
+  function place(el, l, t, w, h) {
+    const e = 1e-6;
+    Object.assign(el.style, {
+      left: `calc(${l * 100}% + ${l > e ? GAP / 2 : 0}px)`,
+      top: `calc(${t * 100}% + ${t > e ? GAP / 2 : 0}px)`,
+      right: `calc(${(1 - l - w) * 100}% + ${l + w < 1 - e ? GAP / 2 : 0}px)`,
+      bottom: `calc(${(1 - t - h) * 100}% + ${t + h < 1 - e ? GAP / 2 : 0}px)`,
+    });
+  }
+
+  // pos(): { at, from, to } als Anteile – wird bei jedem Neusetzen frisch berechnet
+  function addDivider(x, vertical, pos, onMove, onReset) {
+    const d = document.createElement('div');
+    d.className = 'xt-divider ' + (vertical ? 'xt-v' : 'xt-h');
+    d.title = 'Ziehen zum Verschieben, Doppelklick = gleich groß';
+    d.reposition = () => {
+      const { at, from, to } = pos();
+      Object.assign(d.style, vertical
+        ? { left: `calc(${at * 100}% - ${GAP / 2}px)`, top: `${from * 100}%`, bottom: `${(1 - to) * 100}%` }
+        : { top: `calc(${at * 100}% - ${GAP / 2}px)`, left: `${from * 100}%`, right: `${(1 - to) * 100}%` });
+    };
+    d.reposition();
+    const relayout = () => { layoutPanes(x); requestAnimationFrame(() => fitTab(x)); };
+    d.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      d.setPointerCapture(e.pointerId);
+      d.classList.add('drag');
+      const move = ev => {
+        const r = x.tab.el.getBoundingClientRect();
+        onMove(vertical ? (ev.clientX - r.left) / r.width : (ev.clientY - r.top) / r.height);
+        relayout();
+      };
+      const up = () => {
+        d.classList.remove('drag');
+        d.removeEventListener('pointermove', move);
+        d.removeEventListener('pointerup', up);
+        d.removeEventListener('pointercancel', up);
+      };
+      d.addEventListener('pointermove', move);
+      d.addEventListener('pointerup', up);
+      d.addEventListener('pointercancel', up);
+    });
+    d.addEventListener('dblclick', () => { onReset(); relayout(); });
+    x.tab.el.appendChild(d);
+    x.dividers.push(d);
+  }
+
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  function layoutPanes(x) {
+    const el = x.tab.el;
+    const panes = [x.panes.main, ...x.splits.map(s => s.el)];
+    const n = panes.length;
+    const mode = n > 1 ? modeOf(x) : null;
+    el.classList.toggle('xt-split', n > 1);
+    // Gleiche Anordnung wie vorher (z. B. beim Ziehen): Trenner nur verschieben, nicht neu anlegen
+    const shape = `${mode}:${n}`;
+    const rebuild = x.shape !== shape;
+    x.shape = shape;
+    if (rebuild) { for (const d of x.dividers) d.remove(); x.dividers = []; }
+    if (n === 1) {
+      delete el.dataset.layout;
+      for (const k of ['left', 'top', 'right', 'bottom']) panes[0].style[k] = '';
+      return;
+    }
+    el.dataset.layout = mode;
+
+    if (mode === 'grid') {
+      const g = x.sizes.grid;
+      place(panes[0], 0, 0, g.x, g.y);
+      place(panes[1], g.x, 0, 1 - g.x, g.y);
+      if (n === 3) place(panes[2], 0, g.y, 1, 1 - g.y);
+      else { place(panes[2], 0, g.y, g.x, 1 - g.y); place(panes[3], g.x, g.y, 1 - g.x, 1 - g.y); }
+      if (rebuild) {
+        addDivider(x, true, () => ({ at: g.x, from: 0, to: n === 3 ? g.y : 1 }), p => { g.x = clamp(p, 0.15, 0.85); }, () => { g.x = 0.5; });
+        addDivider(x, false, () => ({ at: g.y, from: 0, to: 1 }), p => { g.y = clamp(p, 0.15, 0.85); }, () => { g.y = 0.5; });
+      }
+    } else {
+      const vertical = mode === 'cols';
+      const f = fractions(x, mode, n);
+      let acc = 0;
+      panes.forEach((p, i) => {
+        if (vertical) place(p, acc, 0, f[i], 1); else place(p, 0, acc, 1, f[i]);
+        acc += f[i];
+      });
+      if (rebuild) {
+        const startOf = i => x.sizes[mode].slice(0, i).reduce((a, b) => a + b, 0);
+        for (let i = 0; i < n - 1; i++) {
+          addDivider(x, vertical, () => ({ at: startOf(i + 1), from: 0, to: 1 }), pos => {
+            const fr = x.sizes[mode];
+            const start = startOf(i), end = start + fr[i] + fr[i + 1];
+            const at = clamp(pos, start + 0.1, end - 0.1);
+            fr[i] = at - start;
+            fr[i + 1] = end - at;
+          }, () => { x.sizes[mode] = Array(n).fill(1 / n); });
+        }
+      }
+    }
+    for (const d of x.dividers) d.reposition();
+  }
+
+  async function addPane(x) {
     const tab = x.tab;
-    if (x.split || tab.state !== 'open') return;
+    if (tab.state !== 'open') return;
+    if (x.splits.length + 1 >= MAX_PANES) { showToast(`Höchstens ${MAX_PANES} Terminals pro Tab`); return; }
     const id = crypto.randomUUID();
-    const divider = document.createElement('div');
-    divider.className = 'xt-divider';
-    divider.title = 'Ziehen zum Verschieben, Doppelklick = Mitte';
     const el = document.createElement('div');
     el.className = 'xt-pane xt-second';
-    tab.el.classList.add('xt-split');
-    tab.el.append(divider, el);
+    const close = document.createElement('button');
+    close.className = 'mini-btn xt-pane-close';
+    close.type = 'button';
+    close.title = 'Dieses Terminal schließen';
+    close.innerHTML = icon('close');
+    tab.el.appendChild(el);
 
     const term = new Terminal(baseTermOptions());
     const fit = new FitAddon.FitAddon();
     term.loadAddon(fit);
     term.open(el);
-    const split = { id, term, fit, el, divider, ready: false };
-    x.split = split;
+    el.appendChild(close);
+    const split = { id, term, fit, el, ready: false };
+    x.splits.push(split);
     splitById.set(id, split);
-    split.search = setupTerm(x, term, el, id, 'split');
+    split.search = setupTerm(x, term, el, id, id);
     if (!IS_MAC) addWindowsClipboard(term, el);
     term.onData(d => { if (split.ready) X.splitWrite(id, d); });
     term.onResize(({ cols, rows }) => { if (split.ready) X.splitResize(id, cols, rows); });
-    dragDivider(x, divider);
+    close.addEventListener('mousedown', e => e.stopPropagation());
+    close.addEventListener('click', () => closePane(x, split));
+    layoutPanes(x);
     fitTab(x);
     update(tab);
-    term.write(`\x1b[90mÖffne zweites Terminal …\x1b[0m\r\n`);
+    term.write(`\x1b[90mÖffne weiteres Terminal …\x1b[0m\r\n`);
     try {
       await X.splitOpen(tab.id, id, term.cols, term.rows);
-      if (x.split !== split) { X.splitClose(id); return; } // inzwischen wieder geschlossen
+      if (!x.splits.includes(split)) { X.splitClose(id); return; } // inzwischen wieder geschlossen
       split.ready = true;
       term.reset();
+      fitTab(x);
+      X.splitResize(id, term.cols, term.rows);
       term.focus();
     } catch (err) {
-      removeSplit(x);
+      removeSplit(x, split);
       showError(err);
     }
     updateBroadcastBadge();
   }
 
-  function removeSplit(x) {
-    const s = x.split;
-    if (!s) return;
-    if (x.searchTarget === 'split') { if (x.searchBar) x.searchBar.hidden = true; x.searchTarget = 'main'; }
-    x.split = null;
+  function removeSplit(x, s) {
+    if (!s || !x.splits.includes(s)) return;
+    if (x.searchTarget === s.id) { if (x.searchBar) x.searchBar.hidden = true; x.searchTarget = 'main'; }
+    x.splits = x.splits.filter(o => o !== s);
     splitById.delete(s.id);
     s.term.dispose();
-    s.divider.remove();
     s.el.remove();
-    x.tab.el.classList.remove('xt-split');
-    x.panes.main.classList.remove('xt-focus');
-    x.focus = 'main';
-    fitTab(x);
-    if (activeId === x.tab.id) { update(x.tab); if (x.tab.view === 'terminal') x.tab.term.focus(); }
+    layoutPanes(x);
+    const focusNext = x.focus === s.id;
+    if (focusNext || !x.splits.length) { x.focus = 'main'; x.panes.main.classList.toggle('xt-focus', x.splits.length > 0); }
+    if (!x.splits.length) x.panes.main.classList.remove('xt-focus');
+    requestAnimationFrame(() => fitTab(x));
+    if (activeId === x.tab.id) { update(x.tab); if (x.tab.view === 'terminal' && focusNext) x.tab.term.focus(); }
     updateBroadcastBadge();
   }
 
-  async function toggleSplit(x) {
-    if (!x.split) return openSplit(x);
-    const ok = await askLocal({ kind: 'confirm', title: 'Zweites Terminal schließen?', message: 'Was dort gerade läuft, wird beendet.', okLabel: 'Schließen', danger: true });
-    if (!ok || !x.split) return;
-    X.splitClose(x.split.id);
-    removeSplit(x);
+  async function closePane(x, s) {
+    const ok = await askLocal({ kind: 'confirm', title: 'Terminal schließen?', message: 'Was in diesem Terminal gerade läuft, wird beendet.', okLabel: 'Schließen', danger: true });
+    if (!ok || !x.splits.includes(s)) return;
+    X.splitClose(s.id);
+    removeSplit(x, s);
   }
 
-  function dragDivider(x, divider) {
-    const el = x.tab.el;
-    const setPct = pct => { el.style.setProperty('--xt-split', Math.max(15, Math.min(85, pct)) + '%'); requestAnimationFrame(() => fitTab(x)); };
-    divider.addEventListener('pointerdown', e => {
-      e.preventDefault();
-      divider.setPointerCapture(e.pointerId);
-      divider.classList.add('drag');
-      const move = ev => { const r = el.getBoundingClientRect(); setPct((ev.clientX - r.left) / r.width * 100); };
-      const up = () => {
-        divider.classList.remove('drag');
-        divider.removeEventListener('pointermove', move);
-        divider.removeEventListener('pointerup', up);
-        divider.removeEventListener('pointercancel', up);
-      };
-      divider.addEventListener('pointermove', move);
-      divider.addEventListener('pointerup', up);
-      divider.addEventListener('pointercancel', up);
-    });
-    divider.addEventListener('dblclick', () => setPct(50));
+  async function closeAllPanes(x) {
+    const n = x.splits.length;
+    if (!n) return;
+    const ok = await askLocal({ kind: 'confirm', title: n === 1 ? 'Zweites Terminal schließen?' : `${n} zusätzliche Terminals schließen?`, message: 'Was dort gerade läuft, wird beendet. Das Haupt-Terminal bleibt offen.', okLabel: 'Schließen', danger: true });
+    if (!ok) return;
+    for (const s of [...x.splits]) { X.splitClose(s.id); removeSplit(x, s); }
+  }
+
+  function setLayout(x, mode) {
+    x.layout = mode;
+    layoutPanes(x);
+    requestAnimationFrame(() => fitTab(x));
+    termFor(x, x.focus).focus();
+  }
+
+  // Klick auf „Teilen“: ohne weitere Terminals wie bisher eines daneben öffnen, sonst Menü
+  function splitClick(x, btn) {
+    if (!x.splits.length) return addPane(x);
+    const n = x.splits.length + 1;
+    const mode = modeOf(x);
+    const cur = m => (mode === m ? 'xt-cur' : '');
+    const entries = [];
+    if (n < MAX_PANES) entries.push(['Weiteres Terminal öffnen', () => addPane(x), '', 'plus'], null);
+    entries.push(['Nebeneinander', () => setLayout(x, 'cols'), cur('cols'), 'layoutCols']);
+    entries.push(['Untereinander', () => setLayout(x, 'rows'), cur('rows'), 'layoutRows']);
+    if (n >= 3) entries.push(['Raster 2×2', () => setLayout(x, 'grid'), cur('grid'), 'layoutGrid']);
+    entries.push(null);
+    const focused = splitOf(x, x.focus);
+    if (focused) entries.push(['Aktives Terminal schließen …', () => closePane(x, focused), '', 'close']);
+    entries.push([n === 2 ? 'Zweites Terminal schließen …' : 'Alle zusätzlichen schließen …', () => closeAllPanes(x), 'danger', 'close']);
+    const r = btn.getBoundingClientRect();
+    openMenu(entries, r.left, r.bottom + 6);
   }
 
   X.onSplitData((id, d) => splitById.get(id)?.term.write(d));
   X.onSplitClosed(id => {
-    for (const x of xs.values()) if (x.split?.id === id) removeSplit(x);
+    for (const x of xs.values()) { const s = splitOf(x, id); if (s) removeSplit(x, s); }
   });
 
   // ---------- Mitschnitt ----------
@@ -449,7 +601,7 @@
     const list = [];
     for (const x of xs.values()) {
       if (x.tab.state === 'open') list.push([x.tab.id, d => api.write(x.tab.id, d)]);
-      if (x.split?.ready) list.push([x.split.id, d => X.splitWrite(x.split.id, d)]);
+      for (const s of x.splits) if (s.ready) list.push([s.id, d => X.splitWrite(s.id, d)]);
     }
     return list;
   }
@@ -483,15 +635,19 @@
     const mod = IS_MAC ? e.metaKey && !e.ctrlKey : e.ctrlKey && e.shiftKey;
     const hit = () => { e.preventDefault(); e.stopPropagation(); };
     if (mod && !e.altKey && key === 'f') { hit(); openSearch(x); return; }
-    if (mod && !e.altKey && key === 'd') { hit(); toggleSplit(x); return; }
+    if (mod && !e.altKey && key === 'd') { hit(); addPane(x); return; }
     const searching = x.searchBar && !x.searchBar.hidden && x.searchQuery;
     if (searching && ((IS_MAC && e.metaKey && key === 'g') || e.key === 'F3')) { hit(); runSearch(x, e.shiftKey ? -1 : 1); }
   }, true);
 
   window.TermExtra = {
-    attach, detach, update, setBroadcast, openSearch: () => activeX() && openSearch(activeX()),
-    // Für session.js: geteiltes Terminal merken und wieder öffnen
-    isSplit: tab => !!xs.get(tab.id)?.split,
-    openSplit: tab => { const x = xs.get(tab.id); return x ? openSplit(x) : undefined; },
+    attach, detach, update, setBroadcast,
+    toggleBroadcast: () => setBroadcast(!broadcast),
+    openSearch: () => activeX() && openSearch(activeX()),
+    addPane: () => activeX() && addPane(activeX()),
+    paneCount: tab => (xs.get(tab?.id)?.splits.length || 0) + 1,
+    // Für session.js: geteiltes Terminal merken und wieder öffnen (Raster: mindestens ein Zusatzfeld)
+    isSplit: tab => (xs.get(tab?.id)?.splits.length || 0) > 0,
+    openSplit: tab => { const x = xs.get(tab.id); return x && !x.splits.length ? addPane(x) : undefined; },
   };
 })();

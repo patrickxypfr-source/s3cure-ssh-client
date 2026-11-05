@@ -1,7 +1,8 @@
 // Eigene Befehlsknöpfe pro Verbindung – gespeichert in ~/.myssh/snippets.json
 //
 // Aufbau der Datei:
-// { version: 1, migrated: true, iconsMigrated: true, profiles: { "<Verbindung>": { groups: [ { id, items: [...] } ] } } }
+// { version: 1, migrated: true, iconsMigrated: true, profiles: { "<Verbindung>": { groups: [ { id, items: [...] } ] } },
+//   global: { groups: [...] } }   <- Knöpfe „Für alle Server“ (bei jeder Verbindung sichtbar)
 // Eintrag:  { id, type: 'button', label, icon, cmd, tip, confirm, danger, live, inputs: { name: { prompt, kind, value } } }
 // Menü:     { id, type: 'menu', label, icon, tip, confirm, danger, items: [Einträge] }
 // icon: Name aus app/src/icons.js oder '' (kein Icon)
@@ -132,9 +133,10 @@ function createStore(configDir) {
         data = { migrated: true, iconsMigrated: true, profiles: {} };
       }
     }
-    const out = { version: 1, migrated: !!(data && data.migrated), iconsMigrated: true, profiles: {} };
+    const out = { version: 1, migrated: !!(data && data.migrated), iconsMigrated: true, profiles: {}, global: { groups: [] } };
     const profiles = data && data.profiles && typeof data.profiles === 'object' ? data.profiles : {};
     for (const [key, prof] of Object.entries(profiles)) out.profiles[key] = { groups: cleanGroups(prof && prof.groups) };
+    if (data && data.global && typeof data.global === 'object') out.global = { groups: cleanGroups(data.global.groups) };
     // Datei von vor den Icons: einmal nachrüsten und gleich speichern (danach nie wieder)
     if (data && !data.iconsMigrated) {
       for (const prof of Object.values(out.profiles)) addTemplateIcons(prof.groups);
@@ -159,6 +161,13 @@ function createStore(configDir) {
       data.profiles[str(key, 300)] = { groups };
       save(data);
       return data.profiles[key];
+    },
+    // Knöpfe „Für alle Server“
+    saveGlobal(profile) {
+      const data = load();
+      data.global = { groups: cleanGroups(profile && profile.groups) };
+      save(data);
+      return data.global;
     },
     // Einmalige Übernahme der alten s3-Leiste: nur Verbindungen ohne eigene Knöpfe
     migrate(profiles) {
@@ -187,6 +196,7 @@ function register(ipcMain, { configDir, dialog, getWin }) {
   const store = createStore(configDir);
   ipcMain.handle('snippets:load', () => store.load());
   ipcMain.handle('snippets:save', (_e, key, profile) => store.saveProfile(key, profile));
+  ipcMain.handle('snippets:saveGlobal', (_e, profile) => store.saveGlobal(profile));
   ipcMain.handle('snippets:migrate', (_e, profiles) => store.migrate(profiles));
 
   ipcMain.handle('snippets:export', async (_e, name, groups) => {

@@ -243,6 +243,7 @@ function updateToolbar() {
   $('#toolbar').hidden = !tab;
   window.tunnelUi?.setTab(sshTab || null);
   window.TermExtra?.update(tab);
+  window.Dashboard?.update(tab); // Ansicht „Übersicht“ (dashboard.js)
   if (!tab) return;
   const texts = {
     connecting: 'Verbinde …',
@@ -398,6 +399,7 @@ function closeTab(id, force = false) {
   window.FileColumns?.detach(tab);
   tab.files.nav?.detach();
   window.SyncTools?.detach(tab);
+  window.Dashboard?.detach(tab);
   tab.term.dispose();
   tab.el.remove();
   tab.files.el.remove();

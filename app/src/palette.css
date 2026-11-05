@@ -1,0 +1,49 @@
+/* ---------- Befehlspalette (palette.js) ---------- */
+
+#palette {
+  position: fixed; inset: 0; z-index: 12;
+  display: flex; justify-content: center; align-items: flex-start; padding: 12vh 16px 16px;
+  background: rgba(10, 10, 12, .28);
+  animation: fade .1s ease;
+}
+.pal {
+  width: 620px; max-width: 100%; max-height: 70vh; display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: 14px;
+  box-shadow: var(--shadow-lg); overflow: hidden; animation: pop .1s ease;
+}
+.pal-head { display: flex; align-items: center; gap: 10px; padding: 0 14px; border-bottom: 1px solid var(--border); }
+.pal-ic { display: flex; color: var(--faint); }
+.pal-ic svg.ic { width: 18px; height: 18px; }
+.pal-input {
+  flex: 1; height: 50px; border: none !important; outline: none; box-shadow: none !important;
+  background: transparent !important; color: var(--text); font: 15px/1 inherit; font-family: inherit; padding: 0 !important;
+}
+#palette kbd {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px;
+  border: 1px solid var(--border-strong); border-radius: 5px; background: var(--bg);
+  font: 600 10.5px/1 inherit; font-family: inherit; color: var(--muted);
+}
+.pal-list { overflow-y: auto; padding: 6px; min-height: 0; }
+.pal-section { padding: 10px 10px 4px; font-size: 11px; font-weight: 650; color: var(--faint); text-transform: uppercase; letter-spacing: .4px; }
+.pal-row {
+  display: flex; align-items: center; gap: 11px; padding: 7px 10px; border-radius: 8px; cursor: default; min-width: 0;
+}
+.pal-row.sel { background: var(--accent-soft); }
+.pal-row-ic { display: flex; color: var(--muted); }
+.pal-row.sel .pal-row-ic { color: var(--accent); }
+.pal-row.danger .pal-label { color: var(--accent); }
+.pal-text { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; }
+.pal-label { font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; max-width: 60%; }
+.pal-label mark { background: none; color: var(--accent); font-weight: 700; }
+.pal-detail { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.pal-tag { flex-shrink: 0; font-size: 11px; color: var(--faint); }
+.pal-empty { padding: 26px; text-align: center; color: var(--muted); }
+.pal-foot {
+  display: flex; align-items: center; gap: 14px; padding: 8px 14px; border-top: 1px solid var(--border);
+  color: var(--faint); font-size: 11.5px; white-space: nowrap; overflow: hidden;
+}
+.pal-foot > span { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Knopf rechts in der Tab-Leiste */
+#pal-btn { align-self: center; flex-shrink: 0; margin-left: auto; width: 28px; height: 28px; -webkit-app-region: no-drag; }
+#pal-btn svg.ic { width: 15px; height: 15px; }

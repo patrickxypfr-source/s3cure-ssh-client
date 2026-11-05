@@ -1,0 +1,653 @@
+// S3cure SSH Client – Server-Übersicht (dritte Ansicht neben Terminal und Dateien)
+// System (CPU, RAM, Platten, Prozesse, größte Ordner), Dienste (systemd) und Docker-Container.
+// Daten kommen über eigene exec-Kanäle (app/lib/dashboard.js) – nichts wird ins Terminal getippt.
+// Was es auf dem Server nicht gibt (kein systemd, kein Docker), wird ausgeblendet.
+// Eingehängt in renderer.js über Dashboard.update(tab) und Dashboard.detach(tab).
+window.Dashboard = (() => {
+  const D = window.s3dash;
+  const REFRESH = 15000; // Dienste/Container neu laden, solange sichtbar
+  const states = new Map(); // Tab-ID -> Zustand der Ansicht
+
+  // ---------- Kleine Helfer ----------
+
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  const errMsg = err => String(err?.message || err).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
+  const pct = (used, total) => (total ? Math.max(0, Math.min(100, (100 * used) / total)) : 0);
+  const level = p => (p >= 90 ? 'crit' : p >= 75 ? 'warn' : '');
+  const fmtPct = p => `${Math.round(p)} %`;
+  const num = (n, d = 2) => n.toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const shortUnit = n => n.replace(/\.service$/, '');
+
+  function uptimeLong(sec) {
+    const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60);
+    const parts = [];
+    if (d) parts.push(`${d} ${d === 1 ? 'Tag' : 'Tage'}`);
+    if (h || d) parts.push(`${h} Std.`);
+    parts.push(`${m} Min.`);
+    return parts.join(', ');
+  }
+
+  function bar(p, cls = '') {
+    const b = el('div', `dash-bar ${level(p)} ${cls}`);
+    const i = el('i');
+    i.style.width = p.toFixed(1) + '%';
+    b.appendChild(i);
+    return b;
+  }
+
+  function actionBtn(text, ic, fn, cls = '') {
+    const b = el('button', 'btn dash-act ' + cls);
+    b.type = 'button';
+    b.innerHTML = icon(ic);
+    b.append(text);
+    b.addEventListener('click', fn);
+    return b;
+  }
+
+  // ---------- Umschalter Terminal / Dateien / Übersicht ----------
+
+  const viewBtn = el('button');
+  viewBtn.dataset.view = 'dash';
+  viewBtn.dataset.icon = 'gauge';
+  viewBtn.textContent = 'Übersicht';
+  viewBtn.title = 'Server-Übersicht: System, Dienste, Docker';
+  viewBtn.insertAdjacentHTML('afterbegin', icon('gauge'));
+  document.getElementById('view-switch').appendChild(viewBtn);
+  viewBtn.addEventListener('click', () => setView('dash'));
+
+  // ---------- Aufbau pro Tab ----------
+
+  function build(tab) {
+    const root = el('div', 'dash');
+    root.hidden = true;
+    root.innerHTML = `
+      <div class="dash-head">
+        <div class="seg dash-nav">
+          <button data-sec="system">${icon('gauge')}System</button>
+          <button data-sec="services">${icon('server')}Dienste<span class="dash-badge" hidden></span></button>
+          <button data-sec="docker">${icon('container')}Docker</button>
+        </div>
+        <span class="spacer"></span>
+        <span class="dash-updated"></span>
+        <button class="round-btn" data-a="refresh" title="Aktualisieren">${icon('refresh')}</button>
+      </div>
+      <div class="dash-body">
+        <div class="dash-msg" hidden></div>
+        <section data-sec="system" hidden></section>
+        <section data-sec="services" hidden></section>
+        <section data-sec="docker" hidden></section>
+      </div>`;
+    document.getElementById('terminals').appendChild(root);
+    const st = {
+      tab, root, sec: 'system', probe: null, probeFor: null, probing: null,
+      services: null, servicesErr: '', containers: null, containersErr: '', system: null,
+      filter: '', status: 'all', dFilter: '', busy: new Set(), du: null, duDir: '/', timer: null, sysTimer: null, updated: null,
+    };
+    for (const b of root.querySelectorAll('.dash-nav [data-sec]')) b.addEventListener('click', () => showSection(st, b.dataset.sec));
+    root.querySelector('[data-a=refresh]').addEventListener('click', () => refresh(st, true));
+    buildSystem(st);
+    buildServices(st);
+    buildDocker(st);
+    return st;
+  }
+
+  const sec = (st, name) => st.root.querySelector(`section[data-sec=${name}]`);
+
+  function showSection(st, name) {
+    st.sec = name;
+    for (const b of st.root.querySelectorAll('.dash-nav [data-sec]')) b.classList.toggle('on', b.dataset.sec === name);
+    for (const s of st.root.querySelectorAll('section[data-sec]')) s.hidden = s.dataset.sec !== name || !st.probe;
+    refresh(st);
+  }
+
+  // ---------- Laden ----------
+
+  async function ensureProbe(st) {
+    const tab = st.tab;
+    if (st.probe && st.probeFor === tab.info) return st.probe;
+    if (st.probing) return st.probing;
+    st.probing = (async () => {
+      try {
+        st.probe = await D.probe(tab.id);
+        st.probeFor = tab.info;
+        st.services = st.containers = st.system = null;
+      } catch (err) {
+        st.probe = null;
+        throw err;
+      } finally { st.probing = null; }
+      return st.probe;
+    })();
+    return st.probing;
+  }
+
+  async function refresh(st, force = false) {
+    const tab = st.tab;
+    if (tab.state !== 'open') { render(st); return; }
+    try { await ensureProbe(st); } catch (err) { st.msg = 'Die Übersicht konnte nicht geladen werden: ' + errMsg(err); render(st); return; }
+    st.msg = '';
+    const p = st.probe;
+    // Abschnitt nicht vorhanden -> auf System zurück
+    if ((st.sec === 'services' && !p.systemd) || (st.sec === 'docker' && !p.docker)) st.sec = 'system';
+    render(st);
+    const jobs = [];
+    if (st.sec === 'system' && (force || !st.system)) jobs.push(loadSystem(st));
+    if (p.systemd && (st.sec === 'services' || force || !st.services)) jobs.push(loadServices(st));
+    if (p.docker && (st.sec === 'docker' || force || !st.containers)) jobs.push(loadContainers(st));
+    await Promise.all(jobs);
+    st.updated = new Date();
+    render(st);
+  }
+
+  async function loadSystem(st) {
+    try { st.system = await D.system(st.tab.id); } catch (err) { st.system = { error: errMsg(err) }; }
+  }
+  async function loadServices(st) {
+    try { const r = await D.services(st.tab.id); st.services = r.list; st.servicesErr = ''; }
+    catch (err) { st.servicesErr = errMsg(err); }
+  }
+  async function loadContainers(st) {
+    try { const r = await D.containers(st.tab.id); st.containers = r.list; st.containersErr = r.hint || ''; }
+    catch (err) { st.containersErr = errMsg(err); }
+  }
+
+  // ---------- Anzeige ----------
+
+  function render(st) {
+    const tab = st.tab;
+    const msg = st.root.querySelector('.dash-msg');
+    const p = st.probe;
+    const connected = tab.state === 'open';
+    msg.textContent = !connected ? (tab.state === 'closed' ? 'Nicht verbunden.' : 'Verbinde …') : st.msg || (!p ? 'Lade Übersicht …' : '');
+    msg.hidden = !msg.textContent;
+    const ok = connected && !!p && !st.msg;
+    const nav = st.root.querySelector('.dash-nav');
+    nav.querySelector('[data-sec=services]').hidden = !p?.systemd;
+    nav.querySelector('[data-sec=docker]').hidden = !p?.docker;
+    nav.hidden = !ok || (!p.systemd && !p.docker); // nur System -> kein Umschalter nötig
+    for (const b of nav.querySelectorAll('[data-sec]')) b.classList.toggle('on', b.dataset.sec === st.sec);
+    for (const s of st.root.querySelectorAll('section[data-sec]')) s.hidden = !ok || s.dataset.sec !== st.sec;
+    st.root.querySelector('[data-a=refresh]').disabled = !connected;
+    st.root.querySelector('.dash-updated').textContent = ok && st.updated ? `Stand ${st.updated.toLocaleTimeString('de-DE')}` : '';
+    const failed = (st.services || []).filter(s => s.active === 'failed').length;
+    const badge = nav.querySelector('.dash-badge');
+    badge.hidden = !failed;
+    badge.textContent = failed;
+    badge.title = `${failed} fehlerhafte${failed === 1 ? 'r' : ''} Dienst${failed === 1 ? '' : 'e'}`;
+    if (!ok) return;
+    if (st.sec === 'system') renderSystem(st);
+    if (st.sec === 'services') renderServices(st);
+    if (st.sec === 'docker') renderDocker(st);
+  }
+
+  // ===================== System =====================
+
+  function buildSystem(st) {
+    const s = sec(st, 'system');
+    s.innerHTML = `
+      <div class="dash-cards"></div>
+      <div class="dash-grid2">
+        <div class="dash-card dash-info"><h3>Server</h3><dl></dl></div>
+        <div class="dash-card dash-disks"><h3>Laufwerke</h3><div class="dash-disk-list"></div></div>
+      </div>
+      <div class="dash-card dash-procs"><h3>Prozesse mit der meisten CPU</h3><table class="dash-table"><thead><tr><th>Programm</th><th>Benutzer</th><th class="r">CPU</th><th class="r">RAM</th><th class="r">PID</th></tr></thead><tbody></tbody></table></div>
+      <div class="dash-card dash-du">
+        <h3>Größte Ordner</h3>
+        <p class="dash-note">Zählt, wie viel Platz die Unterordner belegen. Bei großen Ordnern (z. B. /) kann das eine Weile dauern.</p>
+        <form class="dash-du-form">
+          <div class="field grow"><span class="field-icon">${icon('folder')}</span><input class="dash-du-dir" spellcheck="false" value="/" title="Ordner auf dem Server"></div>
+          <button type="submit" class="btn primary">${icon('hardDrive')}Größe ermitteln</button>
+          <button type="button" class="btn dash-du-cancel" hidden>Abbrechen</button>
+        </form>
+        <div class="dash-du-out"></div>
+      </div>`;
+    const form = s.querySelector('.dash-du-form');
+    const input = s.querySelector('.dash-du-dir');
+    form.addEventListener('submit', e => { e.preventDefault(); runDu(st, input.value.trim() || '/'); });
+    s.querySelector('.dash-du-cancel').addEventListener('click', () => D.cancel(st.tab.id));
+  }
+
+  function card(title, value, sub, p) {
+    const c = el('div', 'dash-card dash-stat' + (p == null ? '' : ' ' + level(p)));
+    c.append(el('div', 'dash-stat-k', title), el('div', 'dash-stat-v', value));
+    if (p != null) c.appendChild(bar(p));
+    if (sub) c.appendChild(el('div', 'dash-stat-sub', sub));
+    return c;
+  }
+
+  // cardsOnly: nur die großen Kennzahlen (Takt alle 2,5 s) – Listen bleiben stehen, damit Klicks nicht verloren gehen
+  function renderSystem(st, cardsOnly = false) {
+    const s = sec(st, 'system');
+    const m = st.tab.monitorStats;
+    const sys = st.system || {};
+    const p = st.probe;
+
+    const cards = s.querySelector('.dash-cards');
+    cards.innerHTML = '';
+    if (m) {
+      const cpu = m.cpu != null ? m.cpu : m.cpuApprox;
+      if (cpu != null) {
+        const cores = m.cpus ? `${m.cpus} ${m.cpus === 1 ? 'Kern' : 'Kerne'}` : '';
+        const load = m.load ? `Last ${m.load.map(x => (x == null ? '–' : num(x))).join(' / ')}` : '';
+        cards.appendChild(card('CPU', (m.cpu == null ? 'ca. ' : '') + fmtPct(cpu), [cores, load].filter(Boolean).join(' · '), cpu));
+      }
+      if (m.mem) {
+        const q = pct(m.mem.used, m.mem.total);
+        cards.appendChild(card('Arbeitsspeicher', fmtPct(q), `${formatSize(m.mem.used)} von ${formatSize(m.mem.total)}${m.swap ? ` · Swap ${formatSize(m.swap.used)}` : ''}`, q));
+      }
+      if (m.disk) {
+        const q = pct(m.disk.used, m.disk.used + m.disk.free);
+        cards.appendChild(card(`Platte (${m.disk.mount || '/'})`, fmtPct(q), `${formatSize(m.disk.free)} frei von ${formatSize(m.disk.total)}`, q));
+      }
+      if (m.uptime != null) cards.appendChild(card('Läuft seit', uptimeLong(m.uptime), m.at ? `Stand ${new Date(m.at).toLocaleTimeString('de-DE')} · alle 5 Sek.` : ''));
+    }
+    cards.hidden = !cards.children.length;
+    if (cardsOnly) return;
+
+    const dl = s.querySelector('.dash-info dl');
+    dl.innerHTML = '';
+    const info = [['Rechnername', m?.hostname], ['Betriebssystem', p.os], ['Kernel', p.kernel || m?.system], ['Prozessor', p.cpuModel], ['Angemeldet als', p.user + (p.root ? ' (Administrator)' : '')],
+      ['Administratorrechte', p.root ? 'ja (root)' : p.sudo === 'nopass' ? 'sudo ohne Passwort' : p.sudo === 'password' ? 'sudo nur mit Passwort' : 'kein sudo']];
+    for (const [k, v] of info) if (v) dl.append(el('dt', '', k), el('dd', '', v));
+
+    const disks = s.querySelector('.dash-disk-list');
+    disks.innerHTML = '';
+    if (sys.error) disks.appendChild(el('p', 'dash-note', sys.error));
+    for (const d of sys.disks || []) {
+      const q = pct(d.used, d.used + d.free);
+      const row = el('div', 'dash-disk');
+      const head = el('div', 'dash-disk-head');
+      head.append(el('span', 'dash-mono', d.mount), el('span', 'dash-muted', `${formatSize(d.free)} frei von ${formatSize(d.total)} · ${fmtPct(q)}`));
+      row.append(head, bar(q));
+      row.title = d.fs;
+      disks.appendChild(row);
+    }
+    s.querySelector('.dash-disks').hidden = !sys.error && !(sys.disks || []).length;
+
+    const body = s.querySelector('.dash-procs tbody');
+    body.innerHTML = '';
+    for (const pr of sys.procs || []) {
+      const tr = el('tr');
+      tr.append(el('td', 'dash-mono', pr.name), el('td', 'dash-muted', pr.user), el('td', 'r', `${num(pr.cpu, 1)} %`), el('td', 'r', `${num(pr.mem, 1)} %`), el('td', 'r dash-muted', String(pr.pid)));
+      body.appendChild(tr);
+    }
+    s.querySelector('.dash-procs').hidden = !(sys.procs || []).length;
+    renderDu(st);
+  }
+
+  async function runDu(st, dir, useSudo = false) {
+    if (st.du?.running) return;
+    st.du = { running: true, dir };
+    renderDu(st);
+    try { st.du = { ...(await D.bigDirs(st.tab.id, dir, useSudo)), running: false }; }
+    catch (err) { st.du = { error: errMsg(err), dir, running: false }; }
+    if (st.du.dir) sec(st, 'system').querySelector('.dash-du-dir').value = st.du.dir;
+    renderDu(st);
+  }
+
+  function renderDu(st) {
+    const s = sec(st, 'system');
+    const out = s.querySelector('.dash-du-out');
+    const du = st.du;
+    s.querySelector('.dash-du-cancel').hidden = !du?.running;
+    s.querySelector('.dash-du-form [type=submit]').disabled = !!du?.running;
+    out.innerHTML = '';
+    if (!du) return;
+    if (du.running) { out.appendChild(el('p', 'dash-note', `Zähle Ordner in ${du.dir} …`)).prepend(el('span', 'spinner')); return; }
+    if (du.cancelled) { out.appendChild(el('p', 'dash-note', 'Abgebrochen.')); return; }
+    if (du.error) { out.appendChild(el('p', 'dash-note dash-err', du.error)); return; }
+    const head = el('div', 'dash-du-head');
+    head.append(el('span', '', `${du.dir}${du.total != null ? ' – insgesamt ' + formatSize(du.total) : ''}`));
+    if (du.dir !== '/') {
+      const up = el('button', 'btn ghost', 'Übergeordneter Ordner');
+      up.insertAdjacentHTML('afterbegin', icon('up'));
+      up.addEventListener('click', () => runDu(st, parentPath(du.dir), du.usedSudo));
+      head.appendChild(up);
+    }
+    out.appendChild(head);
+    if (du.incomplete) {
+      const note = el('p', 'dash-note', 'Einige Ordner konnten ohne Administratorrechte nicht gelesen werden – die Zahlen sind deshalb eher zu klein.');
+      if (du.canSudo) {
+        const b = el('button', 'btn ghost', 'Mit Administratorrechten (sudo) zählen');
+        b.addEventListener('click', () => runDu(st, du.dir, true));
+        note.appendChild(b);
+      }
+      out.appendChild(note);
+    }
+    const max = Math.max(1, ...du.dirs.map(d => d.size));
+    const list = el('div', 'dash-du-list');
+    for (const d of du.dirs) {
+      const row = el('button', 'dash-du-row');
+      row.type = 'button';
+      row.title = `${d.path}\nKlicken, um in diesen Ordner zu schauen`;
+      const name = el('span', 'dash-mono', d.path.split('/').pop() || d.path);
+      const size = el('span', 'dash-du-size', formatSize(d.size));
+      row.append(name, bar(100 * d.size / max, 'neutral'), size);
+      row.addEventListener('click', () => runDu(st, d.path, du.usedSudo));
+      list.appendChild(row);
+    }
+    if (!du.dirs.length) list.appendChild(el('p', 'dash-note', 'Keine Unterordner.'));
+    out.appendChild(list);
+  }
+
+  // ===================== Dienste =====================
+
+  const SVC_STATE = {
+    active: ['Läuft', 'ok'], failed: ['Fehlerhaft', 'bad'], inactive: ['Gestoppt', 'off'],
+    activating: ['Startet …', 'warn'], deactivating: ['Stoppt …', 'warn'], reloading: ['Lädt neu …', 'warn'],
+  };
+  const svcState = s => SVC_STATE[s.active] || [s.active, 'off'];
+
+  function buildServices(st) {
+    const s = sec(st, 'services');
+    s.innerHTML = `
+      <div class="dash-tools">
+        <div class="field dash-filter"><span class="field-icon">${icon('search')}</span><input placeholder="Dienste filtern …" spellcheck="false"></div>
+        <div class="seg dash-status">
+          <button data-st="all">Alle</button>
+          <button data-st="active">Laufend</button>
+          <button data-st="failed">Fehlerhaft</button>
+          <button data-st="inactive">Gestoppt</button>
+        </div>
+        <span class="dash-count"></span>
+      </div>
+      <div class="dash-hint" hidden></div>
+      <div class="dash-card dash-list-card"><table class="dash-table dash-svc"><tbody></tbody></table><p class="dash-note dash-empty" hidden></p></div>`;
+    const input = s.querySelector('.dash-filter input');
+    input.addEventListener('input', () => { st.filter = input.value; renderServices(st); });
+    input.addEventListener('keydown', e => { if (e.key === 'Escape' && input.value) { e.stopPropagation(); input.value = st.filter = ''; renderServices(st); } });
+    for (const b of s.querySelectorAll('[data-st]')) b.addEventListener('click', () => { st.status = b.dataset.st; renderServices(st); });
+  }
+
+  function adminHint(st) {
+    const p = st.probe;
+    if (p.root || p.sudo === 'nopass') return '';
+    return p.sudo === 'password'
+      ? 'Starten und Stoppen braucht Administratorrechte. Dein Benutzer darf sudo nur mit Passwort – solche Befehle werden dann im Terminal ausgeführt, dort fragt der Server nach dem Passwort.'
+      : 'Starten und Stoppen braucht Administratorrechte, die dein Benutzer auf diesem Server nicht hat.';
+  }
+
+  function renderServices(st) {
+    const s = sec(st, 'services');
+    for (const b of s.querySelectorAll('[data-st]')) b.classList.toggle('on', b.dataset.st === st.status);
+    const hint = s.querySelector('.dash-hint');
+    hint.textContent = adminHint(st);
+    hint.hidden = !hint.textContent;
+    const all = st.services || [];
+    const q = st.filter.trim().toLowerCase();
+    const order = { failed: 0, activating: 1, deactivating: 1, reloading: 1, active: 2 };
+    const list = all
+      .filter(x => st.status === 'all' || (st.status === 'inactive' ? !['active', 'failed', 'activating', 'reloading'].includes(x.active) : x.active === st.status))
+      .filter(x => !q || x.name.toLowerCase().includes(q) || x.description.toLowerCase().includes(q))
+      .sort((a, b) => (order[a.active] ?? 3) - (order[b.active] ?? 3) || a.name.localeCompare(b.name));
+    const failed = all.filter(x => x.active === 'failed').length;
+    const running = all.filter(x => x.active === 'active').length;
+    s.querySelector('.dash-count').textContent = st.services ? `${running} laufend · ${failed} fehlerhaft · ${all.length} gesamt` : '';
+
+    const body = s.querySelector('tbody');
+    body.innerHTML = '';
+    for (const svc of list) {
+      const [label, cls] = svcState(svc);
+      const tr = el('tr', 'dash-row-' + cls);
+      const stTd = el('td', 'dash-state');
+      stTd.append(el('span', 'dash-dot ' + cls), label);
+      stTd.title = `${svc.active} (${svc.sub})`;
+      const name = el('td', 'dash-name');
+      name.append(el('div', 'dash-mono', shortUnit(svc.name)), el('div', 'dash-muted', svc.description));
+      name.title = svc.name;
+      const acts = el('td', 'dash-acts');
+      const busy = st.busy.has(svc.name);
+      const isOn = svc.active === 'active' || svc.active === 'activating' || svc.active === 'reloading';
+      if (!isOn) acts.appendChild(actionBtn('Start', 'play', () => serviceAction(st, svc, 'start')));
+      if (isOn) acts.appendChild(actionBtn('Stop', 'stop', () => serviceAction(st, svc, 'stop')));
+      acts.appendChild(actionBtn('Neustart', 'restart', () => serviceAction(st, svc, 'restart')));
+      if (st.probe.journal) acts.appendChild(actionBtn('Logs', 'logs', () => showLogs(st, { kind: 'service', id: svc.name, title: shortUnit(svc.name) }), 'ghost'));
+      for (const b of acts.querySelectorAll('button')) b.disabled = busy || st.tab.state !== 'open';
+      if (busy) acts.prepend(el('span', 'spinner'));
+      tr.append(stTd, name, acts);
+      tr.addEventListener('dblclick', e => { if (!e.target.closest('button') && st.probe.journal) showLogs(st, { kind: 'service', id: svc.name, title: shortUnit(svc.name) }); });
+      body.appendChild(tr);
+    }
+    const empty = s.querySelector('.dash-empty');
+    empty.textContent = st.servicesErr ? 'Dienste konnten nicht geladen werden: ' + st.servicesErr
+      : !st.services ? 'Lade Dienste …'
+      : !list.length ? (q || st.status !== 'all' ? 'Kein Dienst passt zum Filter.' : 'Keine Dienste gefunden.') : '';
+    empty.hidden = !empty.textContent;
+  }
+
+  const VERB = { start: ['starten', 'Starten', 'gestartet'], stop: ['stoppen', 'Stoppen', 'gestoppt'], restart: ['neu starten', 'Neu starten', 'neu gestartet'] };
+
+  // Gemeinsamer Ablauf für Dienste und Container: Rückfrage, ausführen, ggf. Terminal anbieten
+  async function runAction(st, { what, name, detail, action, call, reload, busyKey }) {
+    const [inf, Cap, done] = VERB[action];
+    const ok = await askLocal({
+      kind: 'confirm', title: `${what} ${inf}?`,
+      message: `„${name}“ wirklich ${inf}?${action === 'stop' ? ' Er ist dann offline, bis du ihn wieder startest.' : action === 'restart' ? ' Er ist dabei kurz nicht erreichbar.' : ''}`,
+      detail, okLabel: Cap, danger: action !== 'start',
+    });
+    if (!ok) return;
+    st.busy.add(busyKey);
+    render(st);
+    let res;
+    try { res = await call(); } catch (err) { res = { ok: false, error: errMsg(err) }; }
+    st.busy.delete(busyKey);
+    if (res.ok) flash(`„${name}“ ${done}`);
+    else if (res.needsAdmin && res.terminal) {
+      const go = await askLocal({
+        kind: 'confirm', title: 'Administratorrechte nötig', okLabel: 'Im Terminal ausführen',
+        message: `${res.hint} Soll der Befehl im Terminal ausgeführt werden? Dort fragt der Server nach deinem Passwort.`, detail: res.terminal,
+      });
+      if (go) runQuick(res.terminal);
+    } else if (res.needsAdmin) askLocal({ kind: 'info', title: 'Administratorrechte nötig', message: res.hint, detail: res.detail || '' });
+    else showError(`„${name}“ konnte nicht ${done} werden:\n${res.error}`);
+    await reload();
+    render(st);
+  }
+
+  function serviceAction(st, svc, action) {
+    return runAction(st, {
+      what: 'Dienst', name: shortUnit(svc.name), detail: `${svc.name}${svc.description ? ' – ' + svc.description : ''}`, action, busyKey: svc.name,
+      call: () => D.serviceAction(st.tab.id, svc.name, action),
+      reload: async () => { await new Promise(r => setTimeout(r, 500)); await loadServices(st); },
+    });
+  }
+
+  // ===================== Docker =====================
+
+  const CT_STATE = { running: ['Läuft', 'ok'], exited: ['Beendet', 'off'], created: ['Erstellt', 'off'], paused: ['Pausiert', 'warn'], restarting: ['Startet neu …', 'warn'], dead: ['Fehlerhaft', 'bad'], removing: ['Wird entfernt', 'warn'] };
+
+  function buildDocker(st) {
+    const s = sec(st, 'docker');
+    s.innerHTML = `
+      <div class="dash-tools">
+        <div class="field dash-filter"><span class="field-icon">${icon('search')}</span><input placeholder="Container filtern …" spellcheck="false"></div>
+        <span class="dash-count"></span>
+      </div>
+      <div class="dash-hint" hidden></div>
+      <div class="dash-card dash-list-card"><table class="dash-table dash-ct">
+        <thead><tr><th>Status</th><th>Name</th><th>Image</th><th>Ports</th><th></th></tr></thead><tbody></tbody>
+      </table><p class="dash-note dash-empty" hidden></p></div>`;
+    const input = s.querySelector('.dash-filter input');
+    input.addEventListener('input', () => { st.dFilter = input.value; renderDocker(st); });
+    input.addEventListener('keydown', e => { if (e.key === 'Escape' && input.value) { e.stopPropagation(); input.value = st.dFilter = ''; renderDocker(st); } });
+  }
+
+  function renderDocker(st) {
+    const s = sec(st, 'docker');
+    const all = st.containers || [];
+    const q = st.dFilter.trim().toLowerCase();
+    const list = all.filter(c => !q || `${c.name} ${c.image} ${c.ports}`.toLowerCase().includes(q))
+      .sort((a, b) => (a.state === 'running' ? 0 : 1) - (b.state === 'running' ? 0 : 1) || a.name.localeCompare(b.name));
+    const hint = s.querySelector('.dash-hint');
+    hint.textContent = st.containersErr;
+    hint.hidden = !hint.textContent;
+    s.querySelector('.dash-count').textContent = st.containers ? `${all.filter(c => c.state === 'running').length} laufend · ${all.length} gesamt` : '';
+    s.querySelector('table').hidden = !all.length;
+    const body = s.querySelector('tbody');
+    body.innerHTML = '';
+    for (const c of list) {
+      const [label, cls] = CT_STATE[c.state] || [c.state || '?', 'off'];
+      const tr = el('tr', 'dash-row-' + cls);
+      const stTd = el('td', 'dash-state');
+      stTd.append(el('span', 'dash-dot ' + cls), label);
+      stTd.title = c.status;
+      const name = el('td', 'dash-name');
+      name.append(el('div', 'dash-mono', c.name), el('div', 'dash-muted', c.status));
+      name.title = `ID ${c.id}`;
+      const ports = el('td', 'dash-ports dash-muted', c.ports.split(',').map(x => x.trim()).filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join('\n') || '–');
+      const acts = el('td', 'dash-acts');
+      const run = c.state === 'running' || c.state === 'restarting';
+      if (!run) acts.appendChild(actionBtn('Start', 'play', () => containerAction(st, c, 'start')));
+      if (run) acts.appendChild(actionBtn('Stop', 'stop', () => containerAction(st, c, 'stop')));
+      acts.appendChild(actionBtn('Neustart', 'restart', () => containerAction(st, c, 'restart')));
+      acts.appendChild(actionBtn('Logs', 'logs', () => showLogs(st, { kind: 'container', id: c.name || c.id, title: c.name }), 'ghost'));
+      const busy = st.busy.has('ct:' + c.id);
+      for (const b of acts.querySelectorAll('button')) b.disabled = busy || st.tab.state !== 'open';
+      if (busy) acts.prepend(el('span', 'spinner'));
+      tr.append(stTd, name, el('td', 'dash-mono dash-image', c.image), ports, acts);
+      body.appendChild(tr);
+    }
+    const empty = s.querySelector('.dash-empty');
+    empty.textContent = !st.containers && !st.containersErr ? 'Lade Container …'
+      : st.containers && !all.length && !st.containersErr ? 'Keine Container vorhanden.'
+      : all.length && !list.length ? 'Kein Container passt zum Filter.' : '';
+    empty.hidden = !empty.textContent;
+  }
+
+  function containerAction(st, c, action) {
+    return runAction(st, {
+      what: 'Container', name: c.name, detail: `${c.image} · ${c.status}`, action, busyKey: 'ct:' + c.id,
+      call: () => D.containerAction(st.tab.id, c.name || c.id, action),
+      reload: () => loadContainers(st),
+    });
+  }
+
+  // ===================== Logs-Fenster =====================
+
+  let logModal = null;
+  function buildLogModal() {
+    const m = el('div', 'modal dash-log-modal');
+    m.hidden = true;
+    m.innerHTML = `
+      <div class="dialog dash-log">
+        <div class="dash-log-head">
+          <h2></h2>
+          <span class="spacer"></span>
+          <select class="dash-log-lines" title="Wie viele Zeilen">
+            <option value="200">200 Zeilen</option><option value="500">500 Zeilen</option><option value="1000">1000 Zeilen</option>
+          </select>
+          <button class="btn" data-l="refresh">${icon('refresh')}Aktualisieren</button>
+          <button class="btn" data-l="live" title="Im Terminal live mitlesen (endet mit Strg+C)">${icon('radio')}Live im Terminal</button>
+          <button class="btn" data-l="copy">${icon(Object.hasOwn(ICON_PATHS, 'copy') ? 'copy' : 'file')}Kopieren</button>
+          <button class="btn primary" data-l="close">Schließen</button>
+        </div>
+        <p class="dash-note dash-log-hint" hidden></p>
+        <pre class="dash-log-text"></pre>
+      </div>`;
+    document.body.appendChild(m);
+    m.querySelector('[data-l=close]').addEventListener('click', () => { m.hidden = true; });
+    m.addEventListener('mousedown', e => { if (e.target === m) m.hidden = true; });
+    window.addEventListener('keydown', e => { if (e.key === 'Escape' && !m.hidden && document.getElementById('ask-modal').hidden) { e.stopPropagation(); m.hidden = true; } }, true);
+    m.querySelector('[data-l=copy]').addEventListener('click', () => { navigator.clipboard.writeText(m.querySelector('pre').textContent); flash('Logs kopiert'); });
+    return m;
+  }
+
+  async function showLogs(st, target) {
+    if (!logModal) logModal = buildLogModal();
+    const m = logModal;
+    const pre = m.querySelector('pre');
+    const hint = m.querySelector('.dash-log-hint');
+    const lines = m.querySelector('.dash-log-lines');
+    m.querySelector('h2').textContent = `Logs: ${target.title}`;
+    const load = async () => {
+      pre.textContent = 'Lade …';
+      hint.hidden = true;
+      let r;
+      try {
+        r = target.kind === 'service' ? await D.serviceLogs(st.tab.id, target.id, Number(lines.value)) : await D.containerLogs(st.tab.id, target.id, Number(lines.value));
+      } catch (err) { r = { text: '', hint: errMsg(err) }; }
+      pre.textContent = r.text?.trim() ? r.text : 'Keine Einträge.';
+      hint.textContent = r.hint || (r.timeout ? 'Zeitüberschreitung – die Logs sind vielleicht unvollständig.' : '');
+      hint.hidden = !hint.textContent;
+      pre.scrollTop = pre.scrollHeight;
+    };
+    m.querySelector('[data-l=refresh]').onclick = load;
+    lines.onchange = load;
+    m.querySelector('[data-l=live]').onclick = () => {
+      m.hidden = true;
+      const id = target.id.replace(/'/g, '');
+      const sudoJ = !st.probe.root && st.probe.sudo === 'nopass' ? 'sudo ' : '';
+      runQuick(target.kind === 'service' ? `${sudoJ}journalctl -u '${id}' -f -n 50` : `docker logs -f --tail 50 '${id}'`, null, true);
+    };
+    m.hidden = false;
+    m.querySelector('[data-l=close]').focus();
+    await load();
+  }
+
+  // ---------- Einhängen in renderer.js ----------
+
+  function startTimers(st) {
+    if (!st.timer) st.timer = setInterval(() => { if (!document.hidden && st.sec !== 'system') refresh(st); }, REFRESH);
+    // Systemwerte kommen von der Leiste (monitor.js, alle 5 s) – nur neu zeichnen
+    if (!st.sysTimer) st.sysTimer = setInterval(() => { if (st.sec === 'system' && st.probe && !st.root.hidden) renderSystem(st, true); }, 2500);
+  }
+  function stopTimers(st) {
+    clearInterval(st.timer); clearInterval(st.sysTimer);
+    st.timer = st.sysTimer = null;
+  }
+
+  // Aufruf bei jedem Wechsel von Tab, Ansicht oder Verbindungsstatus (updateToolbar)
+  function update(tab) {
+    for (const st of states.values()) {
+      const show = !!tab && st.tab === tab && tab.view === 'dash';
+      st.root.hidden = !show;
+      if (!show) stopTimers(st);
+    }
+    if (!tab || tab.view !== 'dash') return;
+    let st = states.get(tab.id);
+    if (!st) { st = build(tab); states.set(tab.id, st); }
+    st.root.hidden = false;
+    const wasOpen = st.lastState === 'open';
+    st.lastState = tab.state;
+    if (tab.state === 'open') {
+      startTimers(st);
+      if (!wasOpen || st.probeFor !== tab.info) refresh(st);
+      else render(st);
+    } else { stopTimers(st); render(st); }
+  }
+
+  function detach(tab) {
+    const st = states.get(tab.id);
+    if (!st) return;
+    stopTimers(st);
+    st.root.remove();
+    states.delete(tab.id);
+  }
+
+  function openSection(name) {
+    const tab = tabs.get(activeId);
+    if (!tab) return;
+    if (tab.view !== 'dash') setView('dash');
+    const st = states.get(tab.id);
+    if (st) showSection(st, name);
+  }
+
+  // Einträge für die Befehlspalette
+  window.Palette?.register(() => {
+    const tab = tabs.get(activeId);
+    if (!tab) return [];
+    const st = states.get(tab.id);
+    const A = (id, label, ic, fn, keywords) => ({ key: 'act:dash-' + id, section: 'actions', icon: ic, label, run: fn, keywords });
+    const list = [A('view', 'Übersicht anzeigen (System, Dienste, Docker)', 'gauge', () => setView('dash'), 'dashboard server status monitor')];
+    if (!st?.probe || st.probe.systemd) list.push(A('services', 'Dienste anzeigen (systemd)', 'server', () => openSection('services'), 'systemctl service starten stoppen neustart logs'));
+    if (!st?.probe || st.probe.docker) list.push(A('docker', 'Docker-Container anzeigen', 'container', () => openSection('docker'), 'container docker ps'));
+    list.push(A('du', 'Größte Ordner finden', 'hardDrive', () => { openSection('system'); setTimeout(() => sec(states.get(tab.id), 'system')?.querySelector('.dash-du-dir')?.focus(), 50); }, 'speicherplatz platte voll du'));
+    return list;
+  });
+
+  return { update, detach, openSection };
+})();
