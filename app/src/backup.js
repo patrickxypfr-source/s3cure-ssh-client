@@ -1,5 +1,5 @@
 // Backup & Umzug und automatischer Abgleich über einen Cloud-Ordner – Bereich in den Einstellungen.
-// Hauptprozess: app/lib/backup.js (Export/Import, Verschlüsselung) und app/lib/sync.js (Abgleich).
+// Hauptprozess: app/lib/backup.js (Export/Import, Verschlüsselung) und app/lib/cloud-sync.js (Abgleich).
 // Nutzt aus renderer.js: refreshHosts, askLocal, showError; aus quickbar.js: Quickbar.load; settings.js: Settings.
 (() => {
   const B = window.s3backup;

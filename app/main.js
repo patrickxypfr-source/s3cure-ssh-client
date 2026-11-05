@@ -588,8 +588,8 @@ const backupApi = require('./lib/backup').register({
   ipcMain, dialog, app, getWin: () => win, configDir: CONFIG_DIR, loadHosts, saveHosts, settingsStore, snippetStore, passphrases,
   passwords: { names: () => Object.keys(loadPasswordStore()), read: readPassword, write: writePassword, remove: removePassword },
 });
-// Abgleich über einen Cloud-Ordner (app/lib/sync.js)
-const cloudSync = require('./lib/sync').register({ ipcMain, dialog, getWin: () => win, send: sendToUi, configDir: CONFIG_DIR, data: backupApi.data, platform: PLATFORM });
+// Abgleich über einen Cloud-Ordner (app/lib/cloud-sync.js)
+const cloudSync = require('./lib/cloud-sync').register({ ipcMain, dialog, getWin: () => win, send: sendToUi, configDir: CONFIG_DIR, data: backupApi.data, platform: PLATFORM });
 app.whenReady().then(() => cloudSync.start());
 require('./lib/term-extra').register({ app, ipcMain, dialog, shell, sessions, getWin: () => win, platform: PLATFORM });
 

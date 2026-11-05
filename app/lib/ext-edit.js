@@ -184,8 +184,8 @@ function register({ app, ipcMain, shell, dialog, getSftp, sftpError, transfers, 
     const job = transfers.start(tabId, 'download', name);
     try {
       job.setTotal(st.size);
-      await job.copy('get', sftp, remote, local, name);
-      job.finish();
+      await job.copy('get', sftp, remote, local, name, { size: st.size });
+      await job.finish(); // erst öffnen, wenn die Datei wirklich da ist
     } catch (err) {
       job.finish(err);
       await fsp.rm(dir, { recursive: true, force: true }).catch(() => {});
@@ -267,8 +267,8 @@ function register({ app, ipcMain, shell, dialog, getSftp, sftpError, transfers, 
       const before = { ...f.seen };
       try {
         job.setTotal(f.seen.size);
-        await job.copy('put', sftp, f.local, f.remote, f.name);
-        job.finish();
+        await job.copy('put', sftp, f.local, f.remote, f.name, { size: f.seen.size });
+        await job.finish(); // auf das echte Ende des Hochladens warten
       } catch (err) { job.finish(err); throw err; }
       const after = await p(cb => sftp.stat(f.remote, cb)).catch(() => null);
       if (after) f.base = { size: after.size, mtime: after.mtime };

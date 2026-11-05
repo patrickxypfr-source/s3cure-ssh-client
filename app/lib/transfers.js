@@ -323,6 +323,8 @@ function create(getWin, { getSftp, isConnected = () => true, sftpError = e => e 
       file.status = 'done';
       file.lost = 0;
       job.files++;
+      // Rückruf nach erfolgreicher Übertragung (z. B. Änderungszeit setzen, lib/sync.js)
+      if (file.onDone) { try { await file.onDone(sftp); } catch { /* nur Zusatz */ } }
     } catch (err) {
       const lost = (sftp && dead.has(sftp)) || !isConnected(job.tabId) || LOST.test(String(err?.message || ''));
       if (job.cancelled) file.status = 'cancelled';
@@ -373,13 +375,15 @@ function create(getWin, { getSftp, isConnected = () => true, sftpError = e => e 
 
     // Datei anmelden. dir: 'put' (hochladen) oder 'get' (herunterladen).
     // opts.size: Größe, falls schon bekannt; opts.resume: vorhandene Teil-Datei am Ziel fortsetzen
+    // opts.onDone(sftp): wird aufgerufen, sobald diese Datei fertig übertragen ist
+    // Achtung: copy() meldet die Datei nur an – fertig ist alles erst, wenn job.finish() erfüllt ist.
     job.copy = async (dir, sftp, from, to, name, opts = {}) => {
       job.check();
       let size = opts.size;
       if (size == null) {
         try { size = dir === 'put' ? (await fsp.stat(from)).size : (await p(cb => sftp.stat(from, cb))).size; } catch { size = 0; }
       }
-      const file = { dir, from, to, name, size, done: 0, status: 'pending', started: false, srcSize: size, resume: !!opts.resume, error: null };
+      const file = { dir, from, to, name, size, done: 0, status: 'pending', started: false, srcSize: size, resume: !!opts.resume, error: null, onDone: opts.onDone || null };
       job.list.push(file);
       job.pending.push(file);
       job.sum += size;
