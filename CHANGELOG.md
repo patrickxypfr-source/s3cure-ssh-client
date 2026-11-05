@@ -14,6 +14,10 @@ So wird ein Abschnitt geschrieben (für Mitwirkende):
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Remote Desktop (VNC):** Neue Ansicht „Desktop“ neben Terminal, Dateien und Übersicht – zeigt den Bildschirm des Servers. Die Verbindung läuft verschlüsselt durch SSH, ein VNC-Port muss nicht ins Netz geöffnet werden. Einstellbar pro Verbindung (Adresse oder Display wie „:1“, Passwort, Bildqualität, „Nur ansehen“). In der Ansicht: Anpassen oder 1:1, Vollbild, Strg+Alt+Entf, Zwischenablage hin und her und eine Tastatur-Hilfe.
+- **VNC-Server finden:** Ein Klick prüft, ob auf dem Server ein VNC-Server läuft, und schlägt die Ports vor. Läuft keiner, sagt die App verständlich, wie man ihn einrichtet (TigerVNC, x11vnc, Raspberry Pi).
+
 ## 1.4.0 – 2026-11-05
 
 ### Verbessert

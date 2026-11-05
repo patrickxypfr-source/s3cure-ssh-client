@@ -14,6 +14,10 @@ How to write a section (for contributors):
 
 ## [Unreleased]
 
+### New
+- **Remote desktop (VNC):** New “Desktop” view next to Terminal, Files and Overview – shows the server’s screen. The connection runs encrypted through SSH, no VNC port has to be opened to the network. Set up per connection (address or display like “:1”, password, picture quality, view only). In the view: fit or 1:1, full screen, Ctrl+Alt+Del, clipboard both ways and keyboard help.
+- **Find VNC servers:** One click checks whether a VNC server runs on the server and suggests the ports. If none is running, the app explains clearly how to set one up (TigerVNC, x11vnc, Raspberry Pi).
+
 ## 1.4.0 – 2026-11-05
 
 ### Improved

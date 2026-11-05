@@ -20,7 +20,7 @@ Es gibt zwei Arten von Tests, beide mit dem in Node eingebauten `node:test` (kei
 | Befehl | Was wird geprüft | Dauer |
 |---|---|---|
 | `npm test` | **Einheitentests** in `app/test/unit/`: einzelne Funktionen ohne Fenster und ohne Netz – z. B. Versionsvergleich für Updates, Import aus `~/.ssh/config`, Platzhalter in Befehlsknöpfen, Tunnel-Eingaben, Schlüssel erzeugen, „Was ist neu?“ | wenige Sekunden |
-| `npm run test:integration` | **Integrationstest** in `app/test/integration/`: startet die echte App (Electron) und einen eigenen SSH-Server, verbindet sich, führt einen Befehl im Terminal aus, öffnet Ordner, lädt Dateien hoch und herunter und speichert im Editor | ca. 30 Sekunden |
+| `npm run test:integration` | **Integrationstest** in `app/test/integration/`: startet die echte App (Electron) und einen eigenen SSH-Server, verbindet sich, führt einen Befehl im Terminal aus, öffnet Ordner, lädt Dateien hoch und herunter und speichert im Editor; dazu Remote Desktop (VNC) gegen einen eigenen VNC-Server: Bild, Maus, Tastatur, Zwischenablage | ca. 1 Minute |
 
 ### Integrationstest einrichten
 
@@ -28,6 +28,8 @@ Es gibt zwei Arten von Tests, beide mit dem in Node eingebauten `node:test` (kei
 
 ```bash
 sudo apt install openssh-server xvfb
+# für den Remote-Desktop-Test (VNC), sonst wird er übersprungen:
+sudo apt install tigervnc-standalone-server tigervnc-tools x11-utils xclip iproute2
 cd app
 xvfb-run -a npm run test:integration
 ```
