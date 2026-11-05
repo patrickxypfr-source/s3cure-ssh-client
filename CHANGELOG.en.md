@@ -14,6 +14,16 @@ How to write a section (for contributors):
 
 ## [Unreleased]
 
+### New
+- **Multiple windows:** “New window” with Cmd+N (Mac) or Ctrl+Shift+N (Windows/Linux), from the command palette, or on the Mac from the Dock and File menu.
+- **Move tabs between windows:** right-click a tab → “Move tab to new window” or “Move tab to Window 2” – or simply drag the tab out of the tab bar (new window) or onto another window. The connection stays open and the terminal content comes along – no reconnecting.
+- **Restore session with all windows:** after a restart or update, all windows are back – with their position, size and tabs.
+
+### Improved
+- Each window stands on its own: transfers, tunnels, questions and messages appear in the window of their tab. Closing a window only ends that window’s connections.
+- New connections and changed settings show up right away in all open windows.
+- Mac: after closing the last window, the app stays in the Dock as usual. Clicking the Dock icon brings the window back with its tabs.
+
 ## 1.4.0 – 2026-11-05
 
 ### Improved

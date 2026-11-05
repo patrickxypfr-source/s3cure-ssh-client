@@ -188,7 +188,8 @@ The update window shows **what's new**, and the first time a new version starts,
 - **Overview view:** see, start and stop services (systemd) and Docker containers, view logs
 - **Command palette** with Cmd/Ctrl+K – connections, tabs, commands and actions via keyboard
 - Up to **four terminals** in one tab, command buttons for all servers
-- **Restore session:** your tabs are back after a restart or update
+- **Restore session:** your windows and tabs are back after a restart or update
+- **Multiple windows:** Cmd+N (Mac) or Ctrl+Shift+N (Windows/Linux); move a tab to another window via right-click or by dragging it out of the tab bar – the connection stays open
 - **“Overview” view:** services (systemd) with status, start/stop/restart and logs, Docker containers, large system stats, drives, processes and the largest folders – without typing anything into the terminal
 
 </details>

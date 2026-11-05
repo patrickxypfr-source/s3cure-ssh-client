@@ -19,8 +19,8 @@ Es gibt zwei Arten von Tests, beide mit dem in Node eingebauten `node:test` (kei
 
 | Befehl | Was wird geprüft | Dauer |
 |---|---|---|
-| `npm test` | **Einheitentests** in `app/test/unit/`: einzelne Funktionen ohne Fenster und ohne Netz – z. B. Versionsvergleich für Updates, Import aus `~/.ssh/config`, Platzhalter in Befehlsknöpfen, Tunnel-Eingaben, Schlüssel erzeugen, „Was ist neu?“ | wenige Sekunden |
-| `npm run test:integration` | **Integrationstest** in `app/test/integration/`: startet die echte App (Electron) und einen eigenen SSH-Server, verbindet sich, führt einen Befehl im Terminal aus, öffnet Ordner, lädt Dateien hoch und herunter und speichert im Editor | ca. 30 Sekunden |
+| `npm test` | **Einheitentests** in `app/test/unit/`: einzelne Funktionen ohne Fenster und ohne Netz – z. B. Versionsvergleich für Updates, Import aus `~/.ssh/config`, Platzhalter in Befehlsknöpfen, Tunnel-Eingaben, Schlüssel erzeugen, „Was ist neu?“, Fenster-Zuordnung und Sitzung | wenige Sekunden |
+| `npm run test:integration` | **Integrationstest** in `app/test/integration/`: startet die echte App (Electron) und einen eigenen SSH-Server, verbindet sich, führt einen Befehl im Terminal aus, öffnet Ordner, lädt Dateien hoch und herunter und speichert im Editor. `windows.test.mjs`: mehrere Fenster – Tab verschieben ohne Neuverbinden, Übertragung im zweiten Fenster, Fenster schließen, Tab herausziehen, Neustart mit allen Fenstern | ca. 1 Minute |
 
 ### Integrationstest einrichten
 
@@ -66,6 +66,17 @@ Bei jedem Push und Pull Request läuft `.github/workflows/build.yml`:
 1. **Tests** (Ubuntu): Syntax, Einheitentests, Integrationstest
 2. erst wenn alles grün ist: **Bauen** für Mac (Apple-Chip, Intel), Windows und Linux, jeweils mit kurzem Startversuch
 3. bei einem Tag `v1.2.3`: **Release** mit allen Installern
+
+## Mehrere Fenster
+
+Die App kann mehrere Fenster haben; ein Tab lässt sich zwischen ihnen verschieben, ohne neu zu verbinden. Verbindungen, Tunnel, Übertragungen usw. gehören dem **Hauptprozess**, ein Fenster zeigt sie nur an. Für neue Features im Hauptprozess heißt das:
+
+- **Kein festes Fenster** (`win`, `getWin()` als „das“ Fenster) annehmen. Die Zuordnung Tab → Fenster kennt `app/lib/windows.js`.
+- Ereignis zu einem Tab: `windows.sendTab(tabId, 'kanal', …)` – geht nur an das Fenster dieses Tabs und wird beim Verschieben kurz zurückgehalten, damit nichts verloren geht.
+- Ereignis für alle (Host-Liste, Einstellungen, Update-Hinweis): `windows.sendAll(…)`. Liste mit `tabId`-Feldern: `windows.sendList(…)` (jedes Fenster bekommt seine Einträge).
+- Dialoge und Rückfragen: `windows.current()` – das Fenster, aus dem der IPC-Aufruf kam (sonst das zuletzt aktive).
+- Schließen oder Neuladen eines Fensters beendet nur dessen Tabs (`main.js`, `closeTabs`).
+- Verschieben: `app/lib/window-tabs.js` (Hauptprozess) und `app/src/windows.js` (Oberfläche, Terminal-Inhalt per `@xterm/addon-serialize`). Was ein Feature pro Tab in der Oberfläche merkt, geht beim Verschieben verloren, wenn es nicht im Hauptprozess liegt – z. B. Editor-Inhalte (es wird vorher gefragt) und ein laufender Mitschnitt (er endet beim Verschieben).
 
 ## Texte und Übersetzungen
 
