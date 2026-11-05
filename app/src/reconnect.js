@@ -9,7 +9,7 @@ function startReconnect(tab) {
   if (!tabs.has(tab.id) || tab.rc) return;
   tab.lost = true;
   tab.rc = { attempt: 0, timer: null, busy: false, next: 0 };
-  tab.term.write('\r\n\x1b[33m[Verbindung verloren – verbinde neu …]\x1b[0m\r\n');
+  tab.term.write(`\r\n\x1b[33m${t('reconnect.lost')}\x1b[0m\r\n`);
   setState(tab, 'reconnecting');
   scheduleReconnect(tab);
 }
@@ -39,12 +39,12 @@ async function reconnectAttempt(tab) {
     tab.lost = false;
     // Altes Vollbildprogramm (z. B. nano) verlassen und Terminal-Modi zurücksetzen, Verlauf bleibt
     if (tab.term.buffer.active.type === 'alternate') tab.term.write('\x1b[?1049l');
-    tab.term.write('\x1b[!p\x1b[32m[Wieder verbunden]\x1b[0m\r\n');
+    tab.term.write(`\x1b[!p\x1b[32m${t('reconnect.back')}\x1b[0m\r\n`);
     return;
   }
   if (rc.attempt >= RECONNECT_MAX_ATTEMPTS) {
     tab.rc = null;
-    tab.term.write('\x1b[31m[Neu verbinden aufgegeben. Klick oben auf „Neu verbinden“.]\x1b[0m\r\n');
+    tab.term.write(`\x1b[31m${t('reconnect.gaveUp')}\x1b[0m\r\n`);
     setState(tab, 'closed');
     return;
   }
@@ -72,8 +72,8 @@ function showReconnectStatus() {
   if (!tab || !tab.rc || tab.state !== 'reconnecting') return;
   const secs = Math.ceil((tab.rc.next - Date.now()) / 1000);
   $('#tab-status-text').textContent = tab.rc.busy || secs <= 0
-    ? `Verbindung verloren – verbinde neu …${tab.rc.attempt > 0 ? ` (Versuch ${tab.rc.attempt + 1})` : ''}`
-    : `Verbindung verloren – neuer Versuch in ${secs} s`;
+    ? (tab.rc.attempt > 0 ? t('reconnect.statusAttempt', { n: tab.rc.attempt + 1 }) : t('reconnect.statusBusy'))
+    : t('reconnect.statusWait', { secs });
 }
 setInterval(showReconnectStatus, 1000);
 

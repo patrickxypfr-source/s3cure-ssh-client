@@ -28,14 +28,14 @@
   more.id = 'tb-more';
   more.type = 'button';
   more.className = 'btn ghost';
-  more.title = 'Weitere Werkzeuge';
+  more.title = t('layout.more');
   more.innerHTML = icon('more');
   more.hidden = true;
   viewSwitch.before(more);
 
   // Tooltips für die Stufen, in denen nur noch Symbole zu sehen sind
-  $('#btn-reconnect').title ||= 'Neu verbinden';
-  $('#btn-quick').title ||= 'Befehle';
+  $('#btn-reconnect').title ||= t('app.reconnect');
+  $('#btn-quick').title ||= t('app.commands');
   for (const b of viewSwitch.querySelectorAll('button')) b.title ||= b.textContent.trim();
 
   // Was im „⋯“-Menü landen kann (in dieser Reihenfolge), ab welcher Stufe, und wie es heißt
@@ -97,9 +97,9 @@
     let text = (lbl ? lbl.textContent : [...el.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('')).trim();
     if (el.id === 'btn-tunnels') {
       const c = $('#tunnel-count');
-      if (c && !c.hidden && c.textContent.trim()) text += ` (${c.textContent.trim()} aktiv)`;
+      if (c && !c.hidden && c.textContent.trim()) text += ` (${t('layout.tunnelsActive', { n: c.textContent.trim() })})`;
     }
-    if (el.classList.contains('on')) text += ' – an';
+    if (el.classList.contains('on')) text += ' – ' + t('layout.on');
     return text || el.title;
   }
 
@@ -137,7 +137,7 @@
   // ================= Seitenleiste =================
 
   const KEY = 's3cure.sidebarCollapsed';
-  const shortcut = IS_MAC ? 'Cmd+B' : 'Strg+Umschalt+B';
+  const shortcut = IS_MAC ? 'Cmd+B' : t('app.keyCtrlShift', { key: 'B' });
   const toggle = document.createElement('button');
   toggle.id = 'sb-toggle';
   toggle.type = 'button';
@@ -150,7 +150,7 @@
   function setCollapsed(on, animate = true) {
     if (!animate) document.body.classList.add('sb-no-anim');
     document.body.classList.toggle('sb-collapsed', on);
-    toggle.title = `Seitenleiste ${on ? 'ausklappen' : 'einklappen'} (${shortcut})`;
+    toggle.title = t(on ? 'layout.sidebarExpand' : 'layout.sidebarCollapse', { key: shortcut });
     toggle.setAttribute('aria-pressed', String(on));
     try { localStorage.setItem(KEY, on ? '1' : '0'); } catch {}
     if (!animate) requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove('sb-no-anim')));

@@ -19,24 +19,24 @@
       box.id = 'update-notice';
       box.className = 'outdated';
       box.innerHTML = `
-        <div class="un-title">Veraltet – neue Version verfügbar</div>
+        <div class="un-title">${t('updateNotice.outdated')}</div>
         <div class="un-versions">
-          <span>Deine Version <b class="un-cur"></b></span>
-          <span>Neueste <b class="un-new"></b></span>
+          <span>${t('updateNotice.yours')} <b class="un-cur"></b></span>
+          <span>${t('updateNotice.latest')} <b class="un-new"></b></span>
         </div>
-        <button type="button" class="un-get">Update</button>`;
+        <button type="button" class="un-get">${t('updateNotice.update')}</button>`;
       box.querySelector('.un-cur').textContent = info.current;
       box.querySelector('.un-new').textContent = info.latest;
       // Lädt und installiert die neue Version selbst (app/lib/updater.js, Update-Fenster)
       box.querySelector('.un-get').addEventListener('click', () => api.install());
-      box.querySelector('.un-get').title = `Version ${info.latest} herunterladen und installieren – S3cure startet danach neu`;
+      box.querySelector('.un-get').title = t('updateNotice.updateTip', { version: info.latest });
       box.title = '';
     } else {
       box.id = 'app-version';
       box.className = '';
-      box.textContent = `Version ${info.current}`;
-      box.title = info.latest ? 'Aktuell – das ist die neueste Version' : 'Neueste Version konnte nicht geprüft werden (offline?)';
-      if (info.latest) box.insertAdjacentHTML('beforeend', ' <span class="av-ok">· aktuell</span>');
+      box.textContent = t('updateNotice.version', { version: info.current });
+      box.title = t(info.latest ? 'updateNotice.upToDateTip' : 'updateNotice.uncheckedTip');
+      if (info.latest) { const ok = document.createElement('span'); ok.className = 'av-ok'; ok.textContent = t('updateNotice.upToDate'); box.append(' ', ok); }
     }
   }
 

@@ -9,7 +9,7 @@ if (api.platform === 'linux') document.body.classList.add('linux');
 const modKey = e => (IS_MAC ? e.metaKey : e.ctrlKey);
 const KEYS = IS_MAC
   ? { closeTab: 'Cmd+W', quick: 'Cmd+T', search: 'Cmd+F', up: 'Cmd+↑', del: 'Cmd+⌫' }
-  : { closeTab: 'Strg+Umschalt+W', quick: 'Strg+Umschalt+T', search: 'Strg+Umschalt+F', up: 'Alt+↑', del: 'Entf' };
+  : { closeTab: t('app.keyCtrlShift', { key: 'W' }), quick: t('app.keyCtrlShift', { key: 'T' }), search: t('app.keyCtrlShift', { key: 'F' }), up: 'Alt+↑', del: t('app.keyDel') };
 
 let hosts = {};
 const tabs = new Map(); // id -> { id, spec, title, term, fit, el, tabEl, state }
@@ -61,16 +61,16 @@ function hostItem(name) {
   const connected = [...tabs.values()].some(t => t.spec.name === name && t.state === 'open');
   li.innerHTML = `
     <span class="host-avatar">${icon('server')}<span class="host-dot ${connected ? 'on' : ''}"></span></span>
-    <div class="host-text"><div class="host-name"><span class="host-name-text"></span>${h.hasPassword ? `<span class="pw-badge" title="Passwort gespeichert">${icon('lock')}</span>` : ''}</div><div class="host-addr"></div></div>
+    <div class="host-text"><div class="host-name"><span class="host-name-text"></span>${h.hasPassword ? `<span class="pw-badge" title="${t('host.pwSaved')}">${icon('lock')}</span>` : ''}</div><div class="host-addr"></div></div>
     <div class="host-actions">
-      <button class="mini-btn" data-act="files" title="Dateien öffnen (SFTP)">${icon('folder')}</button>
-      <button class="mini-btn" data-act="edit" title="Bearbeiten">${icon('edit')}</button>
-      <button class="mini-btn danger" data-act="delete" title="Löschen">${icon('trash')}</button>
+      <button class="mini-btn" data-act="files" title="${t('host.openFiles')}">${icon('folder')}</button>
+      <button class="mini-btn" data-act="edit" title="${t('common.edit')}">${icon('edit')}</button>
+      <button class="mini-btn danger" data-act="delete" title="${t('common.delete')}">${icon('trash')}</button>
     </div>`;
   if (connected) li.classList.add('connected');
   li.querySelector('.host-name-text').textContent = name;
   li.querySelector('.host-addr').textContent = `${h.user}@${h.host}${h.port !== 22 ? ':' + h.port : ''}`;
-  li.title = 'Doppelklick zum Verbinden';
+  li.title = t('host.dblClickConnect');
   li.addEventListener('dblclick', () => openTab({ name }, name));
   li.querySelector('[data-act=files]').addEventListener('click', e => { e.stopPropagation(); openTab({ name }, name, 'files'); });
   li.querySelector('[data-act=edit]').addEventListener('click', e => { e.stopPropagation(); editHost(name); });
@@ -87,7 +87,7 @@ $('#forget-pw').addEventListener('click', () => {
   forgetPassword = true;
   const f = $('#host-form');
   f.password.value = '';
-  f.password.placeholder = 'Wird beim Speichern gelöscht';
+  f.password.placeholder = t('host.pwDeleteOnSave');
   $('#forget-pw').hidden = true;
 });
 
@@ -95,7 +95,7 @@ function editHost(name) {
   editingName = name || null;
   const form = $('#host-form');
   form.reset();
-  $('#host-form-title').textContent = name ? 'Verbindung bearbeiten' : 'Neue Verbindung';
+  $('#host-form-title').textContent = t(name ? 'host.editTitle' : 'host.newTitle');
   if (name) {
     const h = hosts[name];
     form.label.value = name;
@@ -107,7 +107,7 @@ function editHost(name) {
   fillHostExtras(form, name); // Gruppe, Farbe, Sprung-Server: hosts-extra.js
   forgetPassword = false;
   const saved = !!(name && hosts[name].hasPassword);
-  form.password.placeholder = saved ? '•••••••• gespeichert – leer lassen zum Behalten' : 'Wird beim ersten Verbinden abgefragt';
+  form.password.placeholder = t(saved ? 'host.pwSavedPh' : 'host.pwAskPh');
   $('#forget-pw').hidden = !saved;
   $('#host-modal').hidden = false;
   form.label.focus();
@@ -118,7 +118,7 @@ $('#host-form').addEventListener('submit', async e => {
   const f = e.target;
   const name = f.label.value.trim();
   if (editingName !== name && hosts[name]) {
-    const ok = await askLocal({ kind: 'confirm', title: 'Name schon vergeben', message: `Es gibt schon eine Verbindung „${name}“. Überschreiben?`, okLabel: 'Überschreiben' });
+    const ok = await askLocal({ kind: 'confirm', title: t('host.nameTakenTitle'), message: t('host.nameTakenMsg', { name }), okLabel: t('host.overwrite') });
     if (!ok) return;
   }
   try {
@@ -139,8 +139,8 @@ $('#pick-key').addEventListener('click', async () => {
 
 async function deleteHost(name) {
   const users = jumpUsers(name); // hosts-extra.js
-  const ok = await askLocal({ kind: 'confirm', title: 'Verbindung löschen', message: `„${name}“ wirklich löschen?`, okLabel: 'Löschen', danger: true,
-    detail: users.length ? `Wird als Sprung-Server benutzt von: ${users.join(', ')}.\nDiese verbinden danach direkt.` : '' });
+  const ok = await askLocal({ kind: 'confirm', title: t('host.deleteTitle'), message: t('host.deleteMsg', { name }), okLabel: t('common.delete'), danger: true,
+    detail: users.length ? t('host.deleteJumpUsers', { list: users.join(', ') }) : '' });
   if (!ok) return;
   hosts = await api.deleteHost(name);
   renderHosts();
@@ -183,7 +183,7 @@ function openTab(spec, title, view = 'terminal', opts = {}) {
 
   const tabEl = document.createElement('div');
   tabEl.className = 'tab';
-  tabEl.innerHTML = `<span class="state"></span><span class="title"></span><button class="close" title="Schließen (${KEYS.closeTab})">${icon('close')}</button>`;
+  tabEl.innerHTML = `<span class="state"></span><span class="title"></span><button class="close" title="${t('app.closeTab', { key: KEYS.closeTab })}">${icon('close')}</button>`;
   tabEl.querySelector('.title').textContent = title;
   tabEl.addEventListener('mousedown', e => { if (!e.target.classList.contains('close')) activate(id); });
   tabEl.querySelector('.close').addEventListener('click', () => closeTab(id));
@@ -208,7 +208,7 @@ async function connect(tab, opts = {}) {
   setState(tab, opts.reconnect ? 'reconnecting' : 'connecting');
   if (!opts.reconnect) {
     tab.term.reset();
-    tab.term.write(`\x1b[90mVerbinde mit ${tab.title} …\x1b[0m\r\n`);
+    tab.term.write(`\x1b[90m${t('app.connectingTo', { name: tab.title })}\x1b[0m\r\n`);
   }
   try {
     const info = await api.connect(tab.id, tab.spec, tab.term.cols, tab.term.rows);
@@ -246,10 +246,10 @@ function updateToolbar() {
   window.Dashboard?.update(tab); // Ansicht „Übersicht“ (dashboard.js)
   if (!tab) return;
   const texts = {
-    connecting: 'Verbinde …',
-    open: tab.info ? `Verbunden mit ${tab.info.user}@${tab.info.host}` : 'Verbunden',
-    closed: 'Nicht verbunden',
-    reconnecting: 'Verbindung verloren – verbinde neu …',
+    connecting: t('app.statusConnecting'),
+    open: tab.info ? t('app.statusConnectedTo', { target: `${tab.info.user}@${tab.info.host}` }) : t('app.statusConnected'),
+    closed: t('app.statusClosed'),
+    reconnecting: t('app.statusReconnecting'),
   };
   $('#tab-status-text').textContent = texts[tab.state];
   $('#tab-status').className = tab.state;
@@ -293,18 +293,18 @@ function renderEditorBar(tab, bar) {
   const send = data => { api.write(tab.id, data); tab.term.focus(); };
   const label = document.createElement('span');
   label.className = 'qlabel';
-  label.textContent = 'Editor geöffnet';
+  label.textContent = t('app.editorOpen');
   bar.appendChild(label);
   const buttons = [
-    ['Speichern & schließen', 'primary', () => send('\x0f\r\x18'), 'Änderungen speichern und nano beenden (wie ⌃O, Enter, ⌃X)'],
-    ['Speichern', '', () => send('\x0f\r'), 'Änderungen speichern, nano bleibt offen (wie ⌃O, Enter)'],
-    ['Schließen ohne Speichern', 'danger', async () => {
-      const ok = await askLocal({ kind: 'confirm', title: 'Ohne Speichern schließen?', message: 'Alle Änderungen seit dem letzten Speichern gehen verloren.', okLabel: 'Verwerfen', danger: true });
+    [t('app.editorSaveClose'), 'primary', () => send('\x0f\r\x18'), t('app.editorSaveCloseTip')],
+    [t('common.save'), '', () => send('\x0f\r'), t('app.editorSaveTip')],
+    [t('app.editorDiscard'), 'danger', async () => {
+      const ok = await askLocal({ kind: 'confirm', title: t('app.editorDiscardTitle'), message: t('app.editorDiscardMsg'), okLabel: t('app.editorDiscardOk'), danger: true });
       if (!ok) return;
       send('\x18');
       // Hat nano Änderungen, fragt es nach – dann mit „Nein“ antworten
       setTimeout(() => { if (tab.term.buffer.active.type === 'alternate') send('n'); }, 350);
-    }, 'nano beenden und Änderungen verwerfen (wie ⌃X, N)'],
+    }, t('app.editorDiscardTip')],
   ];
   for (const [text, cls, fn, tip] of buttons) {
     const b = document.createElement('button');
@@ -316,7 +316,7 @@ function renderEditorBar(tab, bar) {
   }
   const hint = document.createElement('span');
   hint.className = 'qhint';
-  hint.textContent = IS_MAC ? 'Tastatur: control-Taste (⌃) + Buchstabe, z. B. ⌃X = beenden' : 'Tastatur: Strg + Buchstabe, z. B. Strg+X = beenden';
+  hint.textContent = t(IS_MAC ? 'app.editorHintMac' : 'app.editorHintWin');
   bar.appendChild(hint);
 }
 
@@ -325,13 +325,13 @@ async function runQuick(cmd, confirmText, live = Quickbar.isLive(cmd)) {
   const tab = tabs.get(activeId);
   if (!tab || tab.state !== 'open') return;
   if (confirmText) {
-    const ok = await askLocal({ kind: 'confirm', title: 'Sicher?', message: confirmText, detail: cmd, okLabel: 'Ausführen', danger: true });
+    const ok = await askLocal({ kind: 'confirm', title: t('app.quickConfirmTitle'), message: confirmText, detail: cmd, okLabel: t('app.quickRun'), danger: true });
     if (!ok) return;
   }
   if (tab.view !== 'terminal') setView('terminal');
   // Läuft gerade nano, less o. Ä. (Vollbild), würde der Befehl dort hineingetippt
   if (tab.term.buffer.active.type === 'alternate') {
-    showError('Im Terminal ist gerade ein Programm wie nano geöffnet. Bitte erst beenden (nano: Strg+X), dann den Knopf erneut drücken.');
+    showError(t('app.quickBusy'));
     return;
   }
   // Ein Live-Log läuft endlos -> vorher beenden
@@ -414,7 +414,7 @@ api.onData((id, data) => tabs.get(id)?.term.write(data));
 api.onClosed(id => {
   const tab = tabs.get(id);
   if (!tab) return;
-  tab.term.write('\r\n\x1b[90m[Verbindung beendet]\x1b[0m\r\n');
+  tab.term.write(`\r\n\x1b[90m${t('app.connectionEnded')}\x1b[0m\r\n`);
   setState(tab, 'closed');
 });
 
@@ -460,7 +460,7 @@ window.addEventListener('keydown', e => {
 function showError(err) {
   if (FilesExtra.isCancel(err)) return; // vom Nutzer abgebrochen – kein Fehler
   const msg = String(err.message || err).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
-  askLocal({ kind: 'info', title: 'Fehler', message: msg });
+  askLocal({ kind: 'info', title: t('common.error'), message: msg });
 }
 
 // ---------- Dateibrowser (SFTP) ----------
@@ -474,11 +474,11 @@ function formatSize(n) {
   const units = ['KB', 'MB', 'GB', 'TB'];
   let i = -1;
   do { n /= 1024; i++; } while (n >= 1024 && i < units.length - 1);
-  return n.toLocaleString('de-DE', { maximumFractionDigits: n < 10 ? 1 : 0 }) + ' ' + units[i];
+  return n.toLocaleString(I18N.locale, { maximumFractionDigits: n < 10 ? 1 : 0 }) + ' ' + units[i];
 }
 
 function formatDate(ms) {
-  return new Date(ms).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return new Date(ms).toLocaleString(I18N.locale, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 function buildFilesView(tab) {
@@ -487,34 +487,34 @@ function buildFilesView(tab) {
   el.hidden = true;
   el.innerHTML = `
     <div class="files-bar">
-      <button class="round-btn" data-a="up" title="Übergeordneter Ordner (${KEYS.up})">${icon('up')}</button>
-      <button class="round-btn" data-a="home" title="Home-Ordner">${icon('home')}</button>
-      <div class="field grow"><span class="field-icon">${icon('folder')}</span><input class="files-path" spellcheck="false" title="Pfad eingeben und Enter drücken"></div>
-      <button class="round-btn" data-a="refresh" title="Aktualisieren">${icon('refresh')}</button>
+      <button class="round-btn" data-a="up" title="${t('app.filesUp', { key: KEYS.up })}">${icon('up')}</button>
+      <button class="round-btn" data-a="home" title="${t('app.filesHome')}">${icon('home')}</button>
+      <div class="field grow"><span class="field-icon">${icon('folder')}</span><input class="files-path" spellcheck="false" title="${t('app.filesPathTip')}"></div>
+      <button class="round-btn" data-a="refresh" title="${t('app.filesRefresh')}">${icon('refresh')}</button>
       <div class="field search-field">
         <span class="field-icon">${icon('search')}</span>
-        <input class="files-search" placeholder="Suchen …" spellcheck="false" title="Einfach tippen – Treffer erscheinen sofort (${KEYS.search}). Platzhalter * und ? gehen auch.">
-        <select class="search-scope" title="Wo gesucht wird">
-          <option value="root">Ganzer Server</option>
-          <option value="here">Dieser Ordner</option>
+        <input class="files-search" placeholder="${t('app.filesSearchPh')}" spellcheck="false" title="${t('app.filesSearchTip', { key: KEYS.search })}">
+        <select class="search-scope" title="${t('app.filesScopeTip')}">
+          <option value="root">${t('app.filesScopeRoot')}</option>
+          <option value="here">${t('app.filesScopeHere')}</option>
         </select>
       </div>
     </div>
     <div class="files-actions">
-      <button class="btn primary" data-a="upload">${icon('upload')}Hochladen</button>
-      <button class="btn" data-a="mkdir">${icon('folderPlus')}Neuer Ordner</button>
+      <button class="btn primary" data-a="upload">${icon('upload')}${t('app.filesUpload')}</button>
+      <button class="btn" data-a="mkdir">${icon('folderPlus')}${t('app.filesMkdir')}</button>
       <span class="sep"></span>
-      <button class="round-btn" data-a="download" title="Herunterladen">${icon('download')}</button>
-      <button class="round-btn" data-a="rename" title="Umbenennen">${icon('rename')}</button>
-      <button class="round-btn danger" data-a="delete" title="Löschen (${KEYS.del})">${icon('trash')}</button>
+      <button class="round-btn" data-a="download" title="${t('app.filesDownload')}">${icon('download')}</button>
+      <button class="round-btn" data-a="rename" title="${t('common.rename')}">${icon('rename')}</button>
+      <button class="round-btn danger" data-a="delete" title="${t('app.filesDeleteTip', { key: KEYS.del })}">${icon('trash')}</button>
     </div>
     <div class="files-list" tabindex="0">
       <table>
-        <thead><tr><th class="name" data-col="name">Name</th><th class="size" data-col="size">Größe</th><th class="date" data-col="mtime">Geändert</th><th class="mode" data-col="mode">Rechte</th><th class="owner" data-col="owner">Besitzer</th><th class="group" data-col="group">Gruppe</th></tr></thead>
+        <thead><tr><th class="name" data-col="name">${t('app.colName')}</th><th class="size" data-col="size">${t('app.colSize')}</th><th class="date" data-col="mtime">${t('app.colModified')}</th><th class="mode" data-col="mode">${t('app.colMode')}</th><th class="owner" data-col="owner">${t('app.colOwner')}</th><th class="group" data-col="group">${t('app.colGroup')}</th></tr></thead>
         <tbody></tbody>
       </table>
       <div class="files-empty"></div>
-      <div class="drop-hint">Loslassen zum Hochladen</div>
+      <div class="drop-hint">${t('app.dropHint')}</div>
     </div>
     <div class="files-status"></div>
     <div class="search-view">
@@ -522,17 +522,17 @@ function buildFilesView(tab) {
         <span class="spinner"></span>
         <span class="search-title"></span>
         <div class="spacer"></div>
-        <button class="btn" data-a="search-stop">Stoppen</button>
-        <button class="btn" data-a="search-close">${icon('close')}Suche schließen</button>
+        <button class="btn" data-a="search-stop">${t('app.searchStop')}</button>
+        <button class="btn" data-a="search-close">${icon('close')}${t('app.searchClose')}</button>
       </div>
       <div class="search-list" tabindex="0">
         <table>
-          <thead><tr><th>Name</th><th>Ort</th></tr></thead>
+          <thead><tr><th>${t('app.colName')}</th><th>${t('app.colLocation')}</th></tr></thead>
           <tbody></tbody>
         </table>
         <div class="search-empty"></div>
       </div>
-      <div class="search-foot">Doppelklick öffnet den Ordner bzw. zeigt die Datei in ihrem Ordner.</div>
+      <div class="search-foot">${t('app.searchFoot')}</div>
     </div>`;
   $('#terminals').appendChild(el);
 
@@ -548,8 +548,8 @@ function buildFilesView(tab) {
     if (IS_MAC) return uploadPicked(tab);
     const r = e.currentTarget.getBoundingClientRect();
     openMenu([
-      ['Dateien hochladen …', () => uploadPicked(tab, 'files'), '', 'file'],
-      ['Ordner hochladen …', () => uploadPicked(tab, 'folders'), '', 'folder'],
+      [t('app.uploadFiles'), () => uploadPicked(tab, 'files'), '', 'file'],
+      [t('app.uploadFolders'), () => uploadPicked(tab, 'folders'), '', 'folder'],
     ], r.left, r.bottom + 4);
   });
   on('mkdir', () => makeDir(tab));
@@ -675,10 +675,10 @@ function renderFiles(tab) {
   }
 
   const empty = f.el.querySelector('.files-empty');
-  empty.textContent = tab.state === 'reconnecting' ? 'Verbindung verloren – verbinde neu …'
-    : !connected ? 'Nicht verbunden.'
-    : !f.loaded ? 'Lade Dateien …'
-    : items.length ? '' : 'Dieser Ordner ist leer. Zieh Dateien hierher, um sie hochzuladen.';
+  empty.textContent = tab.state === 'reconnecting' ? t('app.statusReconnecting')
+    : !connected ? t('app.filesNotConnected')
+    : !f.loaded ? t('app.filesLoading')
+    : items.length ? '' : t('app.filesEmpty');
   empty.hidden = !empty.textContent;
   updateSelection(tab);
 }
@@ -700,7 +700,7 @@ function updateSelection(tab) {
   f.pathInput.disabled = !connected;
 
   f.el.querySelector('.files-status').textContent = connected && f.loaded
-    ? `${items.length} Elemente${n ? ` · ${n} ausgewählt` : ''}${items.length > 1 && window.LocalPane?.isOpen?.(tab) ? Lasso.hint(n) : ''}`
+    ? `${t('app.filesCount', { count: items.length })}${n ? ` · ${t('app.filesSelected', { count: n })}` : ''}${items.length > 1 && window.LocalPane?.isOpen?.(tab) ? Lasso.hint(n) : ''}`
     : '';
 }
 
@@ -755,15 +755,15 @@ async function uploadPaths(tab, paths) {
   const clashes = paths.map(localName).filter(n => f.entries.some(e => e.name === n));
   if (clashes.length) {
     const ok = await askLocal({
-      kind: 'confirm', title: 'Schon vorhanden',
-      message: `${clashes.length === 1 ? `„${clashes[0]}“ gibt es` : `${clashes.length} Elemente gibt es`} in diesem Ordner schon. Überschreiben?`,
-      okLabel: 'Überschreiben', danger: true,
+      kind: 'confirm', title: t('app.clashTitle'),
+      message: clashes.length === 1 ? t('app.clashOne', { name: clashes[0] }) : t('app.clashMany', { count: clashes.length }),
+      okLabel: t('host.overwrite'), danger: true,
     });
     if (!ok) return;
   }
   try {
     await api.sftpUpload(tab.id, dir, paths);
-    flash(paths.length === 1 ? `Hochgeladen: ${localName(paths[0])}` : `${paths.length} Elemente hochgeladen`);
+    flash(paths.length === 1 ? t('app.uploadedOne', { name: localName(paths[0]) }) : t('app.uploadedMany', { count: paths.length }));
   } catch (err) { showError(err); }
   if (tab.files.path === dir) loadDir(tab, dir);
 }
@@ -772,12 +772,12 @@ async function downloadItems(tab, items) {
   if (!items.length) return;
   try {
     const targets = await api.sftpDownload(tab.id, items.map(it => ({ path: joinPath(tab.files.path, it.name), isDir: it.isDir })));
-    if (targets) { flash(items.length === 1 ? `Heruntergeladen: ${items[0].name}` : `${items.length} Elemente heruntergeladen`); api.showFile(targets[0]); }
+    if (targets) { flash(items.length === 1 ? t('app.downloadedOne', { name: items[0].name }) : t('app.downloadedMany', { count: items.length })); api.showFile(targets[0]); }
   } catch (err) { showError(err); }
 }
 
 async function makeDir(tab) {
-  const name = await askLocal({ kind: 'text', title: 'Neuer Ordner', message: 'Name des Ordners:', placeholder: 'neuer-ordner' });
+  const name = await askLocal({ kind: 'text', title: t('app.filesMkdir'), message: t('app.mkdirMsg'), placeholder: t('app.mkdirPh') });
   if (!name || !name.trim()) return;
   try { await api.sftpMkdir(tab.id, joinPath(tab.files.path, name.trim())); } catch (err) { showError(err); }
   loadDir(tab, tab.files.path);
@@ -786,7 +786,7 @@ async function makeDir(tab) {
 async function renameSelected(tab) {
   const [it] = selectedEntries(tab.files);
   if (!it) return;
-  const name = await askLocal({ kind: 'text', title: 'Umbenennen', message: `Neuer Name für „${it.name}“:`, value: it.name, okLabel: 'Umbenennen' });
+  const name = await askLocal({ kind: 'text', title: t('common.rename'), message: t('app.renameMsg', { name: it.name }), value: it.name, okLabel: t('common.rename') });
   if (!name || !name.trim() || name.trim() === it.name) return;
   const dir = tab.files.path;
   try { await api.sftpRename(tab.id, joinPath(dir, it.name), joinPath(dir, name.trim())); } catch (err) { showError(err); }
@@ -797,15 +797,15 @@ async function deleteSelected(tab) {
   const items = selectedEntries(tab.files);
   if (!items.length || tab.state !== 'open') return;
   const hasDir = items.some(i => i.isDir);
-  const names = items.slice(0, 8).map(i => i.name + (i.isDir ? '/' : '')).join('\n') + (items.length > 8 ? `\n… und ${items.length - 8} weitere` : '');
+  const names = items.slice(0, 8).map(i => i.name + (i.isDir ? '/' : '')).join('\n') + (items.length > 8 ? '\n' + t('app.deleteMore', { count: items.length - 8 }) : '');
   const ok = await askLocal({
-    kind: 'confirm', title: 'Endgültig löschen?',
-    message: `${items.length === 1 ? 'Dieses Element' : `Diese ${items.length} Elemente`} auf dem Server löschen?${hasDir ? ' Ordner werden mit ihrem ganzen Inhalt gelöscht.' : ''} Das lässt sich nicht rückgängig machen.`,
-    detail: names, okLabel: 'Löschen', danger: true,
+    kind: 'confirm', title: t('app.deleteTitle'),
+    message: `${items.length === 1 ? t('app.deleteMsgOne') : t('app.deleteMsgMany', { count: items.length })}${hasDir ? ' ' + t('app.deleteDirNote') : ''} ${t('app.deleteUndo')}`,
+    detail: names, okLabel: t('common.delete'), danger: true,
   });
   if (!ok) return;
   const dir = tab.files.path;
-  try { await api.sftpDelete(tab.id, items.map(i => joinPath(dir, i.name))); flash(`${items.length} Element${items.length === 1 ? '' : 'e'} gelöscht`); }
+  try { await api.sftpDelete(tab.id, items.map(i => joinPath(dir, i.name))); flash(t('app.deleted', { count: items.length })); }
   catch (err) { showError(err); }
   loadDir(tab, dir);
 }
@@ -870,19 +870,20 @@ function renderSearchHead(tab) {
   const s = tab.search;
   const f = tab.files;
   if (!s) return;
-  const where = s.root === '/' ? 'auf dem ganzen Server' : `in ${s.root}`;
+  const where = s.root === '/' ? t('app.searchWhereRoot') : t('app.searchWhereDir', { dir: s.root });
   const n = s.results.length;
   let text;
-  if (s.info?.tooShort) text = 'Für den ganzen Server bitte mindestens 2 Zeichen eingeben …';
-  else if (s.running) text = `Suche „${s.query}“ ${where} … ${n} Treffer bisher`;
-  else if (s.info?.error) text = `Suche fehlgeschlagen: ${s.info.error}`;
-  else if (s.info?.cancelled) text = `Suche gestoppt – ${n} Treffer für „${s.query}“ ${where}`;
-  else text = `${n} Treffer für „${s.query}“ ${where}${s.info?.limited ? ' (nur die ersten 2000 – Suche genauer eingrenzen)' : ''}`;
+  const p = { query: s.query, where, count: n };
+  if (s.info?.tooShort) text = t('app.searchTooShort');
+  else if (s.running) text = t('app.searchRunning', p);
+  else if (s.info?.error) text = t('app.searchFailed', { error: s.info.error });
+  else if (s.info?.cancelled) text = t('app.searchStopped', p);
+  else text = t('app.searchDone', p) + (s.info?.limited ? ' ' + t('app.searchLimited') : '');
   f.el.querySelector('.search-title').textContent = text;
   f.el.querySelector('.spinner').hidden = !s.running;
   f.el.querySelector('[data-a=search-stop]').hidden = !s.running;
   const empty = f.el.querySelector('.search-empty');
-  empty.textContent = n || s.info?.tooShort ? '' : s.running ? 'Suche läuft …' : 'Nichts gefunden.';
+  empty.textContent = n || s.info?.tooShort ? '' : s.running ? t('app.searchBusy') : t('app.searchNothing');
   empty.hidden = !empty.textContent;
 }
 
@@ -915,9 +916,9 @@ function addSearchResults(tab, results) {
       e.preventDefault();
       selectSearchRow(tab, idx);
       openMenu([
-        [r.isDir ? 'Ordner öffnen' : 'Im Ordner zeigen', () => openSearchResult(tab, r), '', 'folder'],
-        ['Herunterladen', () => downloadPaths(tab, [r]), '', 'download'],
-        ['Pfad kopieren', () => navigator.clipboard.writeText(r.path), '', 'link'],
+        [t(r.isDir ? 'app.openFolder' : 'app.showInFolder'), () => openSearchResult(tab, r), '', 'folder'],
+        [t('app.filesDownload'), () => downloadPaths(tab, [r]), '', 'download'],
+        [t('app.copyPath'), () => navigator.clipboard.writeText(r.path), '', 'link'],
       ], e.clientX, e.clientY);
     });
     f.searchBody.appendChild(tr);
@@ -947,7 +948,7 @@ async function openSearchResult(tab, r) {
 async function downloadPaths(tab, items) {
   try {
     const targets = await api.sftpDownload(tab.id, items.map(r => ({ path: r.path, isDir: r.isDir })));
-    if (targets) { flash(`Heruntergeladen: ${items[0].path.split('/').pop()}`); api.showFile(targets[0]); }
+    if (targets) { flash(t('app.downloadedOne', { name: items[0].path.split('/').pop() })); api.showFile(targets[0]); }
   } catch (err) { showError(err); }
 }
 
@@ -964,13 +965,13 @@ api.onSearchDone((id, searchId, info) => {
 function showContextMenu(tab, x, y) {
   const sel = selectedEntries(tab.files);
   const entries = [];
-  if (sel.length === 1 && sel[0].isDir) entries.push(['Öffnen', () => openEntry(tab, sel[0]), '', 'folder']);
-  entries.push(['Herunterladen', () => downloadItems(tab, sel), '', 'download']);
-  if (sel.length === 1) entries.push(['Umbenennen', () => renameSelected(tab), '', 'rename']);
+  if (sel.length === 1 && sel[0].isDir) entries.push([t('common.open'), () => openEntry(tab, sel[0]), '', 'folder']);
+  entries.push([t('app.filesDownload'), () => downloadItems(tab, sel), '', 'download']);
+  if (sel.length === 1) entries.push([t('common.rename'), () => renameSelected(tab), '', 'rename']);
   FilesExtra.addMenuEntries(tab, sel, entries); // files-extra.js
   window.SyncTools?.addMenuEntries(tab, sel, entries); // extern bearbeiten, vergleichen (sync.js)
   entries.push(null);
-  entries.push(['Löschen', () => deleteSelected(tab), 'danger', 'trash']);
+  entries.push([t('common.delete'), () => deleteSelected(tab), 'danger', 'trash']);
   openMenu(entries, x, y);
 }
 
@@ -1039,8 +1040,8 @@ function nextAsk() {
   $('#ask-cancel').hidden = req.kind === 'info';
   $('#ask-remember-wrap').hidden = !req.remember;
   $('#ask-remember').checked = true;
-  $('#ask-remember-text').textContent = req.rememberLabel || 'Passwort merken (verschlüsselt)';
-  $('#ask-ok').textContent = req.okLabel || 'OK';
+  $('#ask-remember-text').textContent = req.rememberLabel || t('ask.remember');
+  $('#ask-ok').textContent = req.okLabel || t('common.ok');
   $('#ask-ok').className = 'btn ' + (req.danger ? 'danger' : 'primary');
   $('#ask-modal').hidden = false;
   // focusCancel: bei riskanten Fragen ist „Abbrechen“ vorausgewählt (Enter bricht ab)

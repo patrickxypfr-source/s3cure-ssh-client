@@ -9,6 +9,9 @@
   const SAVE_EVERY = 1500; // ms
   let saving = false;      // erst nach der Wiederherstellung speichern, sonst würde die leere Tab-Leiste die Datei überschreiben
   let last = '';
+  // Texte vorab holen: unten heißt eine Variable „t“ (Tab-Eintrag)
+  const TXT_RESTORING = t('session.restoring');
+  const TXT_NOT_CONNECTED = t('session.notConnected');
 
   // Tabs in der Reihenfolge der Tab-Leiste
   function orderedTabs() {
@@ -61,7 +64,7 @@
     const opened = items.map(t => {
       const tab = openTab(t.spec, t.title, t.view, { connect: false, restore: t });
       if (t.remotePath) { tab.files.path = t.remotePath; tab.files.restoring = true; }
-      tab.term.write('\x1b[90mWird wiederhergestellt …\x1b[0m\r\n');
+      tab.term.write(`\x1b[90m${TXT_RESTORING}\x1b[0m\r\n`);
       return { tab, t };
     });
     const activeItem = data.tabs[data.active];
@@ -86,7 +89,7 @@
         if (!tabs.has(tab.id)) continue; // inzwischen geschlossen
         if (failed) {
           // Kein Fehler-Hagel: weitere Tabs derselben Verbindung warten auf „Neu verbinden“
-          tab.term.write('\x1b[90mNicht verbunden. Klick oben auf „Neu verbinden“.\x1b[0m\r\n');
+          tab.term.write(`\x1b[90m${TXT_NOT_CONNECTED}\x1b[0m\r\n`);
           setState(tab, 'closed');
           continue;
         }
@@ -109,12 +112,12 @@
   window.addEventListener('beforeunload', save);
 
   registerSettingsSection({
-    id: 'session', title: 'Start', icon: 'refresh', order: 5,
+    id: 'session', title: t('session.sectionTitle'), icon: 'refresh', order: 5,
     defaults: { 'session.restore': true },
     fields: [
       {
-        key: 'session.restore', type: 'toggle', label: 'Beim Start letzte Sitzung wiederherstellen',
-        hint: 'Öffnet die Tabs vom letzten Mal wieder und verbindet neu – mit Terminal oder Dateien, Ordnern und „Mein Computer“.',
+        key: 'session.restore', type: 'toggle', label: t('session.restoreLabel'),
+        hint: t('session.restoreHint'),
       },
     ],
   });

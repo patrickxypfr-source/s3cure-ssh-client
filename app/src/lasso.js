@@ -89,8 +89,8 @@ const Lasso = (() => {
 
   // Kurzer Hinweis für die Statuszeile unter einer Liste
   function hint(selectedCount) {
-    if (selectedCount > 1) return ' – rüberziehen zum Kopieren';
-    return ` · Mehrere: Rahmen oder ${IS_MAC ? '⌘' : 'Strg'}-Klick`;
+    if (selectedCount > 1) return ' – ' + t('lasso.dragToCopy');
+    return ' · ' + t('lasso.multiHint', { key: IS_MAC ? '⌘' : t('app.keyCtrl') });
   }
 
   return { attach, hint };

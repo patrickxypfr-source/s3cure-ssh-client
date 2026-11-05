@@ -39,23 +39,23 @@
 
     <form id="quick" class="field">
       <span class="field-icon" data-icon="bolt"></span>
-      <input id="quick-input" placeholder="user@host" spellcheck="false" autocomplete="off" title="Schnell verbinden: user@host eingeben und Enter drücken">
+      <input id="quick-input" placeholder="user@host" spellcheck="false" autocomplete="off" title="Schnell verbinden: user@host eingeben und Enter drücken" data-i18n-title="app.quickConnectTip">
     </form>
 
     <div class="section-head">
-      <span>Verbindungen</span>
+      <span data-i18n="app.connections">Verbindungen</span>
       <span class="section-btns">
-        <button id="import-hosts" class="round-btn" title="Verbindungen aus ~/.ssh/config übernehmen" data-icon="download"></button>
-        <button id="add-host" class="round-btn" title="Neue Verbindung" data-icon="plus"></button>
+        <button id="import-hosts" class="round-btn" title="Verbindungen aus ~/.ssh/config übernehmen" data-i18n-title="app.importHosts" data-icon="download"></button>
+        <button id="add-host" class="round-btn" title="Neue Verbindung" data-i18n-title="host.newTitle" data-icon="plus"></button>
       </span>
     </div>
     <div id="host-search-wrap" class="field" hidden>
       <span class="field-icon" data-icon="search"></span>
-      <input id="host-search" placeholder="Verbindungen suchen" spellcheck="false" autocomplete="off">
+      <input id="host-search" placeholder="Verbindungen suchen" data-i18n-placeholder="app.searchHosts" spellcheck="false" autocomplete="off">
     </div>
     <ul id="host-list"></ul>
-    <div id="host-empty" class="hint">Noch keine Verbindungen.<br>Klick auf ＋, um eine anzulegen.</div>
-    <button id="app-lock-btn" class="btn ghost" data-icon="lock" title="App beim Start mit Passwort oder Touch ID schützen">App-Sperre</button>
+    <div id="host-empty" class="hint" data-i18n-html="app.noHosts">Noch keine Verbindungen.<br>Klick auf ＋, um eine anzulegen.</div>
+    <button id="app-lock-btn" class="btn ghost" data-icon="lock" title="App beim Start mit Passwort oder Touch ID schützen" data-i18n-title="appLock.buttonTip" data-i18n="appLock.button">App-Sperre</button>
   </aside>
 
   <main id="main">
@@ -65,14 +65,14 @@
 
     <div id="toolbar" hidden>
       <span id="tab-status"><span class="status-dot"></span><span id="tab-status-text"></span></span>
-      <button id="monitor" type="button" hidden title="Server-Übersicht – klicken für Details"></button>
+      <button id="monitor" type="button" hidden title="Server-Übersicht – klicken für Details" data-i18n-title="app.monitorTip"></button>
       <div class="spacer"></div>
-      <button id="btn-reconnect" class="btn" hidden data-icon="refresh">Neu verbinden</button>
-      <button id="btn-tunnels" class="btn ghost" data-icon="tunnel" title="Port-Weiterleitungen (Tunnel) für diese Verbindung">Tunnel<span id="tunnel-count" hidden></span></button>
-      <button id="btn-quick" class="btn ghost" data-icon="bolt" title="Schnellbefehle für diese Verbindung ein- oder ausblenden">Befehle</button>
+      <button id="btn-reconnect" class="btn" hidden data-icon="refresh" data-i18n="app.reconnect">Neu verbinden</button>
+      <button id="btn-tunnels" class="btn ghost" data-icon="tunnel" title="Port-Weiterleitungen (Tunnel) für diese Verbindung" data-i18n-title="app.tunnelsTip" data-i18n="app.tunnels">Tunnel<span id="tunnel-count" hidden></span></button>
+      <button id="btn-quick" class="btn ghost" data-icon="bolt" title="Schnellbefehle für diese Verbindung ein- oder ausblenden" data-i18n-title="app.commandsTip" data-i18n="app.commands">Befehle</button>
       <div class="seg" id="view-switch">
-        <button data-view="terminal" data-icon="terminal">Terminal</button>
-        <button data-view="files" data-icon="folder">Dateien</button>
+        <button data-view="terminal" data-icon="terminal" data-i18n="app.viewTerminal">Terminal</button>
+        <button data-view="files" data-icon="folder" data-i18n="app.viewFiles">Dateien</button>
       </div>
     </div>
 
@@ -84,10 +84,10 @@
           <div class="welcome-card">
             <img class="welcome-logo" src="logo.png" alt="S3cure Logo">
             <div class="welcome-title">S3cure SSH Client</div>
-            <p>Doppelklick auf eine Verbindung links öffnet das Terminal,<br>
+            <p data-i18n-html="app.welcomeText">Doppelklick auf eine Verbindung links öffnet das Terminal,<br>
               das Ordner-Symbol öffnet die Dateien.<br>
               Oder tipp oben links <code>user@host</code> ein und drück Enter.</p>
-            <button id="welcome-add" class="btn primary" data-icon="plus">Neue Verbindung</button>
+            <button id="welcome-add" class="btn primary" data-icon="plus" data-i18n="host.newTitle">Neue Verbindung</button>
           </div>
         </div>
       </div>
@@ -99,55 +99,55 @@
   <!-- Dialog für Verbindung anlegen/bearbeiten -->
   <div id="host-modal" class="modal" hidden>
     <form class="dialog" id="host-form">
-      <h2 id="host-form-title">Neue Verbindung</h2>
-      <label>Name<input name="label" required placeholder="z. B. Raspberry Pi" autocomplete="off"></label>
+      <h2 id="host-form-title" data-i18n="host.newTitle">Neue Verbindung</h2>
+      <label data-i18n="host.name">Name<input name="label" required placeholder="z. B. Raspberry Pi" data-i18n-placeholder="host.namePh" autocomplete="off"></label>
       <!-- Protokoll und FTP-Optionen: app/src/ftp-ui.js -->
-      <label>Protokoll
+      <label data-i18n="host.protocol">Protokoll
         <select name="protocol">
-          <option value="sftp">SFTP / SSH (Terminal und Dateien)</option>
-          <option value="ftp">FTP (nur Dateien, unverschlüsselt)</option>
-          <option value="ftps">FTPS – explizit (nur Dateien, verschlüsselt)</option>
-          <option value="ftps-implicit">FTPS – implizit (nur Dateien, verschlüsselt)</option>
+          <option value="sftp" data-i18n="host.protoSftp">SFTP / SSH (Terminal und Dateien)</option>
+          <option value="ftp" data-i18n="host.protoFtp">FTP (nur Dateien, unverschlüsselt)</option>
+          <option value="ftps" data-i18n="host.protoFtps">FTPS – explizit (nur Dateien, verschlüsselt)</option>
+          <option value="ftps-implicit" data-i18n="host.protoFtpsImplicit">FTPS – implizit (nur Dateien, verschlüsselt)</option>
         </select>
       </label>
       <div class="row">
-        <label class="grow">Server (Adresse oder IP)<input name="host" required placeholder="192.168.1.20" spellcheck="false" autocomplete="off"></label>
-        <label class="port">Port<input name="port" type="number" min="1" max="65535" value="22"></label>
+        <label class="grow" data-i18n="host.server">Server (Adresse oder IP)<input name="host" required placeholder="192.168.1.20" spellcheck="false" autocomplete="off"></label>
+        <label class="port" data-i18n="host.port">Port<input name="port" type="number" min="1" max="65535" value="22"></label>
       </div>
-      <label>Benutzername<input name="user" placeholder="pi" spellcheck="false" autocomplete="off"></label>
-      <label>Passwort <span class="muted">(optional, verschlüsselt im Schlüsselbund)</span>
+      <label data-i18n="host.user">Benutzername<input name="user" placeholder="pi" spellcheck="false" autocomplete="off"></label>
+      <label data-i18n="host.password">Passwort <span class="muted" data-i18n="host.passwordNote">(optional, verschlüsselt im Schlüsselbund)</span>
         <div class="row">
-          <input name="password" type="password" class="grow" placeholder="Wird beim ersten Verbinden abgefragt" autocomplete="new-password">
-          <button type="button" id="forget-pw" class="btn" hidden>Vergessen</button>
+          <input name="password" type="password" class="grow" placeholder="Wird beim ersten Verbinden abgefragt" data-i18n-placeholder="host.pwAskPh" autocomplete="new-password">
+          <button type="button" id="forget-pw" class="btn" hidden data-i18n="host.forgetPw">Vergessen</button>
         </div>
       </label>
       <div id="ftp-options" hidden>
-        <p id="ftp-plain-note" class="ftp-note" hidden>FTP überträgt Passwort und Dateien unverschlüsselt. Wenn dein Hoster FTPS anbietet, nimm lieber FTPS.</p>
-        <label class="toggle"><input type="checkbox" name="ftpPassive" checked><span class="track"><span class="knob"></span></span><span>Passiver Modus <span class="muted">(empfohlen – nur ausschalten, wenn der Hoster es verlangt)</span></span></label>
+        <p id="ftp-plain-note" class="ftp-note" hidden data-i18n="host.ftpPlainNote">FTP überträgt Passwort und Dateien unverschlüsselt. Wenn dein Hoster FTPS anbietet, nimm lieber FTPS.</p>
+        <label class="toggle"><input type="checkbox" name="ftpPassive" checked><span class="track"><span class="knob"></span></span><span data-i18n="host.ftpPassive">Passiver Modus <span class="muted" data-i18n="host.ftpPassiveNote">(empfohlen – nur ausschalten, wenn der Hoster es verlangt)</span></span></label>
         <div id="ftp-tls-options">
-          <label class="toggle"><input type="checkbox" name="ftpInsecure"><span class="track"><span class="knob"></span></span>Zertifikat trotzdem akzeptieren</label>
-          <p id="ftp-insecure-warn" class="ftp-note warn" hidden>Achtung: Das Zertifikat wird dann gar nicht mehr geprüft. Ein Angreifer im Netz könnte sich unbemerkt als dein Server ausgeben und das Passwort mitlesen. Besser ausgeschaltet lassen – bei einem selbst signierten Zertifikat fragt die App beim ersten Verbinden nach und merkt es sich.</p>
+          <label class="toggle" data-i18n="host.ftpInsecure"><input type="checkbox" name="ftpInsecure"><span class="track"><span class="knob"></span></span>Zertifikat trotzdem akzeptieren</label>
+          <p id="ftp-insecure-warn" class="ftp-note warn" hidden data-i18n="host.ftpInsecureWarn">Achtung: Das Zertifikat wird dann gar nicht mehr geprüft. Ein Angreifer im Netz könnte sich unbemerkt als dein Server ausgeben und das Passwort mitlesen. Besser ausgeschaltet lassen – bei einem selbst signierten Zertifikat fragt die App beim ersten Verbinden nach und merkt es sich.</p>
         </div>
       </div>
-      <label id="key-field">SSH-Schlüssel <span class="muted">(optional)</span>
+      <label id="key-field" data-i18n="host.key">SSH-Schlüssel <span class="muted" data-i18n="common.optional">(optional)</span>
         <div class="row">
-          <input name="key" class="grow" placeholder="Standard: ~/.ssh oder Passwort" spellcheck="false" autocomplete="off">
-          <button type="button" id="pick-key" class="btn">Wählen…</button>
+          <input name="key" class="grow" placeholder="Standard: ~/.ssh oder Passwort" data-i18n-placeholder="host.keyPh" spellcheck="false" autocomplete="off">
+          <button type="button" id="pick-key" class="btn" data-i18n="host.pickKey">Wählen…</button>
         </div>
       </label>
       <!-- Zusatzfelder: app/src/hosts-extra.js -->
-      <button type="button" id="setup-key" class="btn ghost" data-icon="lock" hidden>Anmeldung ohne Passwort einrichten …</button>
+      <button type="button" id="setup-key" class="btn ghost" data-icon="lock" hidden data-i18n="host.setupKey">Anmeldung ohne Passwort einrichten …</button>
       <div class="row">
-        <label class="grow">Gruppe <span class="muted">(optional)</span><input name="group" list="group-list" placeholder="z. B. Zuhause" autocomplete="off"></label>
-        <label class="grow" id="jump-field">Sprung-Server <span class="muted">(optional)</span><select name="jump" id="jump-select"></select></label>
+        <label class="grow" data-i18n="host.group">Gruppe <span class="muted" data-i18n="common.optional">(optional)</span><input name="group" list="group-list" placeholder="z. B. Zuhause" data-i18n-placeholder="host.groupPh" autocomplete="off"></label>
+        <label class="grow" id="jump-field" data-i18n="host.jump">Sprung-Server <span class="muted" data-i18n="common.optional">(optional)</span><select name="jump" id="jump-select"></select></label>
       </div>
-      <div class="color-row"><span>Farbe</span><div id="color-pick"></div></div>
+      <div class="color-row"><span data-i18n="host.color">Farbe</span><div id="color-pick"></div></div>
       <!-- Agent-Weiterleitung, Proxy: app/src/conn-pro.js -->
       <div id="conn-pro-fields"></div>
       <datalist id="group-list"></datalist>
       <div class="actions">
-        <button type="button" class="btn" data-cancel>Abbrechen</button>
-        <button type="submit" class="btn primary">Speichern</button>
+        <button type="button" class="btn" data-cancel data-i18n="common.cancel">Abbrechen</button>
+        <button type="submit" class="btn primary" data-i18n="common.save">Speichern</button>
       </div>
     </form>
   </div>
@@ -155,18 +155,18 @@
   <!-- App-Sperre einstellen: app/src/applock.js -->
   <div id="lock-modal" class="modal" hidden>
     <form class="dialog" id="lock-form">
-      <h2>App-Sperre</h2>
-      <p class="muted-text">Beim Start fragt die App nach einem Passwort, bevor deine Verbindungen sichtbar werden.</p>
-      <label class="toggle"><input type="checkbox" name="enabled"><span class="track"><span class="knob"></span></span>Beim Start entsperren</label>
+      <h2 data-i18n="appLock.title">App-Sperre</h2>
+      <p class="muted-text" data-i18n="appLock.intro">Beim Start fragt die App nach einem Passwort, bevor deine Verbindungen sichtbar werden.</p>
+      <label class="toggle" data-i18n="appLock.enable"><input type="checkbox" name="enabled"><span class="track"><span class="knob"></span></span>Beim Start entsperren</label>
       <div class="lock-fields">
-        <label class="toggle" id="lock-touch-wrap" hidden><input type="checkbox" name="touchId"><span class="track"><span class="knob"></span></span>Touch ID verwenden</label>
-        <label><span id="lock-pw-label">App-Passwort</span><input name="password" type="password" autocomplete="new-password"></label>
-        <label>Passwort wiederholen<input name="password2" type="password" autocomplete="new-password"></label>
+        <label class="toggle" id="lock-touch-wrap" hidden data-i18n="appLock.useTouchId"><input type="checkbox" name="touchId"><span class="track"><span class="knob"></span></span>Touch ID verwenden</label>
+        <label><span id="lock-pw-label" data-i18n="appLock.password">App-Passwort</span><input name="password" type="password" autocomplete="new-password"></label>
+        <label data-i18n="appLock.repeat">Passwort wiederholen<input name="password2" type="password" autocomplete="new-password"></label>
       </div>
-      <label id="lock-current-wrap" hidden>Bisheriges App-Passwort <span class="muted">(zum Ändern nötig)</span><input name="current" type="password" autocomplete="current-password"></label>
+      <label id="lock-current-wrap" hidden data-i18n="appLock.current">Bisheriges App-Passwort <span class="muted" data-i18n="appLock.currentNote">(zum Ändern nötig)</span><input name="current" type="password" autocomplete="current-password"></label>
       <div class="actions">
-        <button type="button" class="btn" data-cancel>Abbrechen</button>
-        <button type="submit" class="btn primary">Speichern</button>
+        <button type="button" class="btn" data-cancel data-i18n="common.cancel">Abbrechen</button>
+        <button type="submit" class="btn primary" data-i18n="common.save">Speichern</button>
       </div>
     </form>
   </div>
@@ -178,10 +178,10 @@
       <p id="ask-message"></p>
       <pre id="ask-detail" hidden></pre>
       <input id="ask-input" autocomplete="off" spellcheck="false">
-      <label class="toggle remember" id="ask-remember-wrap" hidden><input type="checkbox" id="ask-remember" checked><span class="track"><span class="knob"></span></span><span id="ask-remember-text">Passwort merken (verschlüsselt)</span></label>
+      <label class="toggle remember" id="ask-remember-wrap" hidden><input type="checkbox" id="ask-remember" checked><span class="track"><span class="knob"></span></span><span id="ask-remember-text" data-i18n="ask.remember">Passwort merken (verschlüsselt)</span></label>
       <div class="actions">
-        <button type="button" class="btn" id="ask-cancel">Abbrechen</button>
-        <button type="submit" class="btn primary" id="ask-ok">OK</button>
+        <button type="button" class="btn" id="ask-cancel" data-i18n="common.cancel">Abbrechen</button>
+        <button type="submit" class="btn primary" id="ask-ok" data-i18n="common.ok">OK</button>
       </div>
     </form>
   </div>

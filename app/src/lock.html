@@ -11,13 +11,13 @@
   <div class="drag-area lock-drag"></div>
   <form id="unlock-form" class="dialog lock-card">
     <img class="welcome-logo" src="logo.png" alt="S3cure Logo">
-    <h2>S3cure SSH Client ist gesperrt</h2>
-    <p class="lock-sub">Bitte entsperren, um deine Verbindungen zu sehen.</p>
-    <input id="unlock-pw" type="password" placeholder="App-Passwort" autocomplete="current-password">
-    <p id="unlock-error" class="lock-error" hidden>Falsches Passwort.</p>
+    <h2 data-i18n="lock.title">S3cure SSH Client ist gesperrt</h2>
+    <p class="lock-sub" data-i18n="lock.sub">Bitte entsperren, um deine Verbindungen zu sehen.</p>
+    <input id="unlock-pw" type="password" placeholder="App-Passwort" data-i18n-placeholder="lock.passwordPh" autocomplete="current-password">
+    <p id="unlock-error" class="lock-error" hidden data-i18n="lock.wrong">Falsches Passwort.</p>
     <div class="actions">
       <button type="button" id="unlock-touch" class="btn" data-icon="lock" hidden>Touch ID</button>
-      <button type="submit" class="btn primary">Entsperren</button>
+      <button type="submit" class="btn primary" data-i18n="lock.unlock">Entsperren</button>
     </div>
   </form>
   <script src="locales/de.js"></script>

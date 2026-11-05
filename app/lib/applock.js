@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { systemPreferences } = require('electron');
+const { t } = require('./i18n');
 
 const SCRYPT = { N: 16384, r: 8, p: 1 };
 
@@ -53,14 +54,14 @@ function createAppLock({ configDir, isMac }) {
     ipcMain.handle('lock:touchid', async () => {
       if (!status().locked) return done();
       if (!status().touchId) return false;
-      try { await systemPreferences.promptTouchID('S3cure SSH Client entsperren'); } catch { return false; }
+      try { await systemPreferences.promptTouchID(t('appLock.touchIdReason')); } catch { return false; }
       return done();
     });
 
     // opts: { enabled, touchId, password (neu), current (bisheriges App-Passwort) }
     ipcMain.handle('lock:configure', (_e, opts) => {
       const c = conf();
-      if (c.enabled && !checkPassword(opts.current)) throw new Error('Das bisherige App-Passwort stimmt nicht.');
+      if (c.enabled && !checkPassword(opts.current)) throw new Error(t('appLock.wrongCurrent'));
       const s = load();
       if (!opts.enabled) {
         delete s.appLock;
@@ -69,11 +70,11 @@ function createAppLock({ configDir, isMac }) {
       }
       const next = { enabled: true, touchId: !!opts.touchId && canTouchId(), salt: c.salt, hash: c.hash };
       if (opts.password) {
-        if (opts.password.length < 4) throw new Error('Das App-Passwort muss mindestens 4 Zeichen haben.');
+        if (opts.password.length < 4) throw new Error(t('appLock.tooShort'));
         next.salt = crypto.randomBytes(16).toString('base64');
         next.hash = hash(opts.password, next.salt).toString('base64');
       }
-      if (!next.hash) throw new Error('Bitte ein App-Passwort festlegen.');
+      if (!next.hash) throw new Error(t('appLock.needPassword'));
       s.appLock = next;
       save(s);
       unlocked = true; // wer es gerade einstellt, ist schon drin
