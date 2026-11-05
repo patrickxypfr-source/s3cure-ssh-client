@@ -1,0 +1,43 @@
+/* Tresor für Zugangsdaten (src/vault.js) – Liste nutzt die cp-*-Bausteine aus conn-pro.css */
+
+.vault-pane .vault-list { max-height: 300px; }
+.vault-note-line { font-style: italic; }
+.vault-lock-row { margin-top: 10px; }
+
+/* Dialog Eintrag bearbeiten */
+.vault-dialog { width: 480px; max-height: calc(100vh - 64px); overflow-y: auto; }
+.vault-dialog .vault-secret { margin-top: 6px; }
+.vault-dialog .vault-secret .row { align-items: center; gap: 6px; margin-top: 0; }
+.vault-dialog .vault-secret .mini-btn { flex-shrink: 0; }
+.vault-dialog .vault-remove { height: 30px; padding: 0 10px; }
+.vault-label { margin-bottom: 6px; font-size: 12.5px; font-weight: 500; }
+.vault-keymode { margin-bottom: 10px; }
+.vault-dialog > .row { margin-bottom: 14px; }
+.vault-stored { margin-bottom: 14px; }
+.vault-stored-btns { display: flex; gap: 8px; margin-top: 8px; }
+.vault-keyinfo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); box-shadow: var(--neu-inset); }
+.vault-keyinfo .cp-fp { flex: 1; min-width: 0; margin: 0; }
+.vault-keyinfo .cp-btns { margin-left: auto; align-items: center; }
+.vault-keyinfo .btn { height: 28px; padding: 0 10px; }
+.vault-keyfile { margin: 0 0 8px; color: var(--muted); font: 12px/1.5 var(--mono); word-break: break-all; }
+.vault-dialog textarea {
+  display: block; width: 100%; margin-top: 6px; padding: 8px 11px; resize: vertical;
+  border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text);
+  box-shadow: var(--neu-inset); font: inherit; outline: none;
+}
+.vault-dialog textarea:focus { border-color: var(--accent); box-shadow: var(--neu-inset), 0 0 0 3px var(--accent-ring); }
+.vault-dialog textarea::placeholder { color: var(--faint); }
+.vault-dialog textarea.vault-keytext { font: 11.5px/1.45 var(--mono); min-height: 84px; }
+.vault-used { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+/* Passwort erzeugen */
+.vault-gen { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; color: var(--muted); font-size: 12px; font-weight: 400; }
+.vault-gen input[type=range] { width: 140px; height: auto; padding: 0; border: none; box-shadow: none; background: none; accent-color: var(--accent); }
+.vault-gen-len { min-width: 22px; font-variant-numeric: tabular-nums; color: var(--text); }
+.dialog .vault-gen label.toggle { margin: 0; }
+.vault-gen .btn { height: 28px; padding: 0 10px; }
+
+/* Verbindungs-Dialog: Felder, die mit einem Tresor-Eintrag nicht gelten */
+#host-form.cred-linked .cred-own { display: none !important; }
+.vault-host-hint { margin: -6px 0 14px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+#host-form input[readonly] { color: var(--muted); background: var(--bg); }
