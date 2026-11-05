@@ -65,7 +65,9 @@ function decorateHostItem(li, name, inGroup = false) {
   const color = hostColor(name);
   if (color) { li.classList.add('has-color'); li.style.setProperty('--host-color', color); }
   if (inGroup) li.classList.add('in-group');
-  if (h.jump) {
+  window.FtpUi?.decorateHost(li, name); // FTP/FTPS-Kennzeichen (ftp-ui.js)
+  const ftp = !!window.FtpUi?.isFtpHost(name);
+  if (h.jump && !ftp) {
     const addr = li.querySelector('.host-addr');
     addr.textContent += ` · über ${h.jump}`;
     li.title += `\nÜber Sprung-Server: ${h.jump}`;
@@ -73,11 +75,11 @@ function decorateHostItem(li, name, inGroup = false) {
   li.addEventListener('contextmenu', e => {
     e.preventDefault();
     openMenu([
-      ['Terminal öffnen', () => openTab({ name }, name), '', 'terminal'],
+      ...(ftp ? [] : [['Terminal öffnen', () => openTab({ name }, name), '', 'terminal']]),
       ['Dateien öffnen', () => openTab({ name }, name, 'files'), '', 'folder'],
       null,
       ['Bearbeiten', () => editHost(name), '', 'edit'],
-      ['Anmeldung ohne Passwort einrichten …', () => setupKeyLogin(name), '', 'lock'],
+      ...(ftp ? [] : [['Anmeldung ohne Passwort einrichten …', () => setupKeyLogin(name), '', 'lock']]),
       null,
       ['Löschen', () => deleteHost(name), 'danger', 'trash'],
     ], e.clientX, e.clientY);
@@ -139,7 +141,7 @@ function fillHostExtras(form, name) {
   const sel = form.jump;
   sel.innerHTML = '';
   sel.appendChild(new Option('Keiner – direkt verbinden', ''));
-  const others = Object.keys(hosts).filter(n => n !== name).sort((a, b) => a.localeCompare(b));
+  const others = Object.keys(hosts).filter(n => n !== name && !window.FtpUi?.isFtpHost(n)).sort((a, b) => a.localeCompare(b));
   for (const n of others) sel.appendChild(new Option(`${n} (${hosts[n].host})`, n));
   if (h.jump && !others.includes(h.jump)) sel.appendChild(new Option(h.jump, h.jump)); // z. B. aus ~/.ssh/config
   sel.value = h.jump || '';
@@ -148,10 +150,11 @@ function fillHostExtras(form, name) {
   renderColorPick();
   $('#setup-key').hidden = !name;
   for (const h of hostFormHooks) h.fill?.(form, name, h);
+  window.FtpUi?.fillForm(form, h); // Protokoll, FTP-Optionen (ftp-ui.js)
 }
 
 function readHostExtras(form) {
-  const out = { group: form.group.value.trim(), color: pickedColor, jump: form.jump.value };
+  const out = { group: form.group.value.trim(), color: pickedColor, jump: form.jump.value, ...window.FtpUi?.readForm(form) };
   for (const h of hostFormHooks) Object.assign(out, h.read?.(form) || {});
   return out;
 }

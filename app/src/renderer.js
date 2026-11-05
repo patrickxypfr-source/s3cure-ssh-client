@@ -164,6 +164,7 @@ $('#quick').addEventListener('submit', e => {
 // opts.connect: false = noch nicht verbinden; opts.restore: gemerkter Zustand (session.js)
 function openTab(spec, title, view = 'terminal', opts = {}) {
   const id = crypto.randomUUID();
+  if (window.FtpUi?.isFtpSpec(spec)) view = 'files'; // FTP: nur Dateien (ftp-ui.js)
   const el = document.createElement('div');
   el.className = 'term';
   $('#terminals').appendChild(el);
@@ -223,6 +224,7 @@ async function connect(tab, opts = {}) {
     if (opts.reconnect) { tab.term.write('\x1b[90m' + msg.replace(/\n/g, '\r\n') + '\x1b[0m\r\n'); return false; }
     tab.term.write('\r\n\x1b[31m' + msg.replace(/\n/g, '\r\n') + '\x1b[0m\r\n');
     setState(tab, 'closed');
+    window.FtpUi?.connectFailed(tab, msg);
     return false;
   }
 }
@@ -236,9 +238,10 @@ function setState(tab, state) {
 
 function updateToolbar() {
   const tab = tabs.get(activeId);
-  Monitor.update(tab); // Server-Übersicht (monitor.js)
+  const sshTab = window.FtpUi?.isFtpTab(tab) ? null : tab; // FTP: keine Server-Übersicht, keine Tunnel
+  Monitor.update(sshTab); // Server-Übersicht (monitor.js)
   $('#toolbar').hidden = !tab;
-  window.tunnelUi?.setTab(tab || null);
+  window.tunnelUi?.setTab(sshTab || null);
   window.TermExtra?.update(tab);
   if (!tab) return;
   const texts = {
@@ -253,6 +256,7 @@ function updateToolbar() {
   for (const b of document.querySelectorAll('#view-switch button')) b.classList.toggle('on', b.dataset.view === tab.view);
   renderFiles(tab);
   renderQuickbar();
+  window.FtpUi?.update(tab);
 }
 
 // ---------- Schnellbefehle ----------
@@ -370,6 +374,7 @@ function activate(id) {
 function setView(view) {
   const tab = tabs.get(activeId);
   if (!tab || tab.view === view) return;
+  if (view === 'terminal' && window.FtpUi?.blockTerminal(tab)) return;
   tab.view = view;
   if (view === 'files' && tab.state === 'open' && !tab.files.loaded) loadDir(tab, tab.files.path || '~');
   activate(tab.id);

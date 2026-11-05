@@ -1,0 +1,20 @@
+/* FTP/FTPS (src/ftp-ui.js): Optionen im Verbindungs-Dialog, Kennzeichen in der Liste, ausgeblendete SSH-Funktionen */
+
+#ftp-options { margin: -2px 0 14px; }
+#ftp-options .toggle { display: flex; margin: 0 0 10px; }
+#ftp-tls-options .toggle { margin-bottom: 6px; }
+.ftp-note { margin: 0 0 12px; padding: 8px 10px; border-radius: 8px; font-size: 12px; line-height: 1.5; color: var(--muted); background: var(--hover); }
+.ftp-note.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); }
+
+/* Kennzeichen „FTP“/„FTPS“ neben dem Namen */
+.proto-badge {
+  margin-left: 6px; padding: 0 5px; border-radius: 4px; border: 1px solid var(--border-strong);
+  font-size: 9.5px; font-weight: 600; letter-spacing: .3px; line-height: 15px; color: var(--muted); vertical-align: 1px;
+}
+.proto-badge.plain { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--border)); }
+
+/* FTP-Tab: kein Terminal, keine SSH-Funktionen */
+#view-switch button.ftp-off { opacity: .4; cursor: not-allowed; }
+#view-switch button.ftp-off:hover { color: var(--muted); }
+body.ftp-tab #btn-tunnels, body.ftp-tab #btn-quick, body.ftp-tab #monitor, body.ftp-tab #quickbar { display: none !important; }
+#ftp-options .toggle .track { flex-shrink: 0; }

@@ -1,4 +1,4 @@
-// Zusatzfelder für gespeicherte Verbindungen: Gruppe, Farbe, Sprung-Server, Agent-Weiterleitung, Proxy.
+// Zusatzfelder für gespeicherte Verbindungen: Gruppe, Farbe, Sprung-Server, Agent-Weiterleitung, Proxy, Protokoll.
 // Alte Einträge ohne diese Felder funktionieren unverändert.
 const { hostProxyField } = require('./proxy');
 
@@ -18,6 +18,23 @@ function hostExtras(host) {
   all.proxy = hostProxyField(host.proxy);
   const out = {};
   for (const k of Object.keys(all)) if (k in host) out[k] = all[k];
+  // Protokoll SFTP/FTP/FTPS (lib/ftp.js) – nur wenn mitgeschickt (Host-Dialog schickt es immer)
+  if ('protocol' in host) Object.assign(out, protocolFields(host));
+  return out;
+}
+
+// Protokoll: SFTP/SSH (Standard, kein Eintrag) oder FTP/FTPS (lib/ftp.js).
+// Felder werden immer gesetzt (auch undefined), damit beim Zurückwechseln auf SFTP nichts Altes übrig bleibt.
+function protocolFields(host) {
+  const { PROTOCOLS } = require('./ftp');
+  const proto = Object.prototype.hasOwnProperty.call(PROTOCOLS, host.protocol || '') ? host.protocol : undefined;
+  const out = { protocol: proto, ftpPassive: undefined, ftpInsecure: undefined };
+  if (!proto) return out;
+  if (host.ftpPassive === false) out.ftpPassive = false;             // Standard: passiv
+  if (proto !== 'ftp' && host.ftpInsecure === true) out.ftpInsecure = true; // Standard: Zertifikat prüfen
+  if (!Number(host.port)) out.port = PROTOCOLS[proto].port;
+  out.jump = undefined;          // Sprung-Server, Agent und Proxy gibt es nur bei SSH
+  out.agentForward = undefined;
   return out;
 }
 
@@ -32,4 +49,4 @@ function updateJumpRefs(hosts, oldName, newName) {
   }
 }
 
-module.exports = { hostExtras, updateJumpRefs, COLORS };
+module.exports = { hostExtras, updateJumpRefs, COLORS, protocolFields };

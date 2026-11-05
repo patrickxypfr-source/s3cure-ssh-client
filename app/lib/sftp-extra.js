@@ -16,6 +16,7 @@ function formatMB(n) { return (n / 1024 / 1024).toLocaleString('de-DE', { maximu
 
 // Ab Position 0 bis zu `max` Bytes lesen
 async function readStart(sftp, file, max) {
+  if (sftp.readStart) return sftp.readStart(file, max); // FTP (lib/ftp.js)
   const handle = await p(cb => sftp.open(file, 'r', cb));
   try {
     const buf = Buffer.alloc(max);

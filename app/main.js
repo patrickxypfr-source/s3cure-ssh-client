@@ -9,7 +9,7 @@ const { setupUpdateCheck } = require('./lib/update-check');
 const sftpExtra = require('./lib/sftp-extra');
 // Übertragungs-Warteschlange (Pause, Fortsetzen, parallel, Limit): app/lib/transfers.js
 const transfers = require('./lib/transfers').create(() => win, {
-  getSftp: id => getSftp(id), isConnected: id => sessions.has(id), sftpError: (err, t) => sftpError(err, t),
+  getSftp: id => getSftp(id), isConnected: id => sessions.has(id) || files.isFtp(id), sftpError: (err, t) => sftpError(err, t),
 });
 const snippets = require('./lib/snippets');
 const monitor = require('./lib/monitor');
@@ -164,6 +164,7 @@ const connection = createConnection({
 
 ipcMain.handle('ssh:connect', (_e, tabId, spec, cols, rows) => {
   closeSession(tabId, { keepTransfers: true }); // Übertragungen warten aufs Neuverbinden
+  if (files.isFtpSpec(spec)) return files.connect(tabId, spec); // FTP/FTPS: nur Dateien (lib/files-adapter.js)
   return connection.openShell(tabId, spec, cols, rows).then(info => {
     tunnels.onConnected(tabId);
     transfers.resumeTab(tabId);
@@ -175,13 +176,14 @@ function closeSession(tabId, { keepTransfers = false } = {}) {
   stopSearch(tabId);
   tunnels.stopAll(tabId);
   if (keepTransfers) transfers.suspendTab(tabId); else transfers.cancelTab(tabId);
+  files.close(tabId);
   const s = sessions.get(tabId);
   if (s) { sessions.delete(tabId); s.client.end(); }
 }
 
 ipcMain.on('ssh:write', (_e, tabId, data) => sessions.get(tabId)?.stream.write(data));
 ipcMain.on('ssh:resize', (_e, tabId, cols, rows) => sessions.get(tabId)?.stream.setWindow(rows, cols, 0, 0));
-ipcMain.on('ssh:close', (_e, tabId) => { closeSession(tabId); connection.forget(tabId); });
+ipcMain.on('ssh:close', (_e, tabId) => { closeSession(tabId); connection.forget(tabId); files.forget(tabId); });
 
 // ---------- Dateien (SFTP) ----------
 
@@ -189,7 +191,7 @@ const posix = path.posix;
 // Callback-Funktion in Promise verwandeln
 const p = fn => new Promise((res, rej) => fn((e, r) => e ? rej(e) : res(r)));
 
-function getSftp(tabId) {
+function sshSftp(tabId) {
   const s = sessions.get(tabId);
   if (!s) return Promise.reject(new Error('Keine aktive Verbindung in diesem Tab.'));
   if (!s.sftp) {
@@ -201,6 +203,13 @@ function getSftp(tabId) {
   }
   return s.sftp;
 }
+
+// Dateizugriff je Tab: SFTP oder FTP/FTPS mit denselben Funktionen (app/lib/files-adapter.js, app/lib/ftp.js)
+const files = require('./lib/files-adapter').createFilesAdapter({
+  configDir: CONFIG_DIR, loadHosts, ask, sshSftp,
+  passwords: { read: readPassword, write: writePassword, remove: removePassword },
+});
+const getSftp = tabId => files.get(tabId);
 
 function sftpError(err, target) {
   const where = target ? ` (${target})` : '';
@@ -347,6 +356,7 @@ transfers.register(ipcMain); // Abbrechen, Pause, Reihenfolge, Erneut versuchen,
 sftpExtra.register({
   ipcMain, getSftp, sftpError,
   getClient: tabId => {
+    if (files.isFtp(tabId)) throw new Error('Das geht nur mit SSH-Verbindungen, nicht mit FTP.');
     const s = sessions.get(tabId);
     if (!s) throw new Error('Keine aktive Verbindung in diesem Tab.');
     return s.client;
@@ -451,7 +461,8 @@ async function searchWithSftp(tabId, root, query, state, add) {
 
 ipcMain.handle('search:start', (_e, tabId, root, query, searchId) => {
   const s = sessions.get(tabId);
-  if (!s) throw new Error('Keine aktive Verbindung in diesem Tab.');
+  const isFtp = files.isFtp(tabId); // FTP: keine Befehle auf dem Server -> nur Ordner für Ordner
+  if (!s && !isFtp) throw new Error('Keine aktive Verbindung in diesem Tab.');
   stopSearch(tabId);
   const state = { cancelled: false, limited: false, count: 0, stop: null, error: null };
   searches.set(tabId, state);
@@ -472,7 +483,7 @@ ipcMain.handle('search:start', (_e, tabId, root, query, searchId) => {
 
   (async () => {
     let done = false;
-    try { done = await searchWithFind(s.client, root, query, state, add); } catch {}
+    if (!isFtp) { try { done = await searchWithFind(s.client, root, query, state, add); } catch {} }
     state.method = done ? 'find' : 'sftp';
     if (!done && !state.cancelled) {
       try { await searchWithSftp(tabId, root, query, state, add); } catch (err) { state.error = sftpError(err).message; }

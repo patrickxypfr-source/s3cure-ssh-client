@@ -113,7 +113,28 @@ function remoteFile(sftp) {
 // file: { dir: 'put'|'get', from, to, done, started, srcSize, resume }
 // shouldStop(): true -> keine neuen Blöcke mehr, angefangene fertig machen, STOP werfen
 // onBytes(n): Fortschritt
+// FTP (lib/ftp.js) kann nicht blockweise an beliebigen Stellen lesen/schreiben: Datei am Stück
+// übertragen. Fortschritt und Abbrechen/Pausieren gehen, Fortsetzen ab der Abbruchstelle nicht.
+async function copyFileFtp(sftp, file, shouldStop, onBytes) {
+  onBytes(-file.done); // ein früherer Versuch fängt von vorn an
+  file.done = 0;
+  file.started = true;
+  let last = 0;
+  const opts = {
+    step: total => { const d = total - last; last = total; file.done += d; onBytes(d); },
+    cancelled: () => shouldStop(),
+  };
+  try {
+    await p(cb => (file.dir === 'put' ? sftp.fastPut(file.from, file.to, opts, cb) : sftp.fastGet(file.from, file.to, opts, cb)));
+  } catch (err) {
+    if (shouldStop()) throw STOP;
+    throw err;
+  }
+  if (shouldStop()) throw STOP;
+}
+
 async function copyFile(sftp, file, limiter, shouldStop, onBytes) {
+  if (sftp && sftp.isFtp) return copyFileFtp(sftp, file, shouldStop, onBytes);
   const get = file.dir === 'get';
   const src = get ? remoteFile(sftp) : localFile();
   const dst = get ? localFile() : remoteFile(sftp);
