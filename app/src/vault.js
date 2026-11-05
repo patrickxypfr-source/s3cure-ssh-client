@@ -438,7 +438,7 @@
   });
 
   // Nach Backup-Import oder Abgleich neu laden
-  window.s3backup?.onChanged(() => load());
+  window.s3backup?.onChanged(info => { load(); if (info && info.vault) refreshHosts().catch(() => {}); });
 
   // ---------- Verbindungs-Dialog: „Zugangsdaten“ ----------
 
