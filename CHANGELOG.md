@@ -15,7 +15,8 @@ So wird ein Abschnitt geschrieben (für Mitwirkende):
 ## [Unveröffentlicht]
 
 ### Verbessert
-- **Befehlsknöpfe löschen das Terminal nicht mehr:** Statt alles zu leeren, setzt jeder Knopf (Status, Check, Logs …) eine graue Trennlinie mit Name und Uhrzeit. Die Ausgaben davor bleiben stehen – einfach hochscrollen.
+- **Befehlsknöpfe löschen das Terminal nicht mehr:** Statt alles zu leeren, setzt jeder Knopf (Status, Check, Logs …) eine Trennlinie mit farbigem Namensschild und Uhrzeit – rot für normale Befehle, grün mit „● LIVE“ für Live-Logs, gelb für Befehle mit Rückfrage (Restart, Stop …). Die Ausgaben davor bleiben stehen – einfach hochscrollen.
+- **Übersichtlichere Meldungen im Terminal:** „Verbindung verloren“, „Wieder verbunden“, „Verbindung beendet“ und Fehler haben jetzt Farbe und ein kleines Symbol (⚠ ✓ ○ ✕).
 - **Modernere Scrollleisten:** Im Terminal und in allen Listen sind die Scrollleisten jetzt schmale, abgerundete Pillen mit etwas Abstand zum Rand. Beim Drüberfahren werden sie etwas breiter und deutlicher.
 
 ## 1.5.0 – 2026-11-05

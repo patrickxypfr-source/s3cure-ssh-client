@@ -483,7 +483,7 @@
     layoutPanes(x);
     fitTab(x);
     update(tab);
-    term.write(`\x1b[90m${t('termExtra.opening')}\x1b[0m\r\n`);
+    term.write(TermStyle.line('info', t('termExtra.opening')));
     try {
       await X.splitOpen(tab.id, id, term.cols, term.rows);
       if (!x.splits.includes(split)) { X.splitClose(id); return; } // inzwischen wieder geschlossen

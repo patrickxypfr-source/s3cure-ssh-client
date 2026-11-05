@@ -211,7 +211,7 @@ async function connect(tab, opts = {}) {
   setState(tab, opts.reconnect ? 'reconnecting' : 'connecting');
   if (!opts.reconnect) {
     tab.term.reset();
-    tab.term.write(`\x1b[90m${t('app.connectingTo', { name: tab.title })}\x1b[0m\r\n`);
+    tab.term.write(TermStyle.line('info', t('app.connectingTo', { name: tab.title })));
   }
   try {
     const info = await api.connect(tab.id, tab.spec, tab.term.cols, tab.term.rows);
@@ -224,8 +224,8 @@ async function connect(tab, opts = {}) {
     return true;
   } catch (err) {
     const msg = String(err.message || err).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
-    if (opts.reconnect) { tab.term.write('\x1b[90m' + msg.replace(/\n/g, '\r\n') + '\x1b[0m\r\n'); return false; }
-    tab.term.write('\r\n\x1b[31m' + msg.replace(/\n/g, '\r\n') + '\x1b[0m\r\n');
+    if (opts.reconnect) { tab.term.write(TermStyle.line('info', msg)); return false; }
+    tab.term.write('\r\n' + TermStyle.line('error', msg));
     setState(tab, 'closed');
     window.FtpUi?.connectFailed(tab, msg);
     return false;
@@ -324,15 +324,6 @@ function renderEditorBar(tab, bar) {
   bar.appendChild(hint);
 }
 
-// Graue Trennlinie „── Status · 15:42 ─────“ über die ganze Breite; die leere Eingabezeile davor wird ersetzt
-function quickSeparator(cols, label) {
-  const name = String(label).replace(/[\x00-\x1f\x7f]/g, ' ').trim();
-  const short = name.length > 60 ? name.slice(0, 59) + '…' : name;
-  const time = I18N.fmtTime(Date.now(), { hour: '2-digit', minute: '2-digit' });
-  const rest = Math.max(3, cols - short.length - time.length - 8);
-  return '\r\x1b[2K\r\n\x1b[90m── \x1b[0;1m' + short + '\x1b[0;90m · ' + time + ' ' + '─'.repeat(rest) + '\x1b[0m\r\n';
-}
-
 // live: Befehl läuft endlos (Live-Log o. Ä.) und wird vor dem nächsten Knopf mit Strg+C beendet
 async function runQuick(cmd, confirmText, live = Quickbar.isLive(cmd), label = '') {
   const tab = tabs.get(activeId);
@@ -357,7 +348,8 @@ async function runQuick(cmd, confirmText, live = Quickbar.isLive(cmd), label = '
   // Übersichtlich, ohne etwas zu löschen: Trennlinie mit Name und Uhrzeit, dann Befehl ausführen
   // (Strg+U leert eine halb getippte Zeile). Die Ausgabe davor bleibt zum Hochscrollen erhalten.
   tab.term.scrollToBottom();
-  await new Promise(r => tab.term.write(quickSeparator(tab.term.cols, label || cmd), r));
+  const kind = live ? 'live' : confirmText ? 'confirm' : 'run';
+  await new Promise(r => tab.term.write(TermStyle.separator(tab.term.cols, label || cmd, kind), r));
   api.write(tab.id, '\x15' + cmd + '\r');
   tab.term.focus();
 }
@@ -439,7 +431,7 @@ api.onHostsChanged?.(() => refreshHosts()); // in einem anderen Fenster geänder
 api.onClosed(id => {
   const tab = tabs.get(id);
   if (!tab) return;
-  tab.term.write(`\r\n\x1b[90m${t('app.connectionEnded')}\x1b[0m\r\n`);
+  tab.term.write('\r\n' + TermStyle.line('end', t('app.connectionEnded')));
   setState(tab, 'closed');
 });
 

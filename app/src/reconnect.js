@@ -9,7 +9,7 @@ function startReconnect(tab) {
   if (!tabs.has(tab.id) || tab.rc) return;
   tab.lost = true;
   tab.rc = { attempt: 0, timer: null, busy: false, next: 0 };
-  tab.term.write(`\r\n\x1b[33m${t('reconnect.lost')}\x1b[0m\r\n`);
+  tab.term.write('\r\n' + TermStyle.line('warn', t('reconnect.lost')));
   setState(tab, 'reconnecting');
   scheduleReconnect(tab);
 }
@@ -39,12 +39,12 @@ async function reconnectAttempt(tab) {
     tab.lost = false;
     // Altes Vollbildprogramm (z. B. nano) verlassen und Terminal-Modi zurücksetzen, Verlauf bleibt
     if (tab.term.buffer.active.type === 'alternate') tab.term.write('\x1b[?1049l');
-    tab.term.write(`\x1b[!p\x1b[32m${t('reconnect.back')}\x1b[0m\r\n`);
+    tab.term.write('\x1b[!p' + TermStyle.line('ok', t('reconnect.back')));
     return;
   }
   if (rc.attempt >= RECONNECT_MAX_ATTEMPTS) {
     tab.rc = null;
-    tab.term.write(`\x1b[31m${t('reconnect.gaveUp')}\x1b[0m\r\n`);
+    tab.term.write(TermStyle.line('error', t('reconnect.gaveUp')));
     setState(tab, 'closed');
     return;
   }

@@ -64,7 +64,7 @@
     const opened = items.map(t => {
       const tab = openTab(t.spec, t.title, t.view, { connect: false, restore: t });
       if (t.remotePath) { tab.files.path = t.remotePath; tab.files.restoring = true; }
-      tab.term.write(`\x1b[90m${TXT_RESTORING}\x1b[0m\r\n`);
+      tab.term.write(TermStyle.line('info', TXT_RESTORING));
       return { tab, t };
     });
     const activeItem = data.tabs[data.active];
@@ -89,7 +89,7 @@
         if (!tabs.has(tab.id)) continue; // inzwischen geschlossen
         if (failed) {
           // Kein Fehler-Hagel: weitere Tabs derselben Verbindung warten auf „Neu verbinden“
-          tab.term.write(`\x1b[90m${TXT_NOT_CONNECTED}\x1b[0m\r\n`);
+          tab.term.write(TermStyle.line('info', TXT_NOT_CONNECTED));
           setState(tab, 'closed');
           continue;
         }
