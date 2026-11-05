@@ -66,6 +66,55 @@ jobs:
           node tools/release-notes.mjs "$GITHUB_REF_NAME" >/dev/null || echo "::warning::CHANGELOG.md hat keinen Abschnitt für $GITHUB_REF_NAME – das Release bekommt automatische Notizen."
           grep -qE "^## \[?v?${GITHUB_REF_NAME#v}\]?( |$)" ../CHANGELOG.en.md 2>/dev/null || echo "::warning::CHANGELOG.en.md hat keinen Abschnitt für $GITHUB_REF_NAME – der Release-Text ist nur deutsch."
 
+  # S3cure Agent (Handy-App): Tests, echte Installation auf Ubuntu mit systemd, Paket fürs Release
+  agent:
+    name: Agent
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+        working-directory: agent
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: agent/package-lock.json
+
+      - name: Abhängigkeiten, Syntax, Tests
+        run: |
+          npm ci --no-audit --no-fund
+          for f in lib/*.js bin/*.js public/*.js test/*.js; do node --check "$f"; done
+          bash -n install.sh
+          npm test
+
+      - name: Paket bauen (s3cure-agent.tar.gz)
+        run: |
+          mkdir -p ../dist/pkg/s3cure-agent
+          cp -a bin lib public package.json package-lock.json install.sh README.md ../dist/pkg/s3cure-agent/
+          tar czf ../dist/s3cure-agent.tar.gz -C ../dist/pkg s3cure-agent
+          ls -la ../dist/s3cure-agent.tar.gz
+
+      - name: Echte Installation aus dem Paket und Probe
+        run: |
+          mkdir -p /tmp/probe && tar xzf ../dist/s3cure-agent.tar.gz -C /tmp/probe
+          sudo env "PATH=$PATH" /tmp/probe/s3cure-agent/install.sh
+          printf 'probe-passwort-123\n' | sudo env "PATH=$PATH" s3cure-agent user add probe --admin --password-stdin >/dev/null
+          sudo env "PATH=$PATH" node test/probe.js probe probe-passwort-123
+          # Update: erneut installieren, Benutzer bleibt
+          sudo env "PATH=$PATH" /tmp/probe/s3cure-agent/install.sh >/dev/null
+          sudo env "PATH=$PATH" s3cure-agent user list | grep -q '^probe'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: S3cure Agent
+          path: dist/s3cure-agent.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+
   build:
     name: ${{ matrix.name }}
     needs: test
@@ -151,7 +200,7 @@ jobs:
   release:
     name: GitHub-Release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: [build, agent]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -169,7 +218,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           ls -la dist
-          FILES=(dist/*.dmg dist/*.exe dist/*.AppImage)
+          FILES=(dist/*.dmg dist/*.exe dist/*.AppImage dist/s3cure-agent.tar.gz)
           # Release-Text: Abschnitt der Version aus CHANGELOG.md, darunter (nach „<!-- lang:en -->“) der aus
           # CHANGELOG.en.md – die App zeigt davon den Teil in ihrer Sprache als „Was ist neu?“ (app/lib/release-notes.js)
           if node app/tools/release-notes.mjs "$GITHUB_REF_NAME" > release-notes.md; then

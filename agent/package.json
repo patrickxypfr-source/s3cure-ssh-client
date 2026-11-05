@@ -1,0 +1,19 @@
+{
+  "name": "s3cure-agent",
+  "version": "1.0.0",
+  "description": "S3cure Agent – Server-Status, Dienste, Docker und Logs fürs Handy (Web-App mit Login und 2FA)",
+  "license": "MIT",
+  "private": true,
+  "main": "lib/server.js",
+  "bin": { "s3cure-agent": "bin/s3cure-agent.js" },
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node bin/s3cure-agent.js serve",
+    "demo": "S3CURE_AGENT_DEMO=1 S3CURE_AGENT_DIR=./.demo node bin/s3cure-agent.js serve",
+    "test": "node --test \"test/*.test.js\""
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4",
+    "web-push": "^3.6.7"
+  }
+}
