@@ -139,7 +139,7 @@ t('SSH verbinden, Ansicht „Desktop“ öffnen, nach dem VNC-Passwort fragen', 
   const state = await waitFor(() => page(`(() => { const s = tabs.get(activeId)?.state; return s === 'open' || s === 'closed' ? s : null; })()`), 'SSH steht', 30_000);
   assert.equal(state, 'open', 'sshd: ' + ctx.sshd.log());
   // Umschalter hat jetzt vier Ansichten
-  assert.deepEqual(await page(`[...document.querySelectorAll('#view-switch button')].map(b => b.dataset.view)`), ['terminal', 'files', 'dash', 'desktop']);
+  assert.deepEqual(await page(`[...document.querySelectorAll('#view-switch button')].map(b => b.dataset.view)`), ['terminal', 'files', 'dash', 'db', 'desktop']);
   await page(`document.querySelector('#view-switch button[data-view=desktop]').click()`);
   // VNC ist für die Verbindung eingeschaltet -> verbindet automatisch und fragt nach dem Passwort
   const ask = await waitFor(() => page(`!document.querySelector('#ask-modal').hidden && document.querySelector('#ask-title').textContent`), 'Passwort-Abfrage', 20_000);
