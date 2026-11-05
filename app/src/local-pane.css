@@ -13,7 +13,8 @@
   position: absolute; top: 0; bottom: 0; left: var(--lp-w, 42%); width: 44px; z-index: 2;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
   cursor: col-resize; touch-action: none;
-  background: var(--bg); border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+  background: var(--bg); border-left: 1px solid var(--neu-edge); border-right: 1px solid var(--neu-edge);
+  box-shadow: var(--neu-inset);
 }
 .lp-divider::before {
   content: ''; position: absolute; top: 0; bottom: 0; left: 21px; width: 2px; border-radius: 1px;
@@ -29,7 +30,7 @@
 .files.lp-on .lp-toggle { display: none; }
 /* Geteilt: Suchfeld schmaler, damit der Pfad lesbar bleibt */
 .files.lp-on .search-field { width: 230px; min-width: 150px; }
-.lp-toggle.on { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, var(--border-strong)); color: var(--accent); }
+.lp-toggle.on { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, var(--border-strong)); color: var(--accent); box-shadow: var(--neu-pressed); }
 .lp-toggle.on:hover { background: var(--accent-soft); }
 
 /* Orte: Schreibtisch, Downloads, Dokumente, Laufwerke */
@@ -42,8 +43,9 @@
 }
 .lp-chip svg.ic { width: 15px; height: 15px; flex-shrink: 0; }
 .lp-chip .lbl { overflow: hidden; text-overflow: ellipsis; }
-.lp-chip:hover { background: var(--hover); color: var(--text); }
-.lp-chip.on { background: var(--accent-soft); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); }
+.lp-chip { transition: background .12s, color .12s, box-shadow .15s; }
+.lp-chip:hover { background: var(--surface); color: var(--text); box-shadow: var(--neu-raised-sm); }
+.lp-chip.on { background: var(--accent-soft); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); box-shadow: var(--neu-pressed); }
 .lp-chip:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-ring); }
 
 /* Sortieren per Klick auf die Spaltenköpfe */
@@ -74,7 +76,7 @@
 .lp-cmp { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; }
 .lp-cmp-col {
   flex: 1; display: flex; flex-direction: column; gap: 3px; padding: 10px 12px;
-  border: 1px solid var(--border); border-radius: 10px; background: var(--bg); font-variant-numeric: tabular-nums;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--bg); box-shadow: var(--neu-inset); font-variant-numeric: tabular-nums;
 }
 .lp-cmp-k { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: var(--faint); }
 .lp-cmp-col b { font-weight: 600; }

@@ -3,7 +3,7 @@
 #ftp-options { margin: -2px 0 14px; }
 #ftp-options .toggle { display: flex; margin: 0 0 10px; }
 #ftp-tls-options .toggle { margin-bottom: 6px; }
-.ftp-note { margin: 0 0 12px; padding: 8px 10px; border-radius: 8px; font-size: 12px; line-height: 1.5; color: var(--muted); background: var(--hover); }
+.ftp-note { margin: 0 0 12px; padding: 8px 10px; border-radius: 8px; font-size: 12px; line-height: 1.5; color: var(--muted); background: var(--hover); box-shadow: var(--neu-inset); }
 .ftp-note.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); }
 
 /* Kennzeichen „FTP“/„FTPS“ neben dem Namen */

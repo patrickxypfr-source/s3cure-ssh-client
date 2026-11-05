@@ -14,7 +14,7 @@
 /* Ausklappliste */
 #bm-menu {
   position: fixed; z-index: 21; width: 340px; max-width: calc(100vw - 16px);
-  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-lg);
+  background: var(--surface); border: 1px solid var(--neu-edge); border-radius: 10px; box-shadow: var(--shadow-lg);
   padding: 5px; animation: pop .12s ease;
 }
 #bm-menu[hidden] { display: none; }

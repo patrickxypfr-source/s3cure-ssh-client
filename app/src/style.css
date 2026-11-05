@@ -85,12 +85,12 @@
 
     /* ---- Neumorphism (dunkel): feine helle Oberkante + tiefer weicher Schatten, kaum Licht von außen ---- */
     --neu-shade: 0, 0, 0;
-    --neu-edge: rgba(255, 255, 255, calc(.055 * var(--neu-strength)));
+    --neu-edge: rgba(255, 255, 255, calc(.065 * var(--neu-strength)));
     --neu-well-bg: #0b0b0d;
-    --neu-highlight: inset 0 1px 0 rgba(var(--neu-light), calc(.06 * var(--neu-strength)));
+    --neu-highlight: inset 0 1px 0 rgba(var(--neu-light), calc(.075 * var(--neu-strength)));
     --neu-raised:
       -1px -1px 2px rgba(var(--neu-light), calc(.025 * var(--neu-strength))),
-      2px 3px 6px rgba(var(--neu-shade), calc(.45 * var(--neu-strength))),
+      2px 3px 7px rgba(var(--neu-shade), calc(.5 * var(--neu-strength))),
       var(--neu-highlight);
     --neu-raised-hover:
       -1px -1px 3px rgba(var(--neu-light), calc(.035 * var(--neu-strength))),
@@ -540,6 +540,8 @@ body.win #tabbar { padding-right: 150px; }
 .btn.ghost { box-shadow: none; background: transparent; border-color: transparent; color: var(--muted); height: 30px; padding: 0 10px; }
 .btn.ghost:hover { background: var(--hover); color: var(--text); }
 .btn.ghost.on { color: var(--accent); background: var(--accent-soft); }
+.btn.ghost:hover:not(:disabled) { box-shadow: var(--neu-raised-sm); }
+.btn.ghost.on, .btn.ghost.on:hover:not(:disabled), .btn.ghost:active { box-shadow: var(--neu-pressed); }
 
 #quickbar {
   display: flex; flex-wrap: wrap; align-items: center; gap: 6px;

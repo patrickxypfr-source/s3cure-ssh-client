@@ -1,8 +1,8 @@
 /* ---------- Eigene Befehlsknöpfe (quickbar.js) ---------- */
 
 .qbtn > svg.ic:first-child:not(:last-child) { margin: 0 2px 0 -2px; }
-.qbtn.qghost { border-color: transparent; background: transparent; color: var(--muted); padding: 0 7px; }
-.qbtn.qghost:hover { background: var(--hover); color: var(--text); border-color: transparent; }
+.qbtn.qghost { border-color: transparent; background: transparent; color: var(--muted); padding: 0 7px; box-shadow: none; }
+.qbtn.qghost:hover { background: var(--hover); color: var(--text); border-color: transparent; box-shadow: var(--neu-raised-sm); }
 .qbtn.qghost svg.ic { margin: 0; color: currentColor; }
 .qempty { color: var(--muted); font-size: 12.5px; margin-right: 6px; }
 
@@ -25,7 +25,8 @@
 
 .qmenu {
   display: inline-flex; align-items: center; gap: 4px; padding: 2px 3px 2px 2px;
-  border: 1px solid var(--border-strong); border-radius: 8px; background: var(--hover);
+  border: 1px solid var(--neu-edge); border-radius: 8px; background: var(--neu-well-bg);
+  box-shadow: var(--neu-well);
 }
 .qmenu.danger { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
 .qmenu-head {
@@ -54,16 +55,16 @@
 .snip-dialog textarea {
   display: block; width: 100%; margin-top: 6px; padding: 8px 11px; resize: vertical; min-height: 60px;
   border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text);
-  font: 12.5px/1.5 var(--mono); outline: none;
+  font: 12.5px/1.5 var(--mono); outline: none; box-shadow: var(--neu-inset);
 }
-.snip-dialog textarea:focus, .snip-dialog select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+.snip-dialog textarea:focus, .snip-dialog select:focus { border-color: var(--accent); box-shadow: var(--neu-inset), 0 0 0 3px var(--accent-ring); }
 .snip-dialog label.toggle { display: flex; margin: 0 0 10px; }
 .snip-dialog .snip-sub { margin: -2px 0 12px 40px; width: calc(100% - 40px); }
 .snip-help { margin: -8px 0 14px; color: var(--muted); font-size: 12px; line-height: 1.55; }
 .snip-dialog.is-menu .for-button, .snip-dialog:not(.is-menu) .for-menu { display: none; }
 .snip-dialog.is-menu .for-menu { margin: 4px 0 0; }
 .snip-inputs:empty { display: none; }
-.snip-inputs { margin: -4px 0 14px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); }
+.snip-inputs { margin: -4px 0 14px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); box-shadow: var(--neu-inset); }
 .snip-inputs-head { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
 .snip-input { display: grid; grid-template-columns: auto 1fr 150px 110px; gap: 6px; align-items: center; }
 .snip-input + .snip-input { margin-top: 6px; }
@@ -71,6 +72,7 @@
 .snip-dialog select {
   height: 30px; padding: 0 6px; border: 1px solid var(--border-strong); border-radius: 8px;
   background: var(--surface); color: var(--text); font: inherit; font-size: 12px; outline: none;
+  box-shadow: var(--neu-inset);
 }
 .snip-dialog .actions { align-items: center; }
 .snip-delete { color: var(--accent); }
@@ -102,7 +104,7 @@
 .snip-icon-grid {
   position: relative; display: grid; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); gap: 4px;
   max-height: 118px; overflow-y: auto; margin-top: 6px; padding: 6px;
-  border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+  border: 1px solid var(--border); border-radius: 8px; background: var(--bg); box-shadow: var(--neu-inset);
 }
 .snip-icon {
   height: 34px; display: inline-flex; align-items: center; justify-content: center;

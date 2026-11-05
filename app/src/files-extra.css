@@ -93,10 +93,11 @@
 .check span {
   width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--border-strong); background: var(--surface);
   display: inline-flex; align-items: center; justify-content: center; transition: background .12s, border-color .12s;
+  box-shadow: var(--neu-inset);
 }
-.check input:checked + span { background: var(--accent); border-color: var(--accent); }
+.check input:checked + span { background: var(--accent); border-color: var(--accent); box-shadow: var(--neu-accent-glow); }
 .check input:checked + span::after { content: ''; width: 5px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: translateY(-1px) rotate(45deg); }
-.check input:focus-visible + span { box-shadow: 0 0 0 3px var(--accent-ring); }
+.check input:focus-visible + span { box-shadow: var(--neu-inset), 0 0 0 3px var(--accent-ring); }
 .chmod-octal { display: flex; align-items: flex-end; gap: 14px; }
 .dialog .chmod-octal label { margin: 0; }
 .chmod-num { width: 80px !important; font-family: var(--mono) !important; text-align: center; }

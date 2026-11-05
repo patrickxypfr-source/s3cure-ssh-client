@@ -5,7 +5,7 @@
 .cp-top .spacer { flex: 1; }
 .cp-top .btn svg.ic { margin-right: 2px; }
 .cp-search { flex: 1; height: 32px; }
-.cp-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 10px; max-height: 330px; overflow-y: auto; }
+.cp-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 10px; max-height: 330px; overflow-y: auto; box-shadow: var(--neu-inset); }
 .cp-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent); }
 .cp-item:last-child { border-bottom: none; }
 .cp-item:hover { background: color-mix(in srgb, var(--hover) 50%, transparent); }

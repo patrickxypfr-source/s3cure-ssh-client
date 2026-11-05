@@ -5,7 +5,7 @@
   position: absolute; right: 16px; bottom: 16px; z-index: 6;
   width: 380px; max-width: calc(100% - 32px); max-height: 55%;
   display: flex; flex-direction: column;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg);
+  background: var(--surface); border: 1px solid var(--neu-edge); border-radius: 12px; box-shadow: var(--shadow-lg);
   animation: pop .14s ease; overflow: hidden;
 }
 #transfers[hidden] { display: none; }
@@ -38,7 +38,7 @@
 .transfer .t-text { flex: 1; min-width: 0; }
 .transfer .t-title { font-weight: 550; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .transfer .t-sub { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.t-bar { height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.t-bar { height: 4px; border-radius: 2px; background: var(--border); box-shadow: var(--neu-inset); overflow: hidden; }
 .transfer .t-bar { margin-top: 6px; }
 .t-fill { height: 100%; width: 0; background: var(--accent); transition: width .15s; }
 .transfer.busy:not(.done):not(.error) .t-fill { animation: t-busy 1.2s ease-in-out infinite; width: 40% !important; }
