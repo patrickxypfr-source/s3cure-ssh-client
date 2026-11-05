@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ws://127.0.0.1:*">
   <title>S3cure SSH Client</title>
   <link rel="stylesheet" href="../node_modules/@xterm/xterm/css/xterm.css">
   <link rel="stylesheet" href="style.css">
@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="ftp.css">
   <link rel="stylesheet" href="palette.css">
   <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="vnc.css">
 </head>
 <body>
   <aside id="sidebar">
@@ -224,6 +225,9 @@
   <script src="applock.js"></script>
   <script src="palette.js"></script>
   <script src="dashboard.js"></script>
+  <!-- Remote Desktop (VNC): noVNC als Modul aus node_modules, Ansicht in vnc.js -->
+  <script src="vnc.js"></script>
+  <script type="module" src="vnc-loader.js"></script>
   <script src="layout.js"></script>
   <script src="session.js"></script>
   <script src="backup.js"></script>

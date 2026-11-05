@@ -244,6 +244,7 @@ function updateToolbar() {
   window.tunnelUi?.setTab(sshTab || null);
   window.TermExtra?.update(tab);
   window.Dashboard?.update(tab); // Ansicht „Übersicht“ (dashboard.js)
+  window.Desktop?.update(tab); // Ansicht „Desktop“ – Remote Desktop über VNC (vnc.js)
   if (!tab) return;
   const texts = {
     connecting: t('app.statusConnecting'),
@@ -376,6 +377,7 @@ function setView(view) {
   const tab = tabs.get(activeId);
   if (!tab || tab.view === view) return;
   if (view === 'terminal' && window.FtpUi?.blockTerminal(tab)) return;
+  if (view === 'desktop' && window.Desktop?.block(tab)) return; // FTP: kein Remote Desktop
   tab.view = view;
   if (view === 'files' && tab.state === 'open' && !tab.files.loaded) loadDir(tab, tab.files.path || '~');
   activate(tab.id);
@@ -400,6 +402,7 @@ function closeTab(id, force = false) {
   tab.files.nav?.detach();
   window.SyncTools?.detach(tab);
   window.Dashboard?.detach(tab);
+  window.Desktop?.detach(tab);
   tab.term.dispose();
   tab.el.remove();
   tab.files.el.remove();
