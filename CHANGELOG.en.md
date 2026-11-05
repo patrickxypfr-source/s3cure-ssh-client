@@ -17,6 +17,9 @@ How to write a section (for contributors):
 ### New
 - **English:** The app is now available in English too. Choose the language in Settings → General – by default it follows your system language.
 
+### Fixed
+- **Settings → Terminal:** The “Font” and “Scrollback” dropdowns are normal width again – no sideways scrolling or squashed labels.
+
 ## 1.2.0 – 2026-11-05
 
 ### New

@@ -17,6 +17,9 @@ So wird ein Abschnitt geschrieben (für Mitwirkende):
 ### Neu
 - **Englisch:** Die App gibt es jetzt auch auf Englisch. Die Sprache stellst du unter Einstellungen → Allgemein ein – ab Werk richtet sie sich nach der Sprache deines Systems.
 
+### Behoben
+- **Einstellungen → Terminal:** Die Auswahlfelder „Schriftart“ und „Verlauf“ sind wieder normal breit – kein seitliches Scrollen und keine zerquetschten Beschriftungen mehr.
+
 ## 1.2.0 – 2026-11-05
 
 ### Neu

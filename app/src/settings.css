@@ -32,14 +32,17 @@
   padding: 12px 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
 }
 .settings-row:last-child { border-bottom: none; }
-.settings-label { font-weight: 500; }
+.settings-label { flex: 1; min-width: 0; font-weight: 500; }
 .settings-label small { display: block; margin-top: 2px; color: var(--muted); font-weight: 400; font-size: 11.5px; }
-.settings-row > select, .settings-row > input { width: 200px; flex-shrink: 0; }
-.settings-row select {
-  height: 32px; padding: 0 8px; border: 1px solid var(--border-strong); border-radius: 8px;
+/* Mit .settings-dialog davor, damit „.dialog select { width: 100% }“ aus connections.css
+   (gleiche Spezifität, später geladen) hier nicht greift. */
+.settings-dialog .settings-row > select, .settings-dialog .settings-row > input { width: 200px; flex: 0 0 200px; }
+.settings-dialog .settings-row select {
+  height: 32px; margin: 0; padding: 0 8px; border: 1px solid var(--border-strong); border-radius: 8px;
   background: var(--surface); color: var(--text); font: inherit; outline: none; cursor: pointer;
+  text-overflow: ellipsis;
 }
-.settings-row select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+.settings-dialog .settings-row select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
 .settings-row .seg { flex-shrink: 0; }
 .settings-row .toggle { flex-shrink: 0; }
 .settings-num { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
