@@ -52,7 +52,7 @@ function setupUpdateCheck({ ipcMain, shell, app, configDir }) {
     if (!parseVersion(version)) return null;
     const url = /^https:\/\/github\.com\//.test(data.html_url || '') ? data.html_url : `https://github.com/${REPO}/releases/latest`;
     // Download-Dateien für das automatische Update (nur aus diesem Repo; im Test auch lokal)
-    const okAsset = u => u.startsWith(`https://github.com/${REPO}/releases/download/`) || (process.env.S3CURE_UPDATE_URL && /^http:\/\/127\.0\.0\.1:\d+\//.test(u));
+    const okAsset = u => assetAllowed(u, REPO, data.html_url) || (process.env.S3CURE_UPDATE_URL && /^http:\/\/127\.0\.0\.1:\d+\//.test(u));
     const assets = (Array.isArray(data.assets) ? data.assets : [])
       .map(a => ({ name: String(a.name || ''), url: String(a.browser_download_url || ''), size: Number(a.size) || 0 }))
       .filter(a => a.name && okAsset(a.url));
@@ -140,4 +140,15 @@ function setupUpdateCheck({ ipcMain, shell, app, configDir }) {
   return { latestRelease, notesFor };
 }
 
-module.exports = { setupUpdateCheck, isNewer, parseVersion };
+// Download-Adresse erlaubt? Nur aus diesem Repo. Wurde das GitHub-Konto umbenannt, leitet GitHub die
+// Abfrage weiter und meldet das Release unter dem neuen Konto (html_url) – dann gilt auch dieses,
+// solange der Repo-Name gleich bleibt.
+function assetAllowed(url, repo, htmlUrl) {
+  const repos = [repo];
+  const m = /^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)\/releases\//.exec(String(htmlUrl || ''));
+  if (m && m[2].toLowerCase() === repo.split('/')[1].toLowerCase()) repos.push(`${m[1]}/${m[2]}`);
+  const u = String(url || '');
+  return repos.some(r => u.toLowerCase().startsWith(`https://github.com/${r}/releases/download/`.toLowerCase()));
+}
+
+module.exports = { setupUpdateCheck, isNewer, parseVersion, assetAllowed };

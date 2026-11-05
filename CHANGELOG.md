@@ -14,6 +14,9 @@ So wird ein Abschnitt geschrieben (für Mitwirkende):
 
 ## [Unveröffentlicht]
 
+### Behoben
+- **Updates nach Umbenennung des GitHub-Kontos:** Die App erkennt Installer jetzt auch, wenn das Konto des Projekts umbenannt wurde (solange der Repo-Name gleich bleibt). Hinweis: Wer noch Version 1.5.1 oder älter hat, muss 1.6.0 einmalig von GitHub herunterladen – danach klappen Updates wieder per Knopf.
+
 ## 1.6.0 – 2026-11-05
 
 ### Neu

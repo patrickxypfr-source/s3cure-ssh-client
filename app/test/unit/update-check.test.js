@@ -29,3 +29,16 @@ test('isNewer ist bei unbekannten Versionen vorsichtig', () => {
   assert.equal(isNewer('2.0.0', 'kaputt'), false);
   assert.equal(isNewer(null, '1.0.0'), false);
 });
+
+test('Download-Adressen: eigenes Repo, nach Umbenennung des Kontos auch das neue – fremde nie', () => {
+  const { assetAllowed } = require('../../lib/update-check');
+  const repo = 'alt/s3cure-ssh-client';
+  const dl = o => `https://github.com/${o}/releases/download/v2.0.0/S3cure.dmg`;
+  assert.ok(assetAllowed(dl('alt/s3cure-ssh-client'), repo, ''));
+  assert.ok(assetAllowed(dl('neu/s3cure-ssh-client'), repo, 'https://github.com/neu/s3cure-ssh-client/releases/tag/v2.0.0'));
+  assert.ok(!assetAllowed(dl('neu/s3cure-ssh-client'), repo, ''));
+  assert.ok(!assetAllowed(dl('neu/anderes-repo'), repo, 'https://github.com/neu/anderes-repo/releases/tag/v2.0.0'));
+  assert.ok(!assetAllowed('https://evil.example/alt/s3cure-ssh-client/releases/download/x', repo, ''));
+  assert.ok(!assetAllowed(dl('neu/s3cure-ssh-client'), repo, 'https://evil.example/neu/s3cure-ssh-client/releases/tag/v2'));
+});
+

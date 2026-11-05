@@ -14,6 +14,9 @@ How to write a section (for contributors):
 
 ## [Unreleased]
 
+### Fixed
+- **Updates after renaming the GitHub account:** the app now also finds installers when the project’s account was renamed (as long as the repo name stays the same). Note: if you still have version 1.5.1 or older, download 1.6.0 once from GitHub – after that, updates work with the button again.
+
 ## 1.6.0 – 2026-11-05
 
 ### New
