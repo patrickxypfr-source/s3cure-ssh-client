@@ -14,6 +14,8 @@ So wird ein Abschnitt geschrieben (für Mitwirkende):
 
 ## [Unveröffentlicht]
 
+## 1.7.0 – 2026-11-05
+
 ### Neu
 - **Datenbank-Ansicht (PostgreSQL):** Neue Ansicht „Datenbank“ neben Terminal und Dateien. Die Verbindung läuft durch SSH – die Datenbank muss nicht im Netz offen sein. „Aus .env übernehmen“ liest die Zugangsdaten (`DATABASE_URL` oder `POSTGRES_*`) direkt aus den .env-Dateien des Servers. Tabellen ansehen, sortieren, durchsuchen und blättern; Zellen per Doppelklick ändern und Zeilen löschen – nur über den Primärschlüssel, immer mit Rückfrage und nur, wenn genau eine Zeile betroffen ist. SQL ausführen (Befehle, die Daten ändern, fragen vorher nach), Ergebnis als CSV speichern.
 - **Sicherheits-Check:** In der Übersicht unter „Sicherheit“ bekommt jeder Server eine Note von A bis F: Root-Anmeldung per Passwort, Anmeldung mit Passwort, Firewall, Schutz vor Passwort-Raten (fail2ban), offene Updates, automatische Sicherheits-Updates, offene Ports (z. B. Datenbank öffentlich erreichbar), ablaufende Zertifikate, Uhrzeit. „Beheben“ zeigt den genauen Befehl und führt ihn erst nach deiner Bestätigung sichtbar im Terminal aus. Passwort-Anmeldung abschalten geht nur, wenn du gerade per Schlüssel angemeldet bist – damit du dich nicht aussperrst.

@@ -14,6 +14,8 @@ How to write a section (for contributors):
 
 ## [Unreleased]
 
+## 1.7.0 – 2026-11-05
+
 ### New
 - **Database view (PostgreSQL):** new “Database” view next to Terminal and Files. The connection runs through SSH – the database never has to be open to the network. “Take from .env” reads the credentials (`DATABASE_URL` or `POSTGRES_*`) straight from the server’s .env files. Browse, sort, search and page through tables; change cells with a double-click and delete rows – only via the primary key, always confirmed and only if exactly one row is affected. Run SQL (commands that change data ask first), save results as CSV.
 - **Security check:** under Overview → “Security” every server gets a grade from A to F: root login with password, password login, firewall, protection against password guessing (fail2ban), pending updates, automatic security updates, open ports (e.g. a database reachable from the internet), expiring certificates, clock. “Fix” shows the exact command and runs it visibly in the terminal only after you confirm. Turning off password login is only offered while you are signed in with a key – so you can’t lock yourself out.
