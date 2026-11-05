@@ -1,7 +1,7 @@
 {
   "name": "myssh",
   "productName": "S3cure SSH Client",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "S3cure SSH Client – SSH & SFTP",
   "main": "main.js",
   "private": true,

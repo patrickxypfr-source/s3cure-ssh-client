@@ -14,6 +14,8 @@ How to write a section (for contributors):
 
 ## [Unreleased]
 
+## 1.3.0 – 2026-11-05
+
 ### New
 - **English:** The app is now available in English too. Choose the language in Settings → General – by default it follows your system language.
 

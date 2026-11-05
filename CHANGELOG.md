@@ -14,6 +14,8 @@ So wird ein Abschnitt geschrieben (für Mitwirkende):
 
 ## [Unveröffentlicht]
 
+## 1.3.0 – 2026-11-05
+
 ### Neu
 - **Englisch:** Die App gibt es jetzt auch auf Englisch. Die Sprache stellst du unter Einstellungen → Allgemein ein – ab Werk richtet sie sich nach der Sprache deines Systems.
 
