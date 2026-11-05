@@ -9,7 +9,7 @@ Desktop-SSH/SFTP-Client (Electron) für macOS, Windows und Linux (AppImage). Obe
 - FTP/FTPS (nur Dateien): `app/lib/ftp.js` (basic-ftp, bildet die SFTP-Schnittstelle von ssh2 nach), `app/lib/files-adapter.js` (`getSftp(tabId)` liefert SFTP oder FTP), Oberfläche `app/src/ftp-ui.js`. Felder in `hosts.json`: `protocol` (`ftp`/`ftps`/`ftps-implicit`, fehlt = SFTP), `ftpPassive`, `ftpInsecure`; gemerkte Zertifikate in `ftp_certs.json`.
 - `app/tools/win-finish.mjs` – Icon/Infos in die Windows-exe (nutzt macOS-Werkzeuge `sips`/`ditto`).
 - `myssh.py` – älteres Python-CLI. `server/s3` – Verwaltungsskript für den Server des Nutzers.
-- Konfiguration: `~/.myssh/hosts.json`, `known_hosts`, `passwords.json` (verschlüsselt). Testhaken: `S3CURE_CONFIG_DIR`, `S3CURE_PLATFORM` (`darwin`/`win32`/`linux`).
+- Konfiguration: `~/.myssh/hosts.json`, `known_hosts`, `passwords.json` (verschlüsselt). Tresor für Zugangsdaten: `app/lib/vault.js` + `app/src/vault.js`, `vault.json` (Metadaten) und `vault-secrets.json` (verschlüsselt); Verbindungen verweisen per `credential: '<id>'` darauf. Testhaken: `S3CURE_CONFIG_DIR`, `S3CURE_PLATFORM` (`darwin`/`win32`/`linux`).
 - Tests: `app/test/unit/*.test.js` (`npm test`), `app/test/integration/` (`xvfb-run -a npm run test:integration`, Electron + lokaler sshd). Anleitung: `CONTRIBUTING.md`.
 - `CHANGELOG.md` + `CHANGELOG.en.md`: Nutzer-sichtbare Änderungen unter „Unveröffentlicht“ / „Unreleased“ eintragen (deutsch + englisch) – wird Release-Text und „Was ist neu?“ in der App.
 

@@ -20,7 +20,7 @@ Es gibt zwei Arten von Tests, beide mit dem in Node eingebauten `node:test` (kei
 | Befehl | Was wird geprüft | Dauer |
 |---|---|---|
 | `npm test` | **Einheitentests** in `app/test/unit/`: einzelne Funktionen ohne Fenster und ohne Netz – z. B. Versionsvergleich für Updates, Import aus `~/.ssh/config`, Platzhalter in Befehlsknöpfen, Tunnel-Eingaben, Schlüssel erzeugen, „Was ist neu?“ | wenige Sekunden |
-| `npm run test:integration` | **Integrationstest** in `app/test/integration/`: startet die echte App (Electron) und einen eigenen SSH-Server, verbindet sich, führt einen Befehl im Terminal aus, öffnet Ordner, lädt Dateien hoch und herunter und speichert im Editor | ca. 30 Sekunden |
+| `npm run test:integration` | **Integrationstest** in `app/test/integration/`: startet die echte App (Electron) und einen eigenen SSH-Server, verbindet sich, führt einen Befehl im Terminal aus, öffnet Ordner, lädt Dateien hoch und herunter und speichert im Editor; `vault.test.mjs` prüft den Tresor (Eintrag mit Schlüssel anlegen, Verbindung verknüpfen und verbinden, Kopieren nach Entsperren, Löschen) | ca. 1 Minute |
 
 ### Integrationstest einrichten
 

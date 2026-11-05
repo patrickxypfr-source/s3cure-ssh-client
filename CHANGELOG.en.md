@@ -14,6 +14,12 @@ How to write a section (for contributors):
 
 ## [Unreleased]
 
+### New
+- **Credential vault:** save user name, password and SSH key once as an entry (e.g. “Company login”) and pick it for as many connections as you like under “Credentials” in the connection dialog. Change the password in the entry and it applies to all of them right away – including FTP/FTPS and jump servers. The key can be a file or stored encrypted in the vault.
+- You’ll find the vault in Settings and under “Keys & Servers”: search, create, edit, delete (showing which connections use the entry) and **generate strong passwords** with an adjustable length.
+- Secrets are never shown just like that: “Show” hides them again after 10 seconds, “Copy” clears the clipboard after 30 seconds. With the app lock turned on, you can choose to be asked for the app password or Touch ID first.
+- Backup and cloud sync include the vault entries – passwords and keys only with the “Include saved passwords” or “Also sync saved passwords” checkbox.
+
 ## 1.4.0 – 2026-11-05
 
 ### Improved

@@ -14,6 +14,12 @@ So wird ein Abschnitt geschrieben (für Mitwirkende):
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Tresor für Zugangsdaten:** Benutzername, Passwort und SSH-Schlüssel einmal als Eintrag speichern (z. B. „Firmen-Login“) und im Verbindungs-Dialog unter „Zugangsdaten“ für beliebig viele Verbindungen auswählen. Änderst du das Passwort im Eintrag, gilt es sofort für alle – auch für FTP/FTPS und Sprung-Server. Den Schlüssel kannst du als Datei angeben oder verschlüsselt im Tresor ablegen.
+- Den Tresor findest du in den Einstellungen und unter „Schlüssel & Server“: Suche, Anlegen, Bearbeiten, Löschen (mit Hinweis, welche Verbindungen den Eintrag nutzen) und **starke Passwörter erzeugen** mit einstellbarer Länge.
+- Geheimnisse werden nie einfach so angezeigt: „Anzeigen“ blendet sie nach 10 Sekunden wieder aus, „Kopieren“ leert die Zwischenablage nach 30 Sekunden. Mit eingeschalteter App-Sperre kannst du festlegen, dass vorher nach App-Passwort bzw. Touch ID gefragt wird.
+- Backup und Cloud-Abgleich nehmen die Tresor-Einträge mit – Passwörter und Schlüssel nur mit dem Häkchen „Passwörter mitnehmen“ bzw. „Passwörter mit abgleichen“.
+
 ## 1.4.0 – 2026-11-05
 
 ### Verbessert
