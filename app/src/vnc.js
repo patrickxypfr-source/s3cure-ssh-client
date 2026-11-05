@@ -102,7 +102,8 @@ window.Desktop = (() => {
     const connB = btn('plug', t('vnc.connect'), '', () => (st.rfb ? disconnect(st) : connect(st)), 'primary');
     connB.dataset.a = 'connect';
     tools.append(scaleSeg, viewOnlyB, cadB, clipB, kbB, fsB, connB);
-    head.append(status, el('span', 'spacer'), tools);
+    for (const b of [viewOnlyB, clipB]) b.classList.add('vnc-sec');
+    head.append(status, tools);
 
     const body = el('div', 'vnc-body');
     const screen = el('div', 'vnc-screen');

@@ -269,3 +269,20 @@ t('Die Brücke lauscht nur auf 127.0.0.1 und nimmt ein Token nur einmal', async 
   assert.match(status, /403/);
   await page(`s3vnc.close(activeId)`);
 });
+
+t('Verbindungs-Dialog speichert die VNC-Einstellungen (Display-Nummer wird zum Port)', async () => {
+  await page(`editHost('Desktopserver')`);
+  await page(`(() => {
+    const f = document.querySelector('#host-form');
+    f.vncEnabled.checked = true; f.vncTarget.value = ':3'; f.vncQuality.value = 'low'; f.vncViewOnly.checked = true;
+    f.requestSubmit();
+  })()`);
+  await waitFor(() => page(`document.querySelector('#host-modal').hidden`), 'Dialog geschlossen');
+  const h = JSON.parse(fs.readFileSync(path.join(ctx.config, 'hosts.json'), 'utf8')).Desktopserver;
+  assert.deepEqual(h.vnc, { enabled: true, host: 'localhost', port: 5903, quality: 'low', viewOnly: true, scale: 'fit' });
+  // Ungültige Adresse: verständlicher Fehler, nichts gespeichert
+  await page(`editHost('Desktopserver'); document.querySelector('#host-form').vncTarget.value = 'a b'; document.querySelector('#host-form').requestSubmit()`);
+  const err = await waitFor(() => page(`!document.querySelector('#ask-modal').hidden && document.querySelector('#ask-message').textContent + document.querySelector('#ask-detail').textContent + document.querySelector('#ask-title').textContent`), 'Fehlermeldung');
+  assert.match(err, /Leerzeichen/);
+  await page(`document.querySelector('#ask-ok').click(); document.querySelector('#host-modal').hidden = true`);
+});
