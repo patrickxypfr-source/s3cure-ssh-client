@@ -1,0 +1,21 @@
+name: ✨ Feature request / Wunsch
+description: An idea to make S3cure better. / Eine Idee, wie S3cure besser wird.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like? / Was wünschst du dir?
+      description: Describe what you want to do – not necessarily how it should be built. / Beschreibe, was du tun möchtest – nicht unbedingt, wie es gebaut werden soll.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why? / Wofür?
+      description: Your use case, e.g. "I manage 20 Raspberry Pis and …" / Dein Anwendungsfall, z. B. „Ich verwalte 20 Raspberry Pis und …“
+  - type: input
+    id: example
+    attributes:
+      label: Example in another app (optional) / Beispiel in einer anderen App (optional)
+      placeholder: "WinSCP, FileZilla, Termius, Bitvise …"

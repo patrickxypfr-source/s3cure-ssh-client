@@ -1,0 +1,60 @@
+name: 🐞 Bug report / Fehler melden
+description: Something doesn't work as expected. / Etwas funktioniert nicht wie erwartet.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please **never** post passwords, private keys or server addresses you want to keep private.
+        Danke fürs Melden! Bitte **niemals** Passwörter, private Schlüssel oder vertrauliche Server-Adressen posten.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Shown bottom-left in the app. / Steht unten links in der App.
+      placeholder: "1.4.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: System
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Windows 10/11
+        - Linux (AppImage)
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area / Bereich
+      options:
+        - Terminal
+        - Files / Dateien (SFTP)
+        - FTP / FTPS
+        - Editor
+        - Sync / Synchronisieren
+        - Tunnels / Tunnel
+        - Overview / Übersicht
+        - Connections & keys / Verbindungen & Schlüssel
+        - Updates & installation / Updates & Installation
+        - Other / Sonstiges
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened? / Was ist passiert?
+      description: Steps to reproduce, what you expected and what happened instead. Screenshots welcome (hide private data). / Schritte zum Nachstellen, was du erwartet hast und was stattdessen passiert ist. Screenshots gern (private Daten schwärzen).
+      placeholder: |
+        1. …
+        2. …
+        Expected / Erwartet: …
+        Actual / Tatsächlich: …
+    validations:
+      required: true
+  - type: textarea
+    id: server
+    attributes:
+      label: Server (optional)
+      description: e.g. Ubuntu 24.04 with OpenSSH 9.6, Raspberry Pi OS, shared hosting via FTPS … / z. B. Ubuntu 24.04 mit OpenSSH 9.6, Raspberry Pi OS, Webhosting über FTPS …
