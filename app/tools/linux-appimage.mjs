@@ -35,7 +35,7 @@ await build({
     appImage: { artifactName: FILE },
     // Nur Angabe für electron-builder (sonst Abbruch beim AppImage); veröffentlicht wird hier nichts,
     // die App aktualisiert sich über lib/updater.js
-    publish: { provider: 'github', owner: 'patrickxypfr-source', repo: 's3cure-ssh-client' },
+    publish: { provider: 'github', owner: 's3cureofficial', repo: 's3cure-ssh-client' },
     extraMetadata: { version: pkg.version },
   },
 });

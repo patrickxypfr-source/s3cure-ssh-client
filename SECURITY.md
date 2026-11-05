@@ -3,13 +3,13 @@
 ## Reporting a vulnerability
 
 Please **do not** open a public issue for security problems.
-Report them privately via **[GitHub Security Advisories](https://github.com/patrickxypfr-source/s3cure-ssh-client/security/advisories/new)** (“Report a vulnerability”).
+Report them privately via **[GitHub Security Advisories](https://github.com/s3cureofficial/s3cure-ssh-client/security/advisories/new)** (“Report a vulnerability”).
 
 Please include the app version (bottom-left in the app), your operating system, and steps to reproduce. You'll get an answer as soon as possible; fixes ship as a normal update that the app offers automatically.
 
 ## Sicherheitslücke melden
 
-Bitte Sicherheitsprobleme **nicht** als öffentliches Issue melden, sondern vertraulich über **[GitHub Security Advisories](https://github.com/patrickxypfr-source/s3cure-ssh-client/security/advisories/new)** („Report a vulnerability“).
+Bitte Sicherheitsprobleme **nicht** als öffentliches Issue melden, sondern vertraulich über **[GitHub Security Advisories](https://github.com/s3cureofficial/s3cure-ssh-client/security/advisories/new)** („Report a vulnerability“).
 
 Bitte Version (unten links in der App), Betriebssystem und die Schritte zum Nachstellen angeben. Korrekturen kommen als normales Update, das die App selbst anbietet.
 

@@ -14,7 +14,7 @@ const i18n = require('./i18n');
 // Release-Text in der Sprache der Oberfläche: deutscher oder englischer Teil (lib/release-notes.js)
 const notesBlocks = md => parseNotes(notesForLang(md, i18n.lang()));
 
-const REPO = process.env.S3CURE_UPDATE_REPO || 'patrickxypfr-source/s3cure-ssh-client';
+const REPO = process.env.S3CURE_UPDATE_REPO || 's3cureofficial/s3cure-ssh-client';
 // S3CURE_UPDATE_URL nur für Tests (lokaler Server statt GitHub)
 const API_URL = process.env.S3CURE_UPDATE_URL || `https://api.github.com/repos/${REPO}/releases/latest`;
 const HOUR = 60 * 60 * 1000;

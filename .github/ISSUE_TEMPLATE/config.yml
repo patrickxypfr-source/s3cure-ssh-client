@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: 🔐 Security vulnerability / Sicherheitslücke
-    url: https://github.com/patrickxypfr-source/s3cure-ssh-client/security/advisories/new
+    url: https://github.com/s3cureofficial/s3cure-ssh-client/security/advisories/new
     about: Please report security issues privately, not as a public issue. / Sicherheitslücken bitte vertraulich melden, nicht als öffentliches Issue.
