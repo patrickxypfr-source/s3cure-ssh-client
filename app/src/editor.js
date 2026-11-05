@@ -3,9 +3,9 @@
 // Pro Tab ein Editor-Feld, das über der Dateiliste liegt.
 
 const Editor = (() => {
-  const SAVE_KEY = IS_MAC ? 'Cmd+S' : 'Strg+S';
-  const FIND_KEY = IS_MAC ? 'Cmd+F' : 'Strg+F';
-  const CLOSE_KEY = IS_MAC ? 'Cmd+W' : 'Strg+W';
+  const SAVE_KEY = IS_MAC ? 'Cmd+S' : t('editor.ctrl') + '+S';
+  const FIND_KEY = IS_MAC ? 'Cmd+F' : t('editor.ctrl') + '+F';
+  const CLOSE_KEY = IS_MAC ? 'Cmd+W' : t('editor.ctrl') + '+W';
 
   // ---------- Dialog mit mehreren Knöpfen (Speichern / Nicht speichern / Abbrechen) ----------
 
@@ -45,18 +45,18 @@ const Editor = (() => {
     el.innerHTML = `
       <div class="editor-bar">
         <span class="editor-ico">${icon('file')}</span>
-        <div class="editor-title"><span class="editor-name"></span><span class="editor-dirty" title="Ungespeicherte Änderungen"></span><div class="editor-path"></div></div>
+        <div class="editor-title"><span class="editor-name"></span><span class="editor-dirty" title="${t('editor.unsaved')}"></span><div class="editor-path"></div></div>
         <div class="spacer"></div>
-        <button class="round-btn" data-e="find" title="Suchen (${FIND_KEY})">${icon('search')}</button>
-        <button class="btn primary" data-e="save" title="Speichern (${SAVE_KEY})">${icon('save')}Speichern</button>
-        <button class="btn" data-e="close" title="Schließen (${CLOSE_KEY})">${icon('close')}Schließen</button>
+        <button class="round-btn" data-e="find" title="${t('editor.findTitle', { key: FIND_KEY })}">${icon('search')}</button>
+        <button class="btn primary" data-e="save" title="${t('editor.saveTitle', { key: SAVE_KEY })}">${icon('save')}${t('common.save')}</button>
+        <button class="btn" data-e="close" title="${t('editor.closeTitle', { key: CLOSE_KEY })}">${icon('close')}${t('common.close')}</button>
       </div>
       <div class="editor-find" hidden>
-        <div class="field grow"><span class="field-icon">${icon('search')}</span><input class="editor-find-input" placeholder="Suchen im Text …" spellcheck="false"></div>
+        <div class="field grow"><span class="field-icon">${icon('search')}</span><input class="editor-find-input" placeholder="${t('editor.findPlaceholder')}" spellcheck="false"></div>
         <span class="editor-find-count"></span>
-        <button class="round-btn" data-e="prev" title="Vorheriger Treffer (Umschalt+Enter)">${icon('up')}</button>
-        <button class="round-btn" data-e="next" title="Nächster Treffer (Enter)">${icon('down')}</button>
-        <button class="round-btn" data-e="find-close" title="Suche schließen (Esc)">${icon('close')}</button>
+        <button class="round-btn" data-e="prev" title="${t('editor.prevMatch')}">${icon('up')}</button>
+        <button class="round-btn" data-e="next" title="${t('editor.nextMatch')}">${icon('down')}</button>
+        <button class="round-btn" data-e="find-close" title="${t('editor.closeFind')}">${icon('close')}</button>
       </div>
       <div class="editor-body">
         <div class="editor-gutter" aria-hidden="true"></div>
@@ -144,13 +144,13 @@ const Editor = (() => {
     const line = (before.match(/\n/g) || []).length + 1;
     const col = pos - before.lastIndexOf('\n');
     const sel = ed.ta.selectionEnd - ed.ta.selectionStart;
-    ed.el.querySelector('.editor-pos').textContent = `Zeile ${line}, Spalte ${col}${sel ? ` · ${sel} Zeichen markiert` : ''}`;
+    ed.el.querySelector('.editor-pos').textContent = t('editor.position', { line, col }) + (sel ? t('editor.selected', { count: sel }) : '');
   }
 
   function updateInfo(ed) {
     const o = ed.opts;
-    const parts = [o.encoding === 'latin1' ? 'Latin-1' : 'UTF-8' + (o.bom ? ' mit BOM' : ''), o.eol === 'crlf' ? 'Windows-Zeilenenden (CRLF)' : 'LF'];
-    parts.push(`${ed.lines} Zeile${ed.lines === 1 ? '' : 'n'}`);
+    const parts = [o.encoding === 'latin1' ? 'Latin-1' : (o.bom ? t('editor.withBom') : 'UTF-8'), o.eol === 'crlf' ? t('editor.crlf') : 'LF'];
+    parts.push(t('editor.lines', { count: ed.lines }));
     ed.el.querySelector('.editor-info').textContent = parts.join(' · ');
   }
 
@@ -189,7 +189,7 @@ const Editor = (() => {
     const v = ed.ta.value.toLowerCase();
     let n = 0;
     for (let i = v.indexOf(q); i !== -1 && n < 10000; i = v.indexOf(q, i + q.length)) n++;
-    out.textContent = n ? `${n} Treffer` : 'Nicht gefunden';
+    out.textContent = n ? t('editor.matches', { count: n }) : t('editor.notFound');
     out.classList.toggle('none', !n);
   }
 
@@ -254,7 +254,7 @@ const Editor = (() => {
     ed.ta.scrollLeft = 0;
     updatePos(ed);
     ed.ta.focus();
-    if (r.encoding === 'latin1') flash(`${name}: kein UTF-8 – als Latin-1 geöffnet und wird auch so gespeichert.`);
+    if (r.encoding === 'latin1') flash(t('editor.latin1', { name }));
     return 'ok';
   }
 
@@ -262,7 +262,7 @@ const Editor = (() => {
     const ed = tab.editor;
     if (!ed || !ed.file || ed.saving) return false;
     const name = ed.file.split('/').pop();
-    if (tab.state !== 'open') { showError('Nicht verbunden. Bitte erst neu verbinden – deine Änderungen bleiben im Editor erhalten.'); return false; }
+    if (tab.state !== 'open') { showError(t('editor.notConnected')); return false; }
     ed.saving = true;
     ed.el.classList.add('saving');
     const text = ed.ta.value;
@@ -272,9 +272,9 @@ const Editor = (() => {
         ed.saving = false;
         ed.el.classList.remove('saving');
         const ok = await askLocal({
-          kind: 'confirm', title: 'Datei wurde geändert',
-          message: `„${name}“ wurde auf dem Server geändert, seit du sie geöffnet hast. Trotzdem mit deiner Version überschreiben?`,
-          okLabel: 'Überschreiben', danger: true,
+          kind: 'confirm', title: t('editor.conflictTitle'),
+          message: t('editor.conflictMessage', { name }),
+          okLabel: t('editor.overwrite'), danger: true,
         });
         ed.ta.focus();
         return ok ? save(tab, true) : false;
@@ -282,7 +282,7 @@ const Editor = (() => {
       ed.original = text;
       ed.opts.mtime = r.mtime;
       updateDirty(tab);
-      flash(`Gespeichert: ${name}`);
+      flash(t('editor.saved', { name }));
       // Größe/Datum in der Liste aktualisieren, falls der Ordner gerade offen ist
       const dir = ed.file.replace(/\/[^/]*$/, '') || '/';
       if (tab.files.path === dir) refreshListQuietly(tab);
@@ -314,12 +314,12 @@ const Editor = (() => {
     if (!isDirty(tab)) return true;
     const name = tab.editor.file.split('/').pop();
     const choice = await choose({
-      title: 'Änderungen speichern?',
-      message: `„${name}“ hat ungespeicherte Änderungen.`,
+      title: t('editor.saveChangesTitle'),
+      message: t('editor.unsavedMessage', { name }),
       buttons: [
-        { label: 'Abbrechen', value: null },
-        { label: 'Nicht speichern', value: 'discard', cls: 'danger-outline' },
-        { label: 'Speichern', value: 'save', cls: 'primary', default: true },
+        { label: t('common.cancel'), value: null },
+        { label: t('editor.dontSave'), value: 'discard', cls: 'danger-outline' },
+        { label: t('common.save'), value: 'save', cls: 'primary', default: true },
       ],
     });
     if (choice === 'save') return save(tab);

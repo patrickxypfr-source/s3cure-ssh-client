@@ -33,18 +33,18 @@ const FilesExtra = (() => {
     if (BINARY_EXT.includes(ext(it.name)) || it.size > EDIT_LIMIT) return downloadItems(tab, [it]);
     const r = await Editor.open(tab, file);
     if (r === 'binary') {
-      flash(`„${it.name}“ ist keine Textdatei – wird heruntergeladen.`);
+      flash(t('filesExtra.notTextDownloading', { name: it.name }));
       downloadItems(tab, [it]);
     }
   }
 
   async function edit(tab, it) {
     if (it.size > EDIT_LIMIT) {
-      showError(`„${it.name}“ ist zu groß für den Editor (${formatSize(it.size)}, höchstens 2 MB). Bitte herunterladen.`);
+      showError(t('filesExtra.tooBigForEditor', { name: it.name, size: formatSize(it.size) }));
       return;
     }
     const r = await Editor.open(tab, joinPath(tab.files.path, it.name));
-    if (r === 'binary') showError(`„${it.name}“ ist keine Textdatei (Binärdatei) und kann nicht im Editor geöffnet werden.`);
+    if (r === 'binary') showError(t('filesExtra.binaryNoEditor', { name: it.name }));
   }
 
   // ---------- Vorschau ----------
@@ -70,12 +70,12 @@ const FilesExtra = (() => {
             <span class="preview-ico"></span>
             <div class="preview-title"><div class="preview-name"></div><div class="preview-meta"></div></div>
             <div class="spacer"></div>
-            <button class="btn" data-p="edit">${icon('edit')}Bearbeiten</button>
-            <button class="btn" data-p="download">${icon('download')}Herunterladen</button>
-            <button class="round-btn" data-p="close" title="Schließen (Leertaste / Esc)">${icon('close')}</button>
+            <button class="btn" data-p="edit">${icon('edit')}${t('common.edit')}</button>
+            <button class="btn" data-p="download">${icon('download')}${t('filesExtra.download')}</button>
+            <button class="round-btn" data-p="close" title="${t('filesExtra.closePreviewTitle')}">${icon('close')}</button>
           </div>
           <div class="preview-body"></div>
-          <div class="preview-foot">Leertaste oder Esc schließt · ↑ ↓ blättert durch die Dateien</div>
+          <div class="preview-foot">${t('filesExtra.previewFoot')}</div>
         </div>`;
       modal.addEventListener('mousedown', e => { if (e.target === modal) closePreview(); });
       modal.querySelector('[data-p=close]').addEventListener('click', closePreview);
@@ -94,7 +94,7 @@ const FilesExtra = (() => {
     m.querySelector('.preview-name').textContent = it.name;
     m.querySelector('.preview-meta').textContent = `${formatSize(it.size)} · ${formatDate(it.mtime)}`;
     const body = m.querySelector('.preview-body');
-    body.innerHTML = '<div class="preview-msg">Lade Vorschau …</div>';
+    body.innerHTML = `<div class="preview-msg">${t('filesExtra.loadingPreview')}</div>`;
     const editBtn = m.querySelector('[data-p=edit]');
     editBtn.hidden = true;
     editBtn.onclick = () => { closePreview(); edit(tab, it); };
@@ -113,21 +113,21 @@ const FilesExtra = (() => {
       const img = document.createElement('img');
       img.className = 'preview-img' + (r.mime === 'image/svg+xml' ? ' svg' : '');
       img.alt = it.name;
-      img.onerror = () => { body.innerHTML = ''; body.appendChild(msg('Das Bild kann nicht angezeigt werden.')); };
-      img.onload = () => { m.querySelector('.preview-meta').textContent = `${img.naturalWidth} × ${img.naturalHeight} Pixel · ${formatSize(it.size)} · ${formatDate(it.mtime)}`; };
+      img.onerror = () => { body.innerHTML = ''; body.appendChild(msg(t('filesExtra.imageFailed'))); };
+      img.onload = () => { m.querySelector('.preview-meta').textContent = t('filesExtra.imageMeta', { width: img.naturalWidth, height: img.naturalHeight, size: formatSize(it.size), date: formatDate(it.mtime) }); };
       img.src = `data:${r.mime};base64,${r.data}`;
       body.appendChild(img);
     } else if (r.kind === 'text') {
       const pre = document.createElement('pre');
       pre.className = 'preview-text';
       pre.tabIndex = 0;
-      pre.textContent = r.text + (r.truncated ? '\n\n… (Vorschau gekürzt – zum Lesen der ganzen Datei „Bearbeiten“ wählen)' : '');
+      pre.textContent = r.text + (r.truncated ? '\n\n' + t('filesExtra.previewTruncated') : '');
       body.appendChild(pre);
       editBtn.hidden = it.size > EDIT_LIMIT;
     } else if (r.kind === 'toolarge') {
-      body.appendChild(msg(`Das Bild ist zu groß für die Vorschau (${formatSize(r.size)}). Bitte herunterladen.`));
+      body.appendChild(msg(t('filesExtra.imageTooLarge', { size: formatSize(r.size) })));
     } else {
-      body.appendChild(msg('Keine Vorschau – das ist keine Text- oder Bilddatei.'));
+      body.appendChild(msg(t('filesExtra.noPreview')));
     }
   }
 
@@ -178,14 +178,14 @@ const FilesExtra = (() => {
   }
 
   function chmodDialog(tab, items) {
-    const who = [['Besitzer', 6], ['Gruppe', 3], ['Andere', 0]];
-    const what = [['Lesen', 4], ['Schreiben', 2], ['Ausführen', 1]];
+    const who = [[t('filesExtra.owner'), 6], [t('filesExtra.group'), 3], [t('filesExtra.others'), 0]];
+    const what = [[t('filesExtra.read'), 4], [t('filesExtra.write'), 2], [t('filesExtra.execute'), 1]];
     let mode = parseMode(items[0].mode);
     const modal = document.createElement('div');
     modal.className = 'modal';
     modal.innerHTML = `
       <form class="dialog chmod-dialog">
-        <h2>Rechte ändern</h2>
+        <h2>${t('filesExtra.chmodTitle')}</h2>
         <p class="choose-msg"></p>
         <table class="chmod-grid">
           <thead><tr><th></th>${what.map(([w]) => `<th>${w}</th>`).join('')}</tr></thead>
@@ -193,17 +193,17 @@ const FilesExtra = (() => {
             `<td><label class="check"><input type="checkbox" data-bit="${bit << shift}"><span></span></label></td>`).join('')}</tr>`).join('')}</tbody>
         </table>
         <div class="chmod-octal">
-          <label>Als Zahl <input class="chmod-num" maxlength="3" spellcheck="false" autocomplete="off"></label>
+          <label>${t('filesExtra.chmodAsNumber')} <input class="chmod-num" maxlength="3" spellcheck="false" autocomplete="off"></label>
           <code class="chmod-text"></code>
         </div>
-        <p class="chmod-hint">Ordner brauchen „Ausführen“, damit man sie öffnen kann. Üblich: Dateien 644, Ordner und Programme 755.</p>
+        <p class="chmod-hint">${t('filesExtra.chmodHint')}</p>
         <div class="actions">
-          <button type="button" class="btn" data-c="cancel">Abbrechen</button>
-          <button type="submit" class="btn primary">Übernehmen</button>
+          <button type="button" class="btn" data-c="cancel">${t('common.cancel')}</button>
+          <button type="submit" class="btn primary">${t('common.apply')}</button>
         </div>
       </form>`;
-    const names = items.length === 1 ? `„${items[0].name}“` : `${items.length} Elemente`;
-    modal.querySelector('.choose-msg').textContent = `Wer darf ${names} lesen, ändern oder ausführen?`;
+    const names = items.length === 1 ? t('filesExtra.quotedName', { name: items[0].name }) : t('filesExtra.items', { count: items.length });
+    modal.querySelector('.choose-msg').textContent = t('filesExtra.chmodWho', { names });
     const num = modal.querySelector('.chmod-num');
     const boxes = [...modal.querySelectorAll('input[type=checkbox]')];
     const sync = (fromNum = false) => {
@@ -227,7 +227,7 @@ const FilesExtra = (() => {
       const dir = tab.files.path;
       try {
         await api.sftpChmod(tab.id, items.map(i => joinPath(dir, i.name)), mode);
-        flash(`Rechte geändert: ${modeText(mode)} (${num.value})`);
+        flash(t('filesExtra.chmodDone', { text: modeText(mode), num: num.value }));
       } catch (err) { showError(err); }
       reloadAndSelect(tab, dir, items.map(i => i.name));
     });
@@ -252,34 +252,34 @@ const FilesExtra = (() => {
 
   async function pack(tab, items) {
     const dir = tab.files.path;
-    const base = items.length === 1 ? items[0].name.replace(/\/$/, '') : (dir.split('/').pop() || 'archiv');
-    let name = await askLocal({ kind: 'text', title: 'Als ZIP packen', message: `Name der ZIP-Datei für ${items.length === 1 ? `„${items[0].name}“` : `${items.length} Elemente`}:`, value: base + '.zip', okLabel: 'Packen' });
+    const base = items.length === 1 ? items[0].name.replace(/\/$/, '') : (dir.split('/').pop() || t('filesExtra.archiveDefault'));
+    let name = await askLocal({ kind: 'text', title: t('filesExtra.packTitle'), message: t('filesExtra.packMessage', { names: items.length === 1 ? t('filesExtra.quotedName', { name: items[0].name }) : t('filesExtra.items', { count: items.length }) }), value: base + '.zip', okLabel: t('filesExtra.packOk') });
     if (!name || !name.trim()) return;
     name = name.trim();
     if (!/\.zip$/i.test(name)) name += '.zip';
-    if (name.includes('/')) { showError('Der Name darf keinen Schrägstrich (/) enthalten.'); return; }
+    if (name.includes('/')) { showError(t('filesExtra.noSlash')); return; }
     let overwrite = false;
     if (await api.archiveExists(tab.id, joinPath(dir, name))) {
-      overwrite = await askLocal({ kind: 'confirm', title: 'Schon vorhanden', message: `„${name}“ gibt es in diesem Ordner schon. Überschreiben?`, okLabel: 'Überschreiben', danger: true });
+      overwrite = await askLocal({ kind: 'confirm', title: t('filesExtra.existsTitle'), message: t('filesExtra.existsMessage', { name }), okLabel: t('filesExtra.overwrite'), danger: true });
       if (!overwrite) return;
     }
-    const job = Transfers.busy(`Packe ${name}`, 'zip');
+    const job = Transfers.busy(t('filesExtra.packing', { name }), 'zip');
     try {
       const r = await api.archivePack(tab.id, dir, items.map(i => i.name), name, overwrite);
       job.done();
-      flash(r.tar ? `„zip“ fehlt auf dem Server – stattdessen gepackt als ${r.name}` : `Gepackt: ${r.name}`);
+      flash(r.tar ? t('filesExtra.packedTar', { name: r.name }) : t('filesExtra.packed', { name: r.name }));
       if (tab.files.path === dir) reloadAndSelect(tab, dir, [r.name]);
     } catch (err) { job.fail(err); showError(err); }
   }
 
   async function unpack(tab, it) {
     const dir = tab.files.path;
-    const job = Transfers.busy(`Entpacke ${it.name}`, 'unzip');
+    const job = Transfers.busy(t('filesExtra.unpacking', { name: it.name }), 'unzip');
     try {
       const r = await api.archiveUnpack(tab.id, joinPath(dir, it.name));
       job.done();
       const folder = r.folder.split('/').pop();
-      flash(`Entpackt nach „${folder}“`);
+      flash(t('filesExtra.unpacked', { folder }));
       if (tab.files.path === dir) reloadAndSelect(tab, dir, [folder]);
     } catch (err) { job.fail(err); showError(err); }
   }
@@ -291,7 +291,7 @@ const FilesExtra = (() => {
     if (activeId !== tab.id) activate(tab.id);
     setView('terminal');
     if (tab.term.buffer.active.type === 'alternate') {
-      showError('Im Terminal ist gerade ein Programm wie nano geöffnet. Bitte erst beenden (nano: Strg+X), dann nochmal versuchen.');
+      showError(t('filesExtra.terminalBusy'));
       return;
     }
     // Strg+U leert eine halb getippte Zeile
@@ -307,17 +307,17 @@ const FilesExtra = (() => {
     const one = sel.length === 1 ? sel[0] : null;
     const extra = [];
     if (one && !one.isDir) {
-      extra.push(['Vorschau', () => preview(tab, one), '', 'eye']);
-      if (!isImage(one.name)) extra.push(['Bearbeiten', () => edit(tab, one), '', 'edit']);
+      extra.push([t('filesExtra.menuPreview'), () => preview(tab, one), '', 'eye']);
+      if (!isImage(one.name)) extra.push([t('common.edit'), () => edit(tab, one), '', 'edit']);
     }
     const ftp = !!window.FtpUi?.isFtpTab(tab); // FTP: keine Befehle auf dem Server (kein ZIP, kein Terminal)
-    if (!ftp && one && ARCHIVE_RE.test(one.name) && !one.isDir) extra.push(['Entpacken', () => unpack(tab, one), '', 'unzip']);
-    if (!ftp) extra.push(['Als ZIP packen …', () => pack(tab, sel), '', 'zip']);
-    extra.push(['Rechte ändern …', () => chmodDialog(tab, sel), '', 'key']);
+    if (!ftp && one && ARCHIVE_RE.test(one.name) && !one.isDir) extra.push([t('filesExtra.menuUnpack'), () => unpack(tab, one), '', 'unzip']);
+    if (!ftp) extra.push([t('filesExtra.menuPack'), () => pack(tab, sel), '', 'zip']);
+    extra.push([t('filesExtra.menuChmod'), () => chmodDialog(tab, sel), '', 'key']);
     extra.push(null);
     const termDir = one && one.isDir ? joinPath(dir, one.name) : dir;
-    if (!ftp) extra.push(['Terminal hier öffnen', () => terminalHere(tab, termDir), '', 'terminal']);
-    if (one) extra.push(['Pfad kopieren', () => { navigator.clipboard.writeText(joinPath(dir, one.name)); flash('Pfad kopiert'); }, '', 'copy']);
+    if (!ftp) extra.push([t('filesExtra.menuTerminalHere'), () => terminalHere(tab, termDir), '', 'terminal']);
+    if (one) extra.push([t('filesExtra.menuCopyPath'), () => { navigator.clipboard.writeText(joinPath(dir, one.name)); flash(t('filesExtra.pathCopied')); }, '', 'copy']);
     entries.push(null, ...extra);
   }
 

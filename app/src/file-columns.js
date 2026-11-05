@@ -14,12 +14,12 @@ window.FileColumns = (() => {
 
   // key = Feld im Eintrag, cls = CSS-Klasse der Zellen (wie in renderFiles)
   const COLUMNS = [
-    { key: 'name', cls: 'name', label: 'Name' },
-    { key: 'size', cls: 'size', label: 'Größe', w: 90, desc: true },
-    { key: 'mtime', cls: 'date', label: 'Geändert', w: 140, desc: true },
-    { key: 'mode', cls: 'mode', label: 'Rechte', w: 105 },
-    { key: 'owner', cls: 'owner', label: 'Besitzer', w: 100 },
-    { key: 'group', cls: 'group', label: 'Gruppe', w: 100 },
+    { key: 'name', cls: 'name', label: t('fileColumns.name') },
+    { key: 'size', cls: 'size', label: t('fileColumns.size'), w: 90, desc: true },
+    { key: 'mtime', cls: 'date', label: t('fileColumns.modified'), w: 140, desc: true },
+    { key: 'mode', cls: 'mode', label: t('fileColumns.mode'), w: 105 },
+    { key: 'owner', cls: 'owner', label: t('fileColumns.owner'), w: 100 },
+    { key: 'group', cls: 'group', label: t('fileColumns.group'), w: 100 },
   ];
   const byKey = Object.fromEntries(COLUMNS.map(c => [c.key, c]));
   const MIN_W = 48;
@@ -35,7 +35,7 @@ window.FileColumns = (() => {
 
   // ---------- Sortieren ----------
 
-  const collator = new Intl.Collator('de', { sensitivity: 'base', numeric: true });
+  const collator = new Intl.Collator(I18N.locale, { sensitivity: 'base', numeric: true });
   function compare(a, b) {
     if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
     const k = sort.key;
@@ -85,7 +85,7 @@ window.FileColumns = (() => {
       c.label, () => toggle(c.key), '', hidden.has(c.key) ? 'blank' : 'check',
     ]);
     entries.push(null);
-    entries.push(['Spaltenbreiten zurücksetzen', () => { widths = {}; lsSet('files:col-widths', widths); applyAll(); }, '', 'columns']);
+    entries.push([t('fileColumns.resetWidths'), () => { widths = {}; lsSet('files:col-widths', widths); applyAll(); }, '', 'columns']);
     openMenu(entries, e.clientX, e.clientY);
   }
 
@@ -128,12 +128,12 @@ window.FileColumns = (() => {
     f.head = table.querySelector('thead');
     for (const th of f.head.querySelectorAll('th[data-col]')) {
       const c = byKey[th.dataset.col];
-      th.title = 'Klicken zum Sortieren · Rechtsklick: Spalten ein-/ausblenden';
+      th.title = t('fileColumns.headTitle');
       th.addEventListener('click', ev => { if (!ev.target.closest('.col-grip')) setSort(c.key); });
       if (c.w) {
         const grip = document.createElement('span');
         grip.className = 'col-grip';
-        grip.title = 'Ziehen, um die Breite zu ändern · Doppelklick: Standardbreite';
+        grip.title = t('fileColumns.gripTitle');
         grip.addEventListener('pointerdown', ev => startResize(ev, c));
         grip.addEventListener('mousedown', ev => ev.stopPropagation());
         grip.addEventListener('click', ev => ev.stopPropagation());

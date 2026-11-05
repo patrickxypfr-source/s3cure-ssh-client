@@ -47,11 +47,11 @@ window.FileNav = (() => {
       return b;
     };
     const keys = IS_MAC ? ['Cmd+[', 'Cmd+]'] : ['Alt+←', 'Alt+→'];
-    const backBtn = mk('nav-back', `Zurück (${keys[0]})`, 'back');
-    const fwdBtn = mk('nav-fwd', `Vor (${keys[1]})`, 'forward');
+    const backBtn = mk('nav-back', t('fileNav.back', { key: keys[0] }), 'back');
+    const fwdBtn = mk('nav-fwd', t('fileNav.forward', { key: keys[1] }), 'forward');
     opts.bar.prepend(backBtn, fwdBtn);
     const field = opts.bar.querySelector('.field.grow');
-    const star = mk('bm-star', 'Lesezeichen', 'star');
+    const star = mk('bm-star', t('fileNav.bookmarks'), 'star');
     field.classList.add('has-star');
     field.appendChild(star);
 
@@ -62,7 +62,7 @@ window.FileNav = (() => {
       const b = nav.current && marked(nav, nav.current);
       star.classList.toggle('on', !!b);
       star.innerHTML = icon(b ? 'starFilled' : 'star');
-      star.title = b ? `Lesezeichen „${b.name}“ – klicken für alle Lesezeichen` : 'Lesezeichen: diesen Ordner merken oder einen gemerkten öffnen';
+      star.title = b ? t('fileNav.starMarked', { name: b.name }) : t('fileNav.starEmpty');
       star.disabled = !on && !listOf(nav).length;
     };
 
@@ -168,22 +168,22 @@ window.FileNav = (() => {
 
     const head = document.createElement('div');
     head.className = 'bm-head';
-    head.textContent = nav.scope === 'local' ? 'Lesezeichen – Mein Computer' : `Lesezeichen – ${nav.key()}`;
+    head.textContent = nav.scope === 'local' ? t('fileNav.headLocal') : t('fileNav.headRemote', { name: nav.key() });
     menu.appendChild(head);
 
     if (cur && nav.enabled()) {
       const add = document.createElement('button');
       add.className = 'bm-add' + (here ? ' remove' : '');
       add.innerHTML = icon(here ? 'starFilled' : 'plus');
-      add.append(here ? `Lesezeichen „${here.name}“ entfernen` : 'Diesen Ordner merken');
+      add.append(here ? t('fileNav.removeBookmark', { name: here.name }) : t('fileNav.rememberFolder'));
       add.title = cur;
       add.addEventListener('click', async () => {
         if (here) { closeMenu(); await removeItem(nav, here); return; }
-        const name = await askLocal({ kind: 'text', title: 'Lesezeichen anlegen', message: `Name für ${cur}:`, value: baseName(cur), okLabel: 'Merken' });
+        const name = await askLocal({ kind: 'text', title: t('fileNav.addTitle'), message: t('fileNav.addMessage', { path: cur }), value: baseName(cur), okLabel: t('fileNav.addOk') });
         closeMenu();
         if (name == null) return;
         await saveList(nav, [...listOf(nav), { name: name.trim() || baseName(cur), path: cur }]);
-        flash(`Lesezeichen „${name.trim() || baseName(cur)}“ angelegt`);
+        flash(t('fileNav.added', { name: name.trim() || baseName(cur) }));
       });
       menu.appendChild(add);
     }
@@ -191,7 +191,7 @@ window.FileNav = (() => {
     if (!list.length) {
       const empty = document.createElement('div');
       empty.className = 'bm-empty';
-      empty.textContent = 'Noch keine Lesezeichen. Öffne einen Ordner und merk ihn dir hier.';
+      empty.textContent = t('fileNav.empty');
       menu.appendChild(empty);
       return;
     }
@@ -203,9 +203,9 @@ window.FileNav = (() => {
       row.className = 'bm-item' + (b.path === cur ? ' on' : '');
       row.innerHTML = `
         <button class="bm-open"><span class="bm-ico">${icon('folder')}</span><span class="bm-text"><span class="bm-name"></span><span class="bm-path"></span></span></button>
-        <button class="mini-btn" data-b="up" title="Nach oben">${icon('arrowUp')}</button>
-        <button class="mini-btn" data-b="rename" title="Umbenennen">${icon('rename')}</button>
-        <button class="mini-btn danger" data-b="delete" title="Löschen">${icon('trash')}</button>`;
+        <button class="mini-btn" data-b="up" title="${t('fileNav.moveUp')}">${icon('arrowUp')}</button>
+        <button class="mini-btn" data-b="rename" title="${t('common.rename')}">${icon('rename')}</button>
+        <button class="mini-btn danger" data-b="delete" title="${t('common.delete')}">${icon('trash')}</button>`;
       row.querySelector('.bm-name').textContent = b.name;
       row.querySelector('.bm-path').textContent = b.path;
       row.querySelector('.bm-open').title = b.path;
@@ -223,7 +223,7 @@ window.FileNav = (() => {
         if (!menu.hidden) renderMenu();
       });
       row.querySelector('[data-b=rename]').addEventListener('click', async () => {
-        const name = await askLocal({ kind: 'text', title: 'Lesezeichen umbenennen', message: `Neuer Name für „${b.name}“:`, value: b.name, okLabel: 'Umbenennen' });
+        const name = await askLocal({ kind: 'text', title: t('fileNav.renameTitle'), message: t('fileNav.renameMessage', { name: b.name }), value: b.name, okLabel: t('common.rename') });
         if (!name || !name.trim() || name.trim() === b.name) return;
         await saveList(nav, listOf(nav).map(x => (x.path === b.path && x.name === b.name ? { ...x, name: name.trim() } : x)));
         if (!menu.hidden) renderMenu();
@@ -236,8 +236,8 @@ window.FileNav = (() => {
 
   async function removeItem(nav, b) {
     const ok = await askLocal({
-      kind: 'confirm', title: 'Lesezeichen löschen?', message: `Das Lesezeichen „${b.name}“ löschen? Der Ordner selbst bleibt unverändert.`,
-      detail: b.path, okLabel: 'Löschen', danger: true,
+      kind: 'confirm', title: t('fileNav.deleteTitle'), message: t('fileNav.deleteMessage', { name: b.name }),
+      detail: b.path, okLabel: t('common.delete'), danger: true,
     });
     if (!ok) return;
     await saveList(nav, listOf(nav).filter(x => !(x.path === b.path && x.name === b.name)));

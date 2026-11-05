@@ -4,16 +4,17 @@
 // die Lesezeichen für „Mein Computer“ gelten für alle Verbindungen.
 const fs = require('fs');
 const path = require('path');
+const { t } = require('./i18n');
 
 const MAX_ITEMS = 200;
 const MAX_KEYS = 500;
 
 function clean(list) {
-  if (!Array.isArray(list)) throw new Error('Ungültige Lesezeichen.');
+  if (!Array.isArray(list)) throw new Error(t('bookmarks.invalidList'));
   return list.slice(0, MAX_ITEMS).map(b => {
     const name = String(b?.name ?? '').trim().slice(0, 200);
     const p = String(b?.path ?? '');
-    if (!p || p.length > 4096 || p.includes('\0')) throw new Error('Ungültiger Pfad im Lesezeichen.');
+    if (!p || p.length > 4096 || p.includes('\0')) throw new Error(t('bookmarks.invalidPath'));
     return { name: name || p, path: p };
   });
 }
@@ -46,10 +47,10 @@ function create(configDir) {
     const items = clean(list);
     if (scope === 'local') data.local = items;
     else if (scope === 'remote') {
-      if (typeof key !== 'string' || !key || key.length > 300) throw new Error('Ungültige Verbindung.');
+      if (typeof key !== 'string' || !key || key.length > 300) throw new Error(t('bookmarks.invalidConnection'));
       if (items.length) data.remote[key] = items; else delete data.remote[key];
-      if (Object.keys(data.remote).length > MAX_KEYS) throw new Error('Zu viele Lesezeichen.');
-    } else throw new Error('Ungültiger Bereich.');
+      if (Object.keys(data.remote).length > MAX_KEYS) throw new Error(t('bookmarks.tooMany'));
+    } else throw new Error(t('bookmarks.invalidScope'));
     return save(data);
   }
 

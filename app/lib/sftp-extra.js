@@ -2,6 +2,8 @@
 // Rechte ändern, ZIP packen/entpacken.
 const path = require('path');
 const crypto = require('crypto');
+const i18n = require('./i18n');
+const { t } = i18n;
 
 const posix = path.posix;
 const p = fn => new Promise((res, rej) => fn((e, r) => e ? rej(e) : res(r)));
@@ -12,7 +14,7 @@ const PREVIEW_TEXT_LIMIT = 256 * 1024;   // Text-Vorschau: nur der Anfang
 const IMAGE_LIMIT = 10 * 1024 * 1024;    // Bild-Vorschau: bis 10 MB
 const IMAGE_TYPES = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', bmp: 'image/bmp', ico: 'image/x-icon', avif: 'image/avif' };
 
-function formatMB(n) { return (n / 1024 / 1024).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' MB'; }
+function formatMB(n) { return (n / 1024 / 1024).toLocaleString(i18n.locale(), { maximumFractionDigits: 1 }) + ' MB'; }
 
 // Ab Position 0 bis zu `max` Bytes lesen
 async function readStart(sftp, file, max) {
@@ -64,14 +66,14 @@ async function writeAll(sftp, handle, buf) {
 
 function friendlyExecError(stderr, code) {
   const msg = String(stderr || '').trim().split('\n').slice(-3).join('\n');
-  return msg || `Befehl fehlgeschlagen (Code ${code}).`;
+  return msg || t('sftpExtra.commandFailed', { code });
 }
 
 // Befehl auf dem Server ausführen (immer über sh, egal welche Login-Shell)
 function run(client, script) {
   return new Promise((resolve, reject) => {
     client.exec('sh -c ' + shQuote(script), (err, stream) => {
-      if (err) return reject(new Error('Der Server erlaubt keine Befehle: ' + err.message));
+      if (err) return reject(new Error(t('sftpExtra.noExec', { error: err.message })));
       let out = '';
       let errOut = '';
       let code = null;
@@ -98,9 +100,9 @@ function register({ ipcMain, getSftp, getClient, sftpError }) {
     try {
       const real = await p(cb => sftp.realpath(file, cb));
       const st = await p(cb => sftp.stat(real, cb));
-      if (st.isDirectory()) throw new Error('Das ist ein Ordner, keine Datei.');
+      if (st.isDirectory()) throw new Error(t('sftpExtra.isFolder'));
       if (st.size > TEXT_LIMIT) {
-        throw new Error(`Die Datei ist zu groß für den Editor (${formatMB(st.size)}, höchstens ${formatMB(TEXT_LIMIT)}). Bitte herunterladen.`);
+        throw new Error(t('sftpExtra.tooBigForEditor', { size: formatMB(st.size), max: formatMB(TEXT_LIMIT) }));
       }
       const buf = await readStart(sftp, real, st.size + 1);
       if (looksBinary(buf)) return { binary: true };
@@ -177,7 +179,7 @@ function register({ ipcMain, getSftp, getClient, sftpError }) {
     const sftp = await getSftp(tabId);
     try {
       const st = await p(cb => sftp.stat(file, cb));
-      if (st.isDirectory()) throw new Error('Für Ordner gibt es keine Vorschau.');
+      if (st.isDirectory()) throw new Error(t('sftpExtra.noFolderPreview'));
       const ext = (posix.extname(file).slice(1) || '').toLowerCase();
       const info = { size: st.size, mtime: st.mtime * 1000 };
       if (IMAGE_TYPES[ext]) {
@@ -231,10 +233,10 @@ function register({ ipcMain, getSftp, getClient, sftpError }) {
       'exit 92',
     ].join('\n');
     const r = await run(client, script);
-    if (r.code === 90) throw new Error('Ordner nicht gefunden.');
-    if (r.code === 91) throw new Error(`„${archive}“ gibt es schon.`);
-    if (r.code === 92) throw new Error('Auf dem Server fehlt ein Programm zum Packen. Installiere es z. B. mit:\nsudo apt install zip');
-    if (r.code !== 0) throw new Error('Packen fehlgeschlagen:\n' + friendlyExecError(r.err, r.code));
+    if (r.code === 90) throw new Error(t('sftpExtra.folderNotFound'));
+    if (r.code === 91) throw new Error(t('sftpExtra.exists', { name: archive }));
+    if (r.code === 92) throw new Error(t('sftpExtra.noPackTool'));
+    if (r.code !== 0) throw new Error(t('sftpExtra.packFailed', { error: friendlyExecError(r.err, r.code) }));
     return { name: /TAR/.test(r.out) ? tarName : archive, tar: /TAR/.test(r.out) };
   });
 
@@ -245,29 +247,29 @@ function register({ ipcMain, getSftp, getClient, sftpError }) {
     const dir = posix.dirname(file);
     const base = posix.basename(file);
     const m = base.match(ARCHIVE_RE);
-    if (!m) throw new Error('Das ist kein unterstütztes Archiv (zip, tar, tar.gz, tar.bz2, tar.xz).');
-    const stem = base.slice(0, -m[0].length) || 'archiv';
+    if (!m) throw new Error(t('sftpExtra.unsupportedArchive'));
+    const stem = base.slice(0, -m[0].length) || t('sftpExtra.archiveDefault');
     let target = posix.join(dir, stem);
     for (let i = 2; await exists(sftp, target); i++) target = posix.join(dir, `${stem} (${i})`);
 
     const isZip = m[1].toLowerCase() === 'zip';
     const f = shQuote(file);
-    const t = shQuote(target);
+    const tq = shQuote(target);
     const script = isZip ? [
-      `mkdir -p -- ${t} || exit 90`,
-      `if command -v unzip >/dev/null 2>&1; then unzip -q -n ${f} -d ${t}; c=$?; [ $c -le 1 ] && exit 0; rm -rf -- ${t}; exit $c; fi`,
-      `if command -v python3 >/dev/null 2>&1; then python3 -m zipfile -e ${f} ${t}; exit $?; fi`,
-      `if command -v bsdtar >/dev/null 2>&1; then bsdtar -xf ${f} -C ${t}; exit $?; fi`,
-      `rmdir -- ${t} 2>/dev/null; exit 92`,
+      `mkdir -p -- ${tq} || exit 90`,
+      `if command -v unzip >/dev/null 2>&1; then unzip -q -n ${f} -d ${tq}; c=$?; [ $c -le 1 ] && exit 0; rm -rf -- ${tq}; exit $c; fi`,
+      `if command -v python3 >/dev/null 2>&1; then python3 -m zipfile -e ${f} ${tq}; exit $?; fi`,
+      `if command -v bsdtar >/dev/null 2>&1; then bsdtar -xf ${f} -C ${tq}; exit $?; fi`,
+      `rmdir -- ${tq} 2>/dev/null; exit 92`,
     ].join('\n') : [
-      `mkdir -p -- ${t} || exit 90`,
-      `tar -xf ${f} -C ${t} || { c=$?; rm -rf -- ${t}; exit $c; }`,
+      `mkdir -p -- ${tq} || exit 90`,
+      `tar -xf ${f} -C ${tq} || { c=$?; rm -rf -- ${tq}; exit $c; }`,
     ].join('\n');
     const r = await run(client, script);
-    if (r.code === 90) throw new Error('Zielordner konnte nicht angelegt werden (keine Berechtigung?).');
-    if (r.code === 92) throw new Error('Auf dem Server fehlt das Programm „unzip“. Installiere es z. B. mit:\nsudo apt install unzip');
-    if (r.code === 127) throw new Error('Auf dem Server fehlt das Programm „tar“.');
-    if (r.code !== 0) throw new Error('Entpacken fehlgeschlagen:\n' + friendlyExecError(r.err, r.code));
+    if (r.code === 90) throw new Error(t('sftpExtra.targetNotCreated'));
+    if (r.code === 92) throw new Error(t('sftpExtra.noUnzip'));
+    if (r.code === 127) throw new Error(t('sftpExtra.noTar'));
+    if (r.code !== 0) throw new Error(t('sftpExtra.unpackFailed', { error: friendlyExecError(r.err, r.code) }));
     return { folder: target };
   });
 }
