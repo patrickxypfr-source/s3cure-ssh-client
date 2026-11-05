@@ -1,9 +1,15 @@
 // Sichere Brücke zwischen Oberfläche und Hauptprozess
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
+// Sprache der Oberfläche (de/en) – synchron, damit src/i18n.js sie beim Laden schon kennt (lib/i18n.js)
+const i18n = (() => { try { return ipcRenderer.sendSync('i18n:get') || {}; } catch { return {}; } })();
+
 contextBridge.exposeInMainWorld('myssh', {
   // S3CURE_PLATFORM nur für Tests (Windows-Verhalten auf dem Mac ausprobieren)
   platform: process.env.S3CURE_PLATFORM || process.platform,
+  lang: i18n.lang,
+  langPref: i18n.pref,
+  reloadForLanguage: () => ipcRenderer.invoke('i18n:reload'),
   listHosts: () => ipcRenderer.invoke('hosts:list'),
   saveHost: (name, host, oldName) => ipcRenderer.invoke('hosts:save', name, host, oldName),
   deleteHost: name => ipcRenderer.invoke('hosts:delete', name),

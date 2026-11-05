@@ -14,6 +14,10 @@ const transfers = require('./lib/transfers').create(() => win, {
 const snippets = require('./lib/snippets');
 const monitor = require('./lib/monitor');
 const owners = require('./lib/owners');
+// Übersetzungen Deutsch/Englisch (app/lib/i18n.js, Wörterbücher in src/locales/)
+const i18n = require('./lib/i18n');
+const { t } = i18n;
+i18n.register(ipcMain);
 
 // Dieselben Dateien wie das Kommandozeilen-Tool myssh
 // S3CURE_CONFIG_DIR nur für Tests, sonst ~/.myssh
@@ -594,6 +598,12 @@ function createWindow() {
 
 // Einstellungen und Terminal-Extras (eigene Dateien in lib/)
 const settingsStore = require('./lib/settings').register({ app, ipcMain, nativeTheme, configDir: CONFIG_DIR });
+// Sprache gewechselt: Fenster neu laden (Verbindungen werden geschlossen, die Sitzung stellt die Tabs wieder her)
+ipcMain.handle('i18n:reload', () => {
+  if (!win || win.isDestroyed()) return;
+  for (const id of [...sessions.keys()]) closeSession(id);
+  win.webContents.reload();
+});
 
 // Backup & Umzug (app/lib/backup.js)
 const backupApi = require('./lib/backup').register({

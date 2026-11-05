@@ -3,6 +3,7 @@
 // was JSON ist. Standardwerte kennt die Oberfläche (registerSettingsSection in src/settings.js).
 const fs = require('fs');
 const path = require('path');
+const i18n = require('./i18n');
 
 const MAX_BYTES = 256 * 1024;
 const APPEARANCES = ['system', 'light', 'dark'];
@@ -55,11 +56,13 @@ function applyAppearance(nativeTheme, values) {
 
 function register({ app, ipcMain, nativeTheme, configDir }) {
   const store = create(configDir);
+  i18n.setPreference(store.load().language); // Sprache: system/de/en (lib/i18n.js)
   app.whenReady().then(() => applyAppearance(nativeTheme, store.load()));
   ipcMain.handle('settings:get', () => store.load());
   ipcMain.handle('settings:set', (_e, patch) => {
     const values = store.set(patch);
     applyAppearance(nativeTheme, values);
+    i18n.setPreference(values.language);
     return values;
   });
   return store;
