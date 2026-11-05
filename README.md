@@ -4,45 +4,47 @@
 
 # S3cure SSH Client
 
-**Terminal, Dateien, Editor und Tunnel – alles für deine Server in einem Fenster.**<br>
-Ein moderner SSH- & SFTP-Client für macOS, Windows und Linux. Kostenlos, Open Source, ohne Konto.
+🇬🇧 **English** · 🇩🇪 [Deutsch](README.de.md)
 
-[![Neueste Version](https://img.shields.io/github/v/release/patrickxypfr-source/s3cure-ssh-client?label=Version&color=e11d2a&style=flat-square)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest)
+**Terminal, files, editor and tunnels – everything for your servers in one window.**<br>
+A modern SSH & SFTP client for macOS, Windows and Linux. Free, open source, no account needed.
+
+[![Latest version](https://img.shields.io/github/v/release/patrickxypfr-source/s3cure-ssh-client?label=Version&color=e11d2a&style=flat-square)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest)
 [![Build](https://img.shields.io/github/actions/workflow/status/patrickxypfr-source/s3cure-ssh-client/build.yml?branch=main&label=Build&style=flat-square)](https://github.com/patrickxypfr-source/s3cure-ssh-client/actions/workflows/build.yml)
 [![Downloads](https://img.shields.io/github/downloads/patrickxypfr-source/s3cure-ssh-client/total?label=Downloads&color=555&style=flat-square)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases)
-[![Plattformen](https://img.shields.io/badge/macOS%20%7C%20Windows%20%7C%20Linux-555?style=flat-square&logo=apple&logoColor=white)](#systemanforderungen)
-[![Lizenz: MIT](https://img.shields.io/badge/Lizenz-MIT-555?style=flat-square)](LICENSE)
+[![Platforms](https://img.shields.io/badge/macOS%20%7C%20Windows%20%7C%20Linux-555?style=flat-square&logo=apple&logoColor=white)](#system-requirements)
+[![License: MIT](https://img.shields.io/badge/License-MIT-555?style=flat-square)](LICENSE)
 
 <br>
 
-[![Download für Mac (Apple-Chip)](https://img.shields.io/badge/Download-Mac%20%C2%B7%20Apple%20Chip-e11d2a?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Mac-AppleSilicon.dmg)
-[![Download für Mac (Intel)](https://img.shields.io/badge/Download-Mac%20%C2%B7%20Intel-3a3a3c?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Mac-Intel.dmg)
-[![Download für Windows](https://img.shields.io/badge/Download-Windows%2010%2F11-3a3a3c?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Setup.exe)
-[![Download für Linux](https://img.shields.io/badge/Download-Linux%20%C2%B7%20AppImage-3a3a3c?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Linux-x64.AppImage)
+[![Download for Mac (Apple silicon)](https://img.shields.io/badge/Download-Mac%20%C2%B7%20Apple%20Chip-e11d2a?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Mac-AppleSilicon.dmg)
+[![Download for Mac (Intel)](https://img.shields.io/badge/Download-Mac%20%C2%B7%20Intel-3a3a3c?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Mac-Intel.dmg)
+[![Download for Windows](https://img.shields.io/badge/Download-Windows%2010%2F11-3a3a3c?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Setup.exe)
+[![Download for Linux](https://img.shields.io/badge/Download-Linux%20%C2%B7%20AppImage-3a3a3c?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Linux-x64.AppImage)
 
-<sub>Ein Klick lädt direkt den Installer der neuesten Version. Alle Versionen: <a href="https://github.com/patrickxypfr-source/s3cure-ssh-client/releases">Releases</a></sub>
+<sub>One click downloads the installer for the latest version. All versions: <a href="https://github.com/patrickxypfr-source/s3cure-ssh-client/releases">Releases</a></sub>
 
 <br><br>
 
-<img src="docs/screenshots/terminal.png" alt="S3cure SSH Client – Terminal mit eigenen Befehlsknöpfen" width="920">
+<img src="docs/screenshots/terminal.png" alt="S3cure SSH Client – terminal with custom command buttons" width="920">
 
 </div>
 
 ---
 
-## Inhalt
+## Contents
 
 - [Highlights](#highlights)
 - [Screenshots](#screenshots)
 - [Installation](#installation)
-- [Automatische Updates](#automatische-updates)
-- [Was ist neu?](CHANGELOG.md)
-- [Alle Funktionen](#alle-funktionen)
-- [Tastenkürzel](#tastenkürzel)
-- [Sicherheit & Datenschutz](#sicherheit--datenschutz)
-- [Häufige Fragen](#häufige-fragen)
-- [Selbst bauen](#selbst-bauen)
-- [Aufbau & Technik](#aufbau--technik)
+- [Automatic updates](#automatic-updates)
+- [What's New?](CHANGELOG.md)
+- [All features](#all-features)
+- [Keyboard shortcuts](#keyboard-shortcuts)
+- [Security & privacy](#security--privacy)
+- [FAQ](#faq)
+- [Building from source](#building-from-source)
+- [Architecture & tech](#architecture--tech)
 
 ## Highlights
 
@@ -51,39 +53,39 @@ Ein moderner SSH- & SFTP-Client für macOS, Windows und Linux. Kostenlos, Open S
 <td width="33%" valign="top">
 
 ### 🖥️ Terminal
-Mehrere Server in Tabs, geteilte Ansicht, Suche, **eigene Befehlsknöpfe** mit Icons und automatisches Neu-Verbinden nach WLAN-Wechsel oder Ruhezustand.
+Multiple servers in tabs, split view, search, **custom command buttons** with icons, and automatic reconnect after a Wi-Fi change or sleep.
 
 </td>
 <td width="33%" valign="top">
 
-### 📁 Dateien
-Server und **eigener PC nebeneinander** – Dateien und Ordner einfach hin- und herziehen. Mehrfachauswahl per Rahmen, Vorschau, ZIP, Rechte.
+### 📁 Files
+Server and **your own computer side by side** – just drag files and folders back and forth. Marquee selection, preview, ZIP, permissions.
 
 </td>
 <td width="33%" valign="top">
 
 ### ✏️ Editor
-Konfigurationsdateien wie `.env` **direkt auf dem Server bearbeiten** – mit Zeilennummern, Suche und Speichern per Cmd/Strg+S. Kein `nano` mehr nötig.
+**Edit config files like `.env` right on the server** – with line numbers, search and saving via Cmd/Ctrl+S. No more `nano`.
 
 </td>
 </tr>
 <tr>
 <td valign="top">
 
-### 🔀 Tunnel
-Port-Weiterleitung lokal, remote oder als SOCKS-Proxy – z. B. die Datenbank oder eine Admin-Oberfläche sicher auf `localhost` holen.
+### 🔀 Tunnels
+Port forwarding – local, remote or as a SOCKS proxy. For example, bring your database or an admin panel safely to `localhost`.
 
 </td>
 <td valign="top">
 
-### 🔐 Sicher
-Passwörter verschlüsselt im Schlüsselbund, SSH-Schlüssel erzeugen und übertragen, Host-Schlüssel-Prüfung, optionale **App-Sperre** mit Touch ID.
+### 🔐 Secure
+Passwords encrypted in the keychain, generate and install SSH keys, host key verification, optional **App Lock** with Touch ID.
 
 </td>
 <td valign="top">
 
-### 🔄 Immer aktuell
-Die App zeigt neue Versionen selbst an – **ein Klick auf „Update“** lädt, prüft und installiert sie. Mit richtigem Installer für Mac und Windows, unter Linux als AppImage.
+### 🔄 Always up to date
+The app tells you about new versions itself – **one click on “Update”** downloads, verifies and installs them. With a proper installer for Mac and Windows, and as an AppImage on Linux.
 
 </td>
 </tr>
@@ -91,247 +93,248 @@ Die App zeigt neue Versionen selbst an – **ein Klick auf „Update“** lädt,
 
 ## Screenshots
 
-| Server und eigener PC nebeneinander | Dateien direkt auf dem Server bearbeiten |
+| Server and your own computer side by side | Edit files right on the server |
 |:---:|:---:|
-| <img src="docs/screenshots/dateien.png" alt="Dateibrowser mit „Mein Computer“"> | <img src="docs/screenshots/editor.png" alt="Eingebauter Editor"> |
-| **Port-Weiterleitung (Tunnel)** | **Terminal mit Befehlsknöpfen und Gruppen** |
-| <img src="docs/screenshots/tunnel.png" alt="Tunnel"> | <img src="docs/screenshots/terminal.png" alt="Terminal"> |
+| <img src="docs/screenshots/dateien.png" alt="File browser with “My Computer”"> | <img src="docs/screenshots/editor.png" alt="Built-in editor"> |
+| **Port forwarding (Tunnels)** | **Terminal with command buttons and groups** |
+| <img src="docs/screenshots/tunnel.png" alt="Tunnels"> | <img src="docs/screenshots/terminal.png" alt="Terminal"> |
 
-<sub>Alle Screenshots zeigen Demo-Daten.</sub>
+<sub>All screenshots show demo data.</sub>
 
 ## Installation
 
-| System | Datei | |
+| System | File | |
 |---|---|---|
-| **Mac mit Apple-Chip** (M1–M4) | [`S3cure-SSH-Client-Mac-AppleSilicon.dmg`](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Mac-AppleSilicon.dmg) | Installationsfenster |
-| **Mac mit Intel-Chip** | [`S3cure-SSH-Client-Mac-Intel.dmg`](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Mac-Intel.dmg) | Installationsfenster |
-| **Windows 10/11** (64 Bit) | [`S3cure-SSH-Client-Setup.exe`](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Setup.exe) | Installer mit Startmenü & Desktop-Verknüpfung |
-| **Linux** (64 Bit, x86) | [`S3cure-SSH-Client-Linux-x64.AppImage`](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Linux-x64.AppImage) | Eine Datei – ausführbar machen und starten |
+| **Mac with Apple silicon** (M1–M4) | [`S3cure-SSH-Client-Mac-AppleSilicon.dmg`](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Mac-AppleSilicon.dmg) | Install window |
+| **Mac with Intel chip** | [`S3cure-SSH-Client-Mac-Intel.dmg`](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Mac-Intel.dmg) | Install window |
+| **Windows 10/11** (64-bit) | [`S3cure-SSH-Client-Setup.exe`](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Setup.exe) | Installer with Start menu & desktop shortcut |
+| **Linux** (64-bit, x86) | [`S3cure-SSH-Client-Linux-x64.AppImage`](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Linux-x64.AppImage) | A single file – make it executable and run it |
 
 > [!IMPORTANT]
-> Bitte **nicht** „Source code“ bzw. den grünen Knopf „Code → Download ZIP“ benutzen – das ist der Quellcode, kein fertiges Programm.
+> Please do **not** use “Source code” or the green “Code → Download ZIP” button – that's the source code, not a ready-to-use app.
 
 <details>
-<summary><b>🍎 macOS – Schritt für Schritt</b></summary>
+<summary><b>🍎 macOS – step by step</b></summary>
 
-1. `.dmg` herunterladen und öffnen.
-2. Im Fenster die App auf den Ordner **Programme** ziehen.
-3. App aus **Programme** starten. Beim ersten Mal meldet macOS, dass der Entwickler nicht verifiziert werden kann (die App ist nicht kostenpflichtig bei Apple signiert):
-   **Systemeinstellungen → Datenschutz & Sicherheit** → ganz unten **Dennoch öffnen**.
-4. Fertig. Startest du die App versehentlich von woanders, bietet sie an, sich selbst nach **Programme** zu verschieben.
+1. Download the `.dmg` and open it.
+2. In the window, drag the app onto the **Applications** folder.
+3. Start the app from **Applications**. The first time, macOS says the developer can't be verified (the app isn't signed through Apple's paid program):
+   **System Settings → Privacy & Security** → at the very bottom, **Open Anyway**.
+4. Done. If you accidentally start the app from somewhere else, it offers to move itself to **Applications**.
 
 </details>
 
 <details>
-<summary><b>🪟 Windows – Schritt für Schritt</b></summary>
+<summary><b>🪟 Windows – step by step</b></summary>
 
-1. `S3cure-SSH-Client-Setup.exe` herunterladen und starten.
-2. Erscheint „Der Computer wurde durch Windows geschützt“: **Weitere Informationen** → **Trotzdem ausführen**.
-3. Dem Installationsfenster folgen (Installationsordner frei wählbar).
-4. Fertig – S3cure findest du im Startmenü und auf dem Desktop. Deinstallieren geht wie gewohnt über **Einstellungen → Apps**.
+1. Download `S3cure-SSH-Client-Setup.exe` and run it.
+2. If “Windows protected your PC” appears: **More info** → **Run anyway**.
+3. Follow the installer (you can choose the install folder).
+4. Done – you'll find S3cure in the Start menu and on the desktop. Uninstall as usual via **Settings → Apps**.
 
 </details>
 
 <details>
-<summary><b>🐧 Linux – Schritt für Schritt</b></summary>
+<summary><b>🐧 Linux – step by step</b></summary>
 
-1. `S3cure-SSH-Client-Linux-x64.AppImage` herunterladen und an einen festen Ort legen, z. B. `~/Programme`.
-2. Ausführbar machen: Rechtsklick → **Eigenschaften → Als Programm ausführen erlauben**, oder im Terminal:
+1. Download `S3cure-SSH-Client-Linux-x64.AppImage` and put it in a permanent place, e.g. `~/Applications`.
+2. Make it executable: right-click → **Properties → Allow executing file as program**, or in the terminal:
    `chmod +x S3cure-SSH-Client-Linux-x64.AppImage`
-3. Doppelklick bzw. `./S3cure-SSH-Client-Linux-x64.AppImage` startet die App.
-4. Startet sie nicht und es erscheint etwas mit **FUSE**: `sudo apt install libfuse2` (Ubuntu 24.04: `libfuse2t64`).
-   Meldet sie etwas mit **sandbox** (z. B. unter Ubuntu 24.04): einmal mit `--no-sandbox` starten.
+3. Double-click it or run `./S3cure-SSH-Client-Linux-x64.AppImage` to start the app.
+4. If it doesn't start and mentions **FUSE**: `sudo apt install libfuse2` (Ubuntu 24.04: `libfuse2t64`).
+   If it mentions **sandbox** (e.g. on Ubuntu 24.04): start it once with `--no-sandbox`.
 
-Updates ersetzen die AppImage-Datei an ihrem Ort – dafür braucht der Ordner Schreibrechte. Sonst legt die App die neue Version in **Downloads**.
+Updates replace the AppImage file where it is – the folder needs write permission for that. Otherwise the app puts the new version in **Downloads**.
 
 </details>
 
-### Systemanforderungen
+### System requirements
 
-| | Mindestens |
+| | Minimum |
 |---|---|
-| macOS | 13 Ventura oder neuer – Apple-Chip oder Intel |
-| Windows | Windows 10 oder 11, 64 Bit |
-| Linux | 64 Bit (x86), z. B. Ubuntu 22.04 / Debian 12 / Fedora 38 oder neuer, mit grafischer Oberfläche |
-| Server | jeder SSH-Server (OpenSSH u. a.), SFTP für die Dateiansicht |
+| macOS | 13 Ventura or later – Apple silicon or Intel |
+| Windows | Windows 10 or 11, 64-bit |
+| Linux | 64-bit (x86), e.g. Ubuntu 22.04 / Debian 12 / Fedora 38 or later, with a desktop environment |
+| Server | any SSH server (OpenSSH etc.), SFTP for the file view |
 
-## Automatische Updates
+## Automatic updates
 
-Beim Start fragt S3cure bei GitHub nach der neuesten Version. Gibt es eine neuere, steht unten links **„Veraltet“** mit deiner und der neuesten Versionsnummer – ein Klick auf **Update**:
+On launch, S3cure asks GitHub for the latest version. If there's a newer one, the bottom left shows **“Outdated”** with your version and the latest version number – one click on **Update**:
 
-1. lädt die neue Version herunter (Fenster mit Fortschrittsbalken, MB und Geschwindigkeit),
-2. prüft sie (Größe, Signatur, Versionsnummer),
-3. tauscht die App aus und startet sie neu.
+1. downloads the new version (window with progress bar, MB and speed),
+2. verifies it (size, signature, version number),
+3. replaces the app and restarts it.
 
-Fehlt etwas oder kann sich die App nicht selbst ersetzen (z. B. fehlende Schreibrechte), lädt sie automatisch den Installer und öffnet ihn (Linux: neue AppImage-Datei in **Downloads**). Ein beschädigtes Paket wird nie installiert – die alte Version bleibt dann erhalten.
+If something is missing or the app can't replace itself (e.g. no write permission), it automatically downloads the installer and opens it (Linux: new AppImage file in **Downloads**). A damaged package is never installed – the old version stays in place.
 
-Das Update-Fenster zeigt dabei, **was neu** ist, und nach dem ersten Start einer neuen Version erscheint einmal kurz „Was ist neu in x.y.z“. Alle Änderungen stehen in [CHANGELOG.md](CHANGELOG.md).
+The update window shows **what's new**, and the first time a new version starts, “What's new in x.y.z” appears briefly once. All changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
-## Alle Funktionen
+## All features
 
 <details open>
 <summary><b>Terminal</b></summary>
 
-- Mehrere Verbindungen in Tabs, helles und dunkles Design, einklappbare Seitenleiste
-- **Automatisch neu verbinden** nach WLAN-Wechsel, Ruhezustand oder Verbindungsabbruch
-- Suche im Terminal, anklickbare Links, Schriftgröße per Tastatur
-- **Befehlspalette** (Cmd/Strg+K): Verbindungen, Tabs, Befehlsknöpfe und Aktionen suchen und starten – unscharfe Suche, zuletzt Benutztes oben
-- Geteilte Ansicht: bis zu 4 Terminals auf demselben Server – nebeneinander, untereinander oder 2×2, Trenner verschiebbar
-- Mitschnitt einer Sitzung als Textdatei
-- **An alle senden:** Eingaben gleichzeitig an mehrere Server
-- **Eigene Befehlsknöpfe** pro Server – mit Icons, Rückfrage vor gefährlichen Befehlen, Eingabefeldern (`{name}` im Befehl), Ausklappmenüs, Export/Import als JSON – dazu Knöpfe **„Für alle Server“**, die bei jeder Verbindung erscheinen
-- Hilfsleiste für `nano` (Speichern & schließen per Klick)
-- Server-Übersicht in der Leiste: CPU, RAM, Platte, Laufzeit
-- **Übersicht-Ansicht:** Dienste (systemd) und Docker-Container sehen, starten, stoppen, Logs ansehen
-- **Befehlspalette** mit Cmd/Strg+K – Verbindungen, Tabs, Befehle und Aktionen per Tastatur
-- Bis zu **vier Terminals** in einem Tab, Befehlsknöpfe für alle Server
-- **Sitzung wiederherstellen:** nach Neustart oder Update sind die Tabs wieder da
-- **Ansicht „Übersicht“:** Dienste (systemd) mit Status, Start/Stop/Neustart und Logs, Docker-Container, große Systemwerte, Laufwerke, Prozesse und die größten Ordner – ohne etwas ins Terminal zu tippen
+- Multiple connections in tabs, light and dark theme, collapsible sidebar
+- Interface in **English and German** – follows your system language, can be changed in **Settings → General**
+- **Automatic reconnect** after a Wi-Fi change, sleep or dropped connection
+- Search in the terminal, clickable links, font size via keyboard
+- **Command palette** (Cmd/Ctrl+K): find and run connections, tabs, command buttons and actions – fuzzy search, recently used at the top
+- Split view: up to 4 terminals on the same server – side by side, stacked or 2×2, with movable dividers
+- Record a session to a text file
+- **Send to all:** type into several servers at once
+- **Custom command buttons** per server – with icons, confirmation before dangerous commands, input fields (`{name}` in the command), drop-down menus, export/import as JSON – plus **“For all servers”** buttons that appear on every connection
+- Helper bar for `nano` (save & exit with one click)
+- Server overview in the bar: CPU, RAM, disk, uptime
+- **Overview view:** see, start and stop services (systemd) and Docker containers, view logs
+- **Command palette** with Cmd/Ctrl+K – connections, tabs, commands and actions via keyboard
+- Up to **four terminals** in one tab, command buttons for all servers
+- **Restore session:** your tabs are back after a restart or update
+- **“Overview” view:** services (systemd) with status, start/stop/restart and logs, Docker containers, large system stats, drives, processes and the largest folders – without typing anything into the terminal
 
 </details>
 
 <details open>
-<summary><b>Dateien (SFTP, FTP, FTPS)</b></summary>
+<summary><b>Files (SFTP, FTP, FTPS)</b></summary>
 
-- Dateibrowser mit Hochladen, Herunterladen, Umbenennen, Neuer Ordner, Löschen (mit Rückfrage)
-- **„Mein Computer“:** eigene Dateien links, Server rechts – Dateien und ganze Ordner per Ziehen & Ablegen kopieren, mit Rückfrage vor dem Überschreiben
-- **Mehrfachauswahl:** Rahmen mit der Maus aufziehen, Cmd/Strg-Klick, Umschalt-Klick, Cmd/Strg+A
-- **Eingebauter Editor** mit Zeilennummern und Suche
-- Vorschau für Bilder und Text (Leertaste)
-- Rechte ändern (chmod), ZIP packen und entpacken
-- Live-Suche im Ordner oder über den ganzen Server
-- Übertragungsliste: **pausieren, fortsetzen**, abgebrochene Übertragungen weitermachen, mehrere gleichzeitig, Geschwindigkeitslimit
-- **Ordner synchronisieren** (Vorschau, Richtung wählbar, Ausschlüsse) und **„Server-Ordner aktuell halten“**
-- **Im eigenen Editor bearbeiten** (z. B. VS Code) – Speichern lädt automatisch hoch
-- **Dateien vergleichen** – Unterschiede farbig nebeneinander
-- **Lesezeichen**, Zurück/Vor, Spalten für Rechte, Besitzer und Gruppe
-- **FTP und FTPS** für Webhosting ohne SSH
-- „Terminal hier öffnen“
+- File browser with upload, download, rename, new folder, delete (with confirmation)
+- **“My Computer”:** your files on the left, the server on the right – copy files and whole folders by drag & drop, with confirmation before overwriting
+- **Multiple selection:** drag a selection rectangle with the mouse, Cmd/Ctrl-click, Shift-click, Cmd/Ctrl+A
+- **Built-in editor** with line numbers and search
+- Preview for images and text (Space)
+- Change permissions (chmod), create and extract ZIP files
+- Live search in the folder or across the whole server
+- Transfer list: **pause, resume**, continue interrupted transfers, several at once, speed limit
+- **Sync folders** (preview, choose direction, exclusions) and **“Keep server folder up to date”**
+- **Edit in your own editor** (e.g. VS Code) – saving uploads automatically
+- **Compare files** – differences highlighted side by side
+- **Bookmarks**, back/forward, columns for permissions, owner and group
+- **FTP and FTPS** for web hosting without SSH
+- “Open Terminal Here”
 
 </details>
 
 <details open>
-<summary><b>Verbindungen & Sicherheit</b></summary>
+<summary><b>Connections & security</b></summary>
 
-- Gespeicherte Verbindungen mit **Gruppen, Farben und Suche**
-- Passwort, SSH-Schlüssel (auch mit Passphrase) oder SSH-Agent
-- **SSH-Schlüssel erzeugen** und mit einem Klick auf den Server übertragen
-- **Schlüssel verwalten:** alle SSH-Schlüssel aus `~/.ssh` mit Typ, Fingerprint und Passphrase-Status – öffentlichen Schlüssel kopieren, im Finder/Explorer zeigen, neuen erzeugen, auf einen Server übertragen
-- Sprung-Server (ProxyJump)
-- **Verbindung über Proxy:** SOCKS5 oder HTTP (CONNECT), mit Anmeldung, global oder pro Verbindung – auch zusammen mit Sprung-Server
-- **Agent-Weiterleitung** pro Verbindung (z. B. `git pull` auf dem Server mit dem Schlüssel vom eigenen Rechner)
-- Import aus `~/.ssh/config`
-- **Port-Weiterleitung:** lokal, remote und SOCKS-Proxy – auf Wunsch automatisch beim Verbinden
-- Host-Schlüssel werden beim ersten Verbinden gemerkt und danach geprüft (wie bei OpenSSH); bei einem **geänderten Schlüssel** klare Warnung mit altem und neuem Fingerprint
-- **Bekannte Server verwalten:** alle gespeicherten Host-Schlüssel (auch aus `~/.ssh/known_hosts`) ansehen, durchsuchen und einzeln entfernen
-- Optionale **App-Sperre** mit Passwort oder Touch ID
-- **Schlüssel & Server:** bekannte Server und eigene SSH-Schlüssel verwalten, Warnung bei geändertem Server-Schlüssel
-- **Agent-Weiterleitung** und Verbindung über **Proxy** (SOCKS5/HTTP)
-- **Backup & Umzug:** alles verschlüsselt exportieren/importieren, optional Abgleich über iCloud/OneDrive
+- Saved connections with **groups, colors and search**
+- Password, SSH key (also with passphrase) or SSH agent
+- **Generate SSH keys** and install them on the server with one click
+- **Manage keys:** all SSH keys from `~/.ssh` with type, fingerprint and passphrase status – copy the public key, show in Finder/Explorer, generate a new one, install on a server
+- Jump host (ProxyJump)
+- **Connect via proxy:** SOCKS5 or HTTP (CONNECT), with login, globally or per connection – also combined with a jump host
+- **Agent forwarding** per connection (e.g. `git pull` on the server using the key from your own computer)
+- Import from `~/.ssh/config`
+- **Port forwarding:** local, remote and SOCKS proxy – optionally started automatically on connect
+- Host keys are remembered on first connect and checked from then on (like OpenSSH); if a **key has changed**, you get a clear warning with the old and new fingerprint
+- **Manage known servers:** view, search and remove individual saved host keys (including those from `~/.ssh/known_hosts`)
+- Optional **App Lock** with password or Touch ID
+- **Keys & Servers:** manage known servers and your own SSH keys, warning when a server key changes
+- **Agent forwarding** and connecting via **proxy** (SOCKS5/HTTP)
+- **Backup & migration:** export/import everything encrypted, optionally sync via iCloud/OneDrive
 
 </details>
 
-## Tastenkürzel
+## Keyboard shortcuts
 
-| Aktion | macOS | Windows |
+| Action | macOS | Windows |
 |---|---|---|
-| Suche im Terminal | <kbd>⌘</kbd> <kbd>F</kbd> | <kbd>Strg</kbd> <kbd>Umschalt</kbd> <kbd>F</kbd> |
-| Schrift größer / kleiner / normal | <kbd>⌘</kbd> <kbd>+</kbd> / <kbd>−</kbd> / <kbd>0</kbd> | <kbd>Strg</kbd> <kbd>+</kbd> / <kbd>−</kbd> / <kbd>0</kbd> |
-| Befehlspalette (alles suchen und starten) | <kbd>⌘</kbd> <kbd>K</kbd> | <kbd>Strg</kbd> <kbd>K</kbd> |
-| Weiteres Terminal daneben (bis zu 4) | <kbd>⌘</kbd> <kbd>D</kbd> | <kbd>Strg</kbd> <kbd>Umschalt</kbd> <kbd>D</kbd> |
-| Seitenleiste ein-/ausklappen | <kbd>⌘</kbd> <kbd>B</kbd> | <kbd>Strg</kbd> <kbd>Umschalt</kbd> <kbd>B</kbd> |
-| Datei im Editor speichern | <kbd>⌘</kbd> <kbd>S</kbd> | <kbd>Strg</kbd> <kbd>S</kbd> |
-| Alle Dateien auswählen | <kbd>⌘</kbd> <kbd>A</kbd> | <kbd>Strg</kbd> <kbd>A</kbd> |
-| Vorschau einer Datei | <kbd>Leertaste</kbd> | <kbd>Leertaste</kbd> |
+| Search in terminal | <kbd>⌘</kbd> <kbd>F</kbd> | <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>F</kbd> |
+| Font bigger / smaller / reset | <kbd>⌘</kbd> <kbd>+</kbd> / <kbd>−</kbd> / <kbd>0</kbd> | <kbd>Ctrl</kbd> <kbd>+</kbd> / <kbd>−</kbd> / <kbd>0</kbd> |
+| Command palette (find and run anything) | <kbd>⌘</kbd> <kbd>K</kbd> | <kbd>Ctrl</kbd> <kbd>K</kbd> |
+| Another terminal alongside (up to 4) | <kbd>⌘</kbd> <kbd>D</kbd> | <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>D</kbd> |
+| Show / hide sidebar | <kbd>⌘</kbd> <kbd>B</kbd> | <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>B</kbd> |
+| Save file in editor | <kbd>⌘</kbd> <kbd>S</kbd> | <kbd>Ctrl</kbd> <kbd>S</kbd> |
+| Select all files | <kbd>⌘</kbd> <kbd>A</kbd> | <kbd>Ctrl</kbd> <kbd>A</kbd> |
+| Preview a file | <kbd>Space</kbd> | <kbd>Space</kbd> |
 
-## Sicherheit & Datenschutz
+## Security & privacy
 
-- **Alles bleibt auf deinem Rechner.** Kein Konto, keine Cloud, keine Statistik.
-- Verbindungen und Einstellungen liegen in `~/.myssh`, **Passwörter verschlüsselt** im macOS-Schlüsselbund, per Windows-DPAPI bzw. unter Linux über den Schlüsselbund der Oberfläche (GNOME Schlüsselbund, KWallet).
-- Die App spricht nur mit deinen Servern – und mit GitHub, um nach neuen Versionen zu schauen.
-- Updates werden nur aus diesem Repository geladen und vor der Installation geprüft.
-- Tunnel-Ports lauschen nur auf `127.0.0.1` und sind von außen nicht erreichbar.
+- **Everything stays on your computer.** No account, no cloud, no analytics.
+- Connections and settings live in `~/.myssh`, **passwords are encrypted** in the macOS Keychain, via Windows DPAPI, or on Linux via your desktop's keyring (GNOME Keyring, KWallet).
+- The app only talks to your servers – and to GitHub to check for new versions.
+- Updates are only downloaded from this repository and verified before installing.
+- Tunnel ports only listen on `127.0.0.1` and can't be reached from outside.
 
-## Häufige Fragen
+## FAQ
 
 <details>
-<summary><b>macOS sagt, die App sei „beschädigt“ oder „nicht verifiziert“.</b></summary>
+<summary><b>macOS says the app is “damaged” or “not verified”.</b></summary>
 
-Die App ist nicht über das kostenpflichtige Apple-Entwicklerprogramm signiert. „Nicht verifiziert“: **Systemeinstellungen → Datenschutz & Sicherheit → Dennoch öffnen**. Bei „beschädigt“ (passiert bei manchen Download-Programmen):
-`xattr -cr "/Applications/S3cure SSH Client.app"` im Terminal ausführen.
+The app isn't signed through Apple's paid developer program. “Not verified”: **System Settings → Privacy & Security → Open Anyway**. For “damaged” (happens with some download tools):
+run `xattr -cr "/Applications/S3cure SSH Client.app"` in the terminal.
 
 </details>
 
 <details>
-<summary><b>Wo sind meine Verbindungen gespeichert? Gehen sie bei Updates verloren?</b></summary>
+<summary><b>Where are my connections stored? Will I lose them when updating?</b></summary>
 
-Im Ordner `~/.myssh` (Verbindungen, Befehlsknöpfe, Einstellungen) und im Schlüsselbund (Passwörter). Updates und Neuinstallationen ändern daran nichts.
-
-</details>
-
-<details>
-<summary><b>Funktioniert das mit meinem Raspberry Pi / NAS / VPS?</b></summary>
-
-Ja – mit allem, was SSH spricht. Für die Dateiansicht braucht der Server SFTP, das ist bei OpenSSH standardmäßig dabei.
+In the `~/.myssh` folder (connections, command buttons, settings) and in the keychain (passwords). Updates and reinstalls don't touch them.
 
 </details>
 
 <details>
-<summary><b>Wie deinstalliere ich S3cure?</b></summary>
+<summary><b>Does it work with my Raspberry Pi / NAS / VPS?</b></summary>
 
-**macOS:** App aus **Programme** in den Papierkorb ziehen, optional den Ordner `~/.myssh` löschen.
-**Windows:** **Einstellungen → Apps → S3cure SSH Client → Deinstallieren**.
-**Linux:** Die AppImage-Datei löschen, optional den Ordner `~/.myssh`.
+Yes – with anything that speaks SSH. For the file view the server needs SFTP, which OpenSSH includes by default.
 
 </details>
 
-## Selbst bauen
+<details>
+<summary><b>How do I uninstall S3cure?</b></summary>
 
-Voraussetzung: [Node.js](https://nodejs.org) 22 oder neuer.
+**macOS:** Drag the app from **Applications** to the Trash, optionally delete the `~/.myssh` folder.
+**Windows:** **Settings → Apps → S3cure SSH Client → Uninstall**.
+**Linux:** Delete the AppImage file, optionally the `~/.myssh` folder.
+
+</details>
+
+## Building from source
+
+Requirement: [Node.js](https://nodejs.org) 22 or later.
 
 ```bash
 git clone https://github.com/patrickxypfr-source/s3cure-ssh-client.git
 cd s3cure-ssh-client/app
 npm install
-npm start                # App direkt aus dem Quellcode starten
+npm start                # run the app straight from source
 ```
 
-Installer bauen (landen in `dist/`):
+Build installers (they end up in `dist/`):
 
 ```bash
-npm run build            # macOS Apple Silicon – .dmg
+npm run build            # macOS Apple silicon – .dmg
 npm run build:mac-intel  # macOS Intel – .dmg
 npm run build:win        # Windows – Setup.exe
 npm run build:linux      # Linux – AppImage (x64)
 ```
 
-Tests (Anleitung in [CONTRIBUTING.md](CONTRIBUTING.md)):
+Tests (guide in [CONTRIBUTING.md](CONTRIBUTING.md)):
 
 ```bash
-npm test                              # Einheitentests, dauern ein paar Sekunden
-xvfb-run -a npm run test:integration  # echte App gegen einen lokalen SSH-Server (Linux)
+npm test                              # unit tests, take a few seconds
+xvfb-run -a npm run test:integration  # real app against a local SSH server (Linux)
 ```
 
-GitHub Actions testet bei jedem Push zuerst (Einheitentests + Integrationstest), baut danach alle vier Versionen und startet Windows-, Mac- und Linux-App zur Probe. Ein Tag `v*` (z. B. `v1.2.0`) veröffentlicht automatisch ein Release mit den Installern und dem passenden Abschnitt aus [CHANGELOG.md](CHANGELOG.md) als Text – die Apps bieten es dann selbst als Update an.
+On every push, GitHub Actions runs the tests first (unit tests + integration test), then builds all four versions and launches the Windows, Mac and Linux apps as a smoke test. A `v*` tag (e.g. `v1.2.0`) automatically publishes a release with the installers and the matching section from [CHANGELOG.md](CHANGELOG.md) as release notes – the apps then offer it as an update themselves.
 
-## Aufbau & Technik
+## Architecture & tech
 
-| Pfad | Inhalt |
+| Path | Contents |
 |---|---|
-| `app/main.js`, `app/lib/` | Hauptprozess: SSH & SFTP, Tunnel, Updater, Einstellungen |
-| `app/src/` | Oberfläche ohne Framework, Terminal mit xterm.js |
-| `app/preload.js` | Sichere Brücke zwischen Oberfläche und Hauptprozess |
-| `app/tools/` | Build-Skripte (DMG, Windows-Installer, Linux-AppImage, Icons, Release-Text) |
-| `app/test/` | Einheitentests (`unit/`) und Integrationstest (`integration/`) mit `node:test` |
-| `CHANGELOG.md` | Was ist neu – pro Version, wird zum Release-Text |
-| `.github/workflows/` | Automatische Builds und Releases |
-| `myssh.py` | Kleines Kommandozeilen-Werkzeug (Python) |
+| `app/main.js`, `app/lib/` | Main process: SSH & SFTP, tunnels, updater, settings |
+| `app/src/` | Interface without a framework, terminal with xterm.js |
+| `app/preload.js` | Secure bridge between interface and main process |
+| `app/tools/` | Build scripts (DMG, Windows installer, Linux AppImage, icons, release notes) |
+| `app/test/` | Unit tests (`unit/`) and integration test (`integration/`) with `node:test` |
+| `CHANGELOG.md` | What's new – per version, becomes the release notes |
+| `.github/workflows/` | Automatic builds and releases |
+| `myssh.py` | Small command-line tool (Python) |
 
-**Gebaut mit:** [Electron](https://www.electronjs.org) · [ssh2](https://github.com/mscdex/ssh2) · [xterm.js](https://xtermjs.org) · [electron-builder](https://www.electron.build) (Installer)
+**Built with:** [Electron](https://www.electronjs.org) · [ssh2](https://github.com/mscdex/ssh2) · [xterm.js](https://xtermjs.org) · [electron-builder](https://www.electron.build) (installer)
 
-## Lizenz
+## License
 
-[MIT](LICENSE) – frei nutzbar, auch für eigene Projekte.
+[MIT](LICENSE) – free to use, including for your own projects.
 
 <div align="center">
 <br>
