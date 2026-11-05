@@ -16,6 +16,7 @@ const tls = require('tls');
 const path = require('path');
 const { Duplex, Writable, Readable } = require('stream');
 const ftp = require('basic-ftp');
+const { t } = require('./i18n');
 
 const posix = path.posix;
 const TIMEOUT = 30000;
@@ -24,7 +25,7 @@ const LIST_CACHE_MS = 4000;
 const PROTOCOLS = {
   ftp: { label: 'FTP', port: 21 },
   ftps: { label: 'FTPS', port: 21 },
-  'ftps-implicit': { label: 'FTPS (implizit)', port: 990 },
+  'ftps-implicit': { get label() { return t('ftp.protoImplicit'); }, port: 990 }, // Text erst beim Gebrauch (Sprache kann wechseln)
 };
 const isFtpProtocol = proto => Object.prototype.hasOwnProperty.call(PROTOCOLS, proto || '');
 
@@ -41,7 +42,9 @@ function parseFtpUrl(text) {
 
 // ---------- Fehler ----------
 
-const CANCEL_TEXT = 'Übertragung abgebrochen.';
+// Muss derselbe Text sein wie in lib/transfers.js (dort wird abgebrochen per Text erkannt)
+const cancelText = () => t('transfers.cancelled');
+const cancelError = () => Object.assign(new Error(cancelText()), { ftpCancelled: true });
 
 // FTP-Antwortcodes auf die Fehlercodes von SFTP abbilden (2 = gibt es nicht, 3 = keine Berechtigung,
 // 4 = fehlgeschlagen) – dann zeigt main.js dieselben verständlichen Meldungen wie bei SFTP.
@@ -61,9 +64,9 @@ function mapError(err) {
       else e.code = 4;
     }
     else if (code === 553 || code === 532) e.code = 3;
-    else if (code === 421) e = new Error('Der FTP-Server hat die Verbindung beendet (zu viele Verbindungen oder Zeitüberschreitung).');
-    else if (code === 530) e = new Error('Anmeldung fehlgeschlagen (Benutzername oder Passwort falsch).');
-    else if (code === 500 || code === 502 || code === 504) e = new Error('Das kann dieser FTP-Server nicht (' + text + ').');
+    else if (code === 421) e = new Error(t('ftp.err421'));
+    else if (code === 530) e = new Error(t('ftp.loginFailed'));
+    else if (code === 500 || code === 502 || code === 504) e = new Error(t('ftp.notSupported', { text }));
     else if (code >= 400) e.code = 4;
   } else {
     e = err instanceof Error ? err : new Error(msg);
@@ -74,18 +77,17 @@ function mapError(err) {
 
 function friendlyConnectError(err, target) {
   const msg = String(err && err.message || err);
-  if (err && err.code === 530) return 'Anmeldung fehlgeschlagen (Benutzername oder Passwort falsch).';
-  if (/ENOTFOUND|EAI_AGAIN/.test(msg)) return `Server „${target.host}“ nicht gefunden. Stimmt die Adresse?`;
-  if (/ECONNREFUSED/.test(msg)) return `${target.host} lehnt die Verbindung ab. Läuft dort ein FTP-Server auf Port ${target.port}?`;
-  if (/ETIMEDOUT|Timeout|timed out/i.test(msg)) return `${target.host} antwortet nicht (Zeitüberschreitung).`;
-  if (/EHOSTUNREACH|ENETUNREACH/.test(msg)) return `${target.host} ist nicht erreichbar.`;
+  if (err && err.code === 530) return t('ftp.loginFailed');
+  if (/ENOTFOUND|EAI_AGAIN/.test(msg)) return t('ftp.hostNotFound', { host: target.host });
+  if (/ECONNREFUSED/.test(msg)) return t('ftp.refused', { host: target.host, port: target.port });
+  if (/ETIMEDOUT|Timeout|timed out/i.test(msg)) return t('ftp.timeout', { host: target.host });
+  if (/EHOSTUNREACH|ENETUNREACH/.test(msg)) return t('ftp.unreachable', { host: target.host });
   if (/AUTH|TLS|SSL|handshake|wrong version/i.test(msg) && target.protocol !== 'ftp') {
-    const variant = target.protocol === 'ftps' ? 'FTPS explizit' : 'FTPS implizit';
-    return `Die verschlüsselte Verbindung (${variant}) ist fehlgeschlagen. Unterstützt der Server diese Art? `
-      + 'Probier im Verbindungs-Dialog die andere FTPS-Variante oder den passenden Port (explizit meist 21, implizit 990).'
-      + '\n\nTechnische Details: ' + msg.split('\n')[0].replace(/^[0-9A-F]{8,}:error:[0-9A-F]+:/, '').slice(0, 160);
+    const variant = target.protocol === 'ftps' ? t('ftp.variantExplicit') : t('ftp.variantImplicit');
+    return t('ftp.tlsFailed', { variant })
+      + '\n\n' + t('ftp.techDetails', { details: msg.split('\n')[0].replace(/^[0-9A-F]{8,}:error:[0-9A-F]+:/, '').slice(0, 160) });
   }
-  return 'Verbindung fehlgeschlagen: ' + msg;
+  return t('ftp.connectFailed', { msg });
 }
 
 // ---------- Aktiver Modus ----------
@@ -139,8 +141,7 @@ async function enterActiveMode(ctx) {
   await new Promise((res, rej) => { server.once('error', rej); server.listen(0, local, res); });
   const port = server.address().port;
   const data = new ActiveDataSocket(server, ctx);
-  const timer = setTimeout(() => data.destroy(new Error('Aktiver Modus: Der Server hat keine Datenverbindung aufgebaut. '
-    + 'Eine Firewall oder der Router blockiert das vermutlich – bitte „Passiver Modus“ einschalten.')), ctx.timeout || TIMEOUT);
+  const timer = setTimeout(() => data.destroy(new Error(t('ftp.activeNoData'))), ctx.timeout || TIMEOUT);
   server.once('connection', sock => { clearTimeout(timer); server.close(); data.attach(sock); });
   try {
     if (v6) await ctx.request(`EPRT |2|${local}|${port}|`);
@@ -208,7 +209,7 @@ function statsFromInfo(info) {
 }
 
 const checkPath = p => {
-  if (typeof p !== 'string' || /[\r\n\0]/.test(p)) throw new Error('Ungültiger Pfad.');
+  if (typeof p !== 'string' || /[\r\n\0]/.test(p)) throw new Error(t('ftp.badPath'));
   return p;
 };
 
@@ -236,28 +237,26 @@ async function openFtp(target, deps) {
     if (fp && state.sessionTrust === fp) return;
     const saved = certs.get(id);
     if (saved && saved.fingerprint === fp) { state.sessionTrust = fp; return; }
-    const reason = {
-      DEPTH_ZERO_SELF_SIGNED_CERT: 'Das Zertifikat ist selbst signiert (nicht von einer bekannten Stelle bestätigt).',
-      SELF_SIGNED_CERT_IN_CHAIN: 'Das Zertifikat stammt von einer unbekannten (selbst signierten) Stelle.',
-      UNABLE_TO_VERIFY_LEAF_SIGNATURE: 'Das Zertifikat kann nicht überprüft werden (Zwischenzertifikat fehlt).',
-      CERT_HAS_EXPIRED: 'Das Zertifikat ist abgelaufen.',
-      ERR_TLS_CERT_ALTNAME_INVALID: `Das Zertifikat ist nicht für „${target.host}“ ausgestellt.`,
-    }[socket.authorizationError] || `Das Zertifikat ist nicht vertrauenswürdig (${socket.authorizationError}).`;
+    const reasonKey = {
+      DEPTH_ZERO_SELF_SIGNED_CERT: 'ftp.certSelfSigned',
+      SELF_SIGNED_CERT_IN_CHAIN: 'ftp.certSelfSignedChain',
+      UNABLE_TO_VERIFY_LEAF_SIGNATURE: 'ftp.certNoIntermediate',
+      CERT_HAS_EXPIRED: 'ftp.certExpired',
+      ERR_TLS_CERT_ALTNAME_INVALID: 'ftp.certWrongHost',
+    }[socket.authorizationError] || 'ftp.certUntrusted';
+    const reason = t(reasonKey, { host: target.host, error: socket.authorizationError });
     const name = s => (s && (s.CN || s.O)) || '–';
-    const detail = `${reason}\n\nAusgestellt für: ${name(cert.subject)}\nAusgestellt von: ${name(cert.issuer)}\n`
-      + `Gültig bis: ${cert.valid_to || '–'}\n\nSHA256-Fingerprint:\n${fp}`;
+    const detail = reason + '\n\n' + t('ftp.certDetail', { subject: name(cert.subject), issuer: name(cert.issuer), validTo: cert.valid_to || '–', fp });
     const changed = saved && saved.fingerprint !== fp;
     const ok = await ask({
       kind: 'confirm',
-      title: changed ? 'WARNUNG: Zertifikat hat sich geändert!' : 'Unbekanntes Zertifikat',
-      message: changed
-        ? `Das Zertifikat von ${id} ist ein anderes als beim letzten Mal. Das kann ein Angriff sein – oder der Server hat ein neues Zertifikat bekommen.`
-        : `${id} zeigt ein Zertifikat, das nicht automatisch geprüft werden kann. Vergleiche den Fingerprint mit dem, was dein Hoster angibt.`,
-      detail: detail + (changed ? `\n\nBisheriger Fingerprint:\n${saved.fingerprint}` : '') + '\n\nVertraust du diesem Zertifikat?',
-      okLabel: 'Vertrauen & verbinden',
+      title: changed ? t('ftp.certChangedTitle') : t('ftp.certUnknownTitle'),
+      message: changed ? t('ftp.certChanged', { id }) : t('ftp.certUnknown', { id }),
+      detail: detail + (changed ? '\n\n' + t('ftp.certPrevious', { fp: saved.fingerprint }) : '') + '\n\n' + t('ftp.certTrustQ'),
+      okLabel: t('ftp.certTrustOk'),
       danger: !!changed,
     });
-    if (!ok) throw Object.assign(new Error('Verbindung abgebrochen: Zertifikat nicht vertraut.'), { userAbort: true });
+    if (!ok) throw Object.assign(new Error(t('ftp.certRejected')), { userAbort: true });
     state.sessionTrust = fp;
     certs.set(id, { fingerprint: fp, subject: name(cert.subject), savedAt: new Date().toISOString() });
   }
@@ -316,13 +315,12 @@ async function openFtp(target, deps) {
           const again = tries > 0;
           const answer = await ask({
             kind: 'secret',
-            title: savedRejected && !again ? 'Passwort geändert?' : again ? 'Falsches Passwort' : 'Anmeldung',
-            message: savedRejected && !again
-              ? `Das gespeicherte Passwort wurde abgelehnt. Bitte neu eingeben für ${target.user}@${target.host}:`
-              : `${again ? 'Nochmal versuchen. ' : ''}FTP-Passwort für ${target.user}@${target.host}:`,
+            title: savedRejected && !again ? t('ftp.pwChangedTitle') : again ? t('ftp.pwWrongTitle') : t('ftp.loginTitle'),
+            message: t(savedRejected && !again ? 'ftp.pwSavedRejected' : again ? 'ftp.pwPromptAgain' : 'ftp.pwPrompt',
+              { user: target.user, host: target.host }),
             remember: !!hostName,
           });
-          if (answer == null) throw Object.assign(new Error('Anmeldung abgebrochen.'), { userAbort: true });
+          if (answer == null) throw Object.assign(new Error(t('ftp.loginCancelled')), { userAbort: true });
           tries++;
           src = typeof answer === 'object' ? { from: 'typed', value: answer.value, remember: answer.remember } : { from: 'typed', value: answer };
         }
@@ -354,7 +352,7 @@ async function openFtp(target, deps) {
     let client = initial;
     let chain = Promise.resolve();
     const ensure = async () => {
-      if (state.closed) throw new Error('Keine aktive Verbindung in diesem Tab.');
+      if (state.closed) throw new Error(t('ftp.noConnection'));
       if (!client || client.closed) {
         client = null;
         try { client = await login(state.password); } catch (err) { throw new Error(friendlyConnectError(err, target)); }
@@ -433,7 +431,7 @@ async function openFtp(target, deps) {
     }
     // Übergeordneter Ordner nicht lesbar? Dann wenigstens prüfen, ob es ein Ordner ist
     if (!list && await isDirByCd(file)) return makeStats({ isDir: true });
-    throw Object.assign(new Error('Datei oder Ordner gibt es nicht.'), { code: 2, ftpMapped: true });
+    throw Object.assign(new Error(t('ftp.notFound')), { code: 2, ftpMapped: true });
   }
 
   // ---------- Schreib-Handles (für den Editor: open/write/close) ----------
@@ -461,7 +459,7 @@ async function openFtp(target, deps) {
   function transfer(kind, remote, local, opts = {}) {
     return xfer.run(async (c, ctl) => {
       const cancelled = typeof opts.cancelled === 'function' ? opts.cancelled : () => false;
-      if (cancelled()) throw new Error(CANCEL_TEXT);
+      if (cancelled()) throw cancelError();
       c.trackProgress(info => {
         if (typeof opts.step === 'function') opts.step(info.bytesOverall);
         if (cancelled() && !ctl.aborted) { ctl.aborted = true; c.close(); }
@@ -472,7 +470,7 @@ async function openFtp(target, deps) {
         if (kind === 'put') await c.uploadFrom(local, remote);
         else await c.downloadTo(local, remote);
       } catch (err) {
-        if (ctl.aborted) throw new Error(CANCEL_TEXT);
+        if (ctl.aborted) throw cancelError();
         throw err;
       } finally {
         clearInterval(poll);
@@ -508,12 +506,12 @@ async function openFtp(target, deps) {
     rename(from, to, cb) {
       cbify(main.run(c => c.rename(checkPath(from), checkPath(to))).then(() => { forget(from); forget(to); }), cb);
     },
-    ext_openssh_rename(_from, _to, cb) { process.nextTick(cb, new Error('Bei FTP nicht verfügbar.')); },
+    ext_openssh_rename(_from, _to, cb) { process.nextTick(cb, new Error(t('ftp.notAvailable'))); },
 
     // Rechte per SITE CHMOD (können nicht alle Server)
     chmod(file, mode, cb) {
       cbify(siteChmod(checkPath(file), mode).catch(err => {
-        if (err instanceof ftp.FTPError && err.code >= 500 && err.code < 550) throw new Error('Dieser FTP-Server erlaubt das Ändern der Rechte nicht.');
+        if (err instanceof ftp.FTPError && err.code >= 500 && err.code < 550) throw new Error(t('ftp.chmodNotAllowed'));
         throw err;
       }), cb);
     },
@@ -524,11 +522,11 @@ async function openFtp(target, deps) {
       const cb = lastCb(rest);
       cbify((async () => {
         checkPath(file);
-        if (!/^w/.test(flags)) throw new Error('Bei FTP nicht verfügbar.');
+        if (!/^w/.test(flags)) throw new Error(t('ftp.notAvailable'));
         if (flags.includes('x')) {
           let exists = false;
           try { await statPath(file, false); exists = true; } catch {}
-          if (exists) throw Object.assign(new Error('Den Namen gibt es schon.'), { code: 4, ftpMapped: true });
+          if (exists) throw Object.assign(new Error(t('ftp.exists')), { code: 4, ftpMapped: true });
         }
         const h = Buffer.from(`ftp${++handleSeq}`);
         handles.set(h.toString(), { file, chunks: [], mode: 0 });
@@ -537,7 +535,7 @@ async function openFtp(target, deps) {
     },
     write(handle, buf, off, len, pos, cb) {
       const h = handles.get(handle.toString());
-      if (!h) return process.nextTick(cb, new Error('Ungültiger Dateizugriff.'));
+      if (!h) return process.nextTick(cb, new Error(t('ftp.badHandle')));
       h.chunks.push({ pos, data: Buffer.from(buf.subarray(off, off + len)) });
       process.nextTick(cb, null);
     },
@@ -546,7 +544,7 @@ async function openFtp(target, deps) {
       if (h) h.mode = mode & 0o7777;
       process.nextTick(cb, null);
     },
-    fchown(_handle, _uid, _gid, cb) { process.nextTick(cb, new Error('Bei FTP nicht verfügbar.')); },
+    fchown(_handle, _uid, _gid, cb) { process.nextTick(cb, new Error(t('ftp.notAvailable'))); },
     close(handle, cb) {
       const key = handle.toString();
       const h = handles.get(key);
@@ -588,7 +586,7 @@ async function openFtp(target, deps) {
       if (typeof opts === 'function') { cb = opts; opts = {}; }
       cbify(transfer('get', checkPath(remote), local, opts).catch(err => {
         // halb geschriebene lokale Datei bei Fehlern nicht liegen lassen
-        if (err.message !== CANCEL_TEXT) { try { fs.unlinkSync(local); } catch {} }
+        if (!err.ftpCancelled) { try { fs.unlinkSync(local); } catch {} }
         throw err;
       }), cb);
     },
@@ -617,4 +615,7 @@ function createCertStore(file) {
   };
 }
 
-module.exports = { openFtp, parseFtpUrl, isFtpProtocol, createCertStore, PROTOCOLS, CANCEL_TEXT, mapError, parseTime };
+module.exports = {
+  openFtp, parseFtpUrl, isFtpProtocol, createCertStore, PROTOCOLS, mapError, parseTime,
+  get CANCEL_TEXT() { return cancelText(); }, // Text in der aktuellen Sprache
+};

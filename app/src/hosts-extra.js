@@ -4,9 +4,9 @@
 // renderHosts, openTab, editHost, deleteHost, openMenu.
 
 const HOST_COLORS = {
-  red: ['Rot', '#e5484d'], orange: ['Orange', '#f76b15'], yellow: ['Gelb', '#e2a336'],
-  green: ['Grün', '#30a46c'], teal: ['Türkis', '#12a594'], blue: ['Blau', '#3e63dd'],
-  purple: ['Lila', '#8e4ec6'], pink: ['Pink', '#d6409f'], gray: ['Grau', '#8b8d98'],
+  red: [t('hostsExtra.colorRed'), '#e5484d'], orange: [t('hostsExtra.colorOrange'), '#f76b15'], yellow: [t('hostsExtra.colorYellow'), '#e2a336'],
+  green: [t('hostsExtra.colorGreen'), '#30a46c'], teal: [t('hostsExtra.colorTeal'), '#12a594'], blue: [t('hostsExtra.colorBlue'), '#3e63dd'],
+  purple: [t('hostsExtra.colorPurple'), '#8e4ec6'], pink: [t('hostsExtra.colorPink'), '#d6409f'], gray: [t('hostsExtra.colorGray'), '#8b8d98'],
 };
 const hostColor = name => (hosts[name] && HOST_COLORS[hosts[name].color] || [])[1] || null;
 
@@ -38,7 +38,7 @@ function renderHostGroups(list, names, makeItem) {
     groups.get(g).push(n);
   }
   for (const n of groups.get('') || []) list.appendChild(decorateHostItem(makeItem(n), n));
-  const groupNames = [...groups.keys()].filter(Boolean).sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+  const groupNames = [...groups.keys()].filter(Boolean).sort((a, b) => a.localeCompare(b, I18N.locale, { sensitivity: 'base' }));
   for (const g of groupNames) {
     const closed = !q && collapsedGroups.has(g); // beim Suchen alles aufklappen
     const head = document.createElement('li');
@@ -46,7 +46,7 @@ function renderHostGroups(list, names, makeItem) {
     head.innerHTML = `${icon('down')}<span class="g-name"></span><span class="g-count"></span>`;
     head.querySelector('.g-name').textContent = g;
     head.querySelector('.g-count').textContent = groups.get(g).length;
-    head.title = closed ? 'Aufklappen' : 'Zuklappen';
+    head.title = closed ? t('hostsExtra.expand') : t('hostsExtra.collapse');
     head.addEventListener('click', () => toggleGroup(g));
     list.appendChild(head);
     if (!closed) for (const n of groups.get(g)) list.appendChild(decorateHostItem(makeItem(n), n, true));
@@ -54,7 +54,7 @@ function renderHostGroups(list, names, makeItem) {
   if (q && !groups.size) {
     const li = document.createElement('li');
     li.className = 'host-nohit';
-    li.textContent = 'Keine Treffer.';
+    li.textContent = t('hostsExtra.noHits');
     list.appendChild(li);
   }
   decorateTabs();
@@ -69,19 +69,19 @@ function decorateHostItem(li, name, inGroup = false) {
   const ftp = !!window.FtpUi?.isFtpHost(name);
   if (h.jump && !ftp) {
     const addr = li.querySelector('.host-addr');
-    addr.textContent += ` · über ${h.jump}`;
-    li.title += `\nÜber Sprung-Server: ${h.jump}`;
+    addr.textContent += ` · ${t('hostsExtra.via', { jump: h.jump })}`;
+    li.title += '\n' + t('hostsExtra.viaJumpTitle', { jump: h.jump });
   }
   li.addEventListener('contextmenu', e => {
     e.preventDefault();
     openMenu([
-      ...(ftp ? [] : [['Terminal öffnen', () => openTab({ name }, name), '', 'terminal']]),
-      ['Dateien öffnen', () => openTab({ name }, name, 'files'), '', 'folder'],
+      ...(ftp ? [] : [[t('hostsExtra.openTerminal'), () => openTab({ name }, name), '', 'terminal']]),
+      [t('hostsExtra.openFiles'), () => openTab({ name }, name, 'files'), '', 'folder'],
       null,
-      ['Bearbeiten', () => editHost(name), '', 'edit'],
-      ...(ftp ? [] : [['Anmeldung ohne Passwort einrichten …', () => setupKeyLogin(name), '', 'lock']]),
+      [t('common.edit'), () => editHost(name), '', 'edit'],
+      ...(ftp ? [] : [[t('hostsExtra.setupKeyMenu'), () => setupKeyLogin(name), '', 'lock']]),
       null,
-      ['Löschen', () => deleteHost(name), 'danger', 'trash'],
+      [t('common.delete'), () => deleteHost(name), 'danger', 'trash'],
     ], e.clientX, e.clientY);
   });
   return li;
@@ -120,7 +120,7 @@ let pickedColor = '';
 function renderColorPick() {
   const box = $('#color-pick');
   box.innerHTML = '';
-  for (const [key, [label, hex]] of [['', ['Keine', '']], ...Object.entries(HOST_COLORS)]) {
+  for (const [key, [label, hex]] of [['', [t('hostsExtra.colorNone'), '']], ...Object.entries(HOST_COLORS)]) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'swatch' + (key === pickedColor ? ' on' : '') + (key ? '' : ' none');
@@ -140,7 +140,7 @@ function fillHostExtras(form, name) {
 
   const sel = form.jump;
   sel.innerHTML = '';
-  sel.appendChild(new Option('Keiner – direkt verbinden', ''));
+  sel.appendChild(new Option(t('hostsExtra.jumpNone'), ''));
   const others = Object.keys(hosts).filter(n => n !== name && !window.FtpUi?.isFtpHost(n)).sort((a, b) => a.localeCompare(b));
   for (const n of others) sel.appendChild(new Option(`${n} (${hosts[n].host})`, n));
   if (h.jump && !others.includes(h.jump)) sel.appendChild(new Option(h.jump, h.jump)); // z. B. aus ~/.ssh/config
@@ -171,23 +171,23 @@ $('#setup-key').addEventListener('click', () => { if (editingName) setupKeyLogin
 $('#import-hosts').addEventListener('click', async () => {
   let plan;
   try { plan = await api.sshConfigScan(); } catch (err) { showError(err); return; }
-  const addr = e => `${e.user}@${e.host}${e.port !== 22 ? ':' + e.port : ''}${e.jump ? ` über ${e.jump}` : ''}`;
+  const addr = e => `${e.user}@${e.host}${e.port !== 22 ? ':' + e.port : ''}${e.jump ? ' ' + t('hostsExtra.via', { jump: e.jump }) : ''}`;
   const skipped = plan.skip.map(s => `–  ${s.name}: ${s.reason}`).join('\n');
   if (!plan.add.length) {
-    askLocal({ kind: 'info', title: 'Nichts Neues', message: 'In ~/.ssh/config gibt es keine neuen Verbindungen.', detail: skipped });
+    askLocal({ kind: 'info', title: t('hostsExtra.importNothingTitle'), message: t('hostsExtra.importNothing'), detail: skipped });
     return;
   }
   const ok = await askLocal({
-    kind: 'confirm', title: 'Aus ~/.ssh/config übernehmen',
-    message: plan.add.length === 1 ? 'Eine neue Verbindung gefunden:' : `${plan.add.length} neue Verbindungen gefunden:`,
-    detail: plan.add.map(e => `+  ${e.name}  (${addr(e)})`).join('\n') + (skipped ? `\n\nÜbersprungen:\n${skipped}` : ''),
-    okLabel: 'Übernehmen',
+    kind: 'confirm', title: t('hostsExtra.importTitle'),
+    message: t('hostsExtra.importFound', { count: plan.add.length }),
+    detail: plan.add.map(e => `+  ${e.name}  (${addr(e)})`).join('\n') + (skipped ? `\n\n${t('hostsExtra.importSkipped')}\n${skipped}` : ''),
+    okLabel: t('common.apply'),
   });
   if (!ok) return;
   try {
     const r = await api.sshConfigImport();
     await refreshHosts();
-    flash(r.added.length === 1 ? '1 Verbindung übernommen' : `${r.added.length} Verbindungen übernommen`);
+    flash(t('hostsExtra.imported', { count: r.added.length }));
   } catch (err) { showError(err); }
 });
 
@@ -196,35 +196,35 @@ $('#import-hosts').addEventListener('click', async () => {
 async function setupKeyLogin(name) {
   let st = await api.keyStatus();
   const ok = await askLocal({
-    kind: 'confirm', title: 'Anmeldung ohne Passwort',
+    kind: 'confirm', title: t('hostsExtra.keyTitle'),
     message: st.exists
-      ? `Der Schlüssel dieser App wird auf „${name}“ eingetragen. Danach meldest du dich dort ohne Passwort an.`
-      : `Die App erzeugt einen eigenen SSH-Schlüssel und trägt ihn auf „${name}“ ein. Danach meldest du dich dort ohne Passwort an.`,
-    detail: `${st.exists ? 'Schlüssel' : 'Neuer Schlüssel'}: ${st.path}\nAuf dem Server: ~/.ssh/authorized_keys (wird nur ergänzt)`,
-    okLabel: 'Weiter',
+      ? t('hostsExtra.keyInstallExisting', { name })
+      : t('hostsExtra.keyInstallNew', { name }),
+    detail: t(st.exists ? 'hostsExtra.keyDetailExisting' : 'hostsExtra.keyDetailNew', { path: st.path }),
+    okLabel: t('common.next'),
   });
   if (!ok) return;
   if (!st.exists) {
     const pass = await askLocal({
-      kind: 'secret', title: 'Schlüssel mit Passphrase schützen?',
-      message: 'Optional. Leer lassen = ohne Passphrase (bequemer; wer an diesen Rechner kommt, kann den Schlüssel aber benutzen).',
-      placeholder: 'Leer lassen = keine Passphrase', remember: true, rememberLabel: 'Passphrase merken (verschlüsselt)',
-      okLabel: 'Schlüssel erzeugen',
+      kind: 'secret', title: t('connPro.passTitle'),
+      message: t('connPro.passMsg'),
+      placeholder: t('connPro.passPlaceholder'), remember: true, rememberLabel: t('connPro.rememberPassphrase'),
+      okLabel: t('hostsExtra.passOk'),
     });
     if (pass == null) return;
     try { st = await api.keyGenerate(pass.value, pass.remember); } catch (err) { showError(err); return; }
   }
-  flash(`Trage Schlüssel auf „${name}“ ein …`, 40);
+  flash(t('hostsExtra.keyInstalling', { name }), 40);
   try {
     const r = await api.keyInstall(name);
-    flash('Schlüssel eingetragen');
+    flash(t('hostsExtra.keyInstalled'));
     await refreshHosts();
     const form = $('#host-form');
     if (!$('#host-modal').hidden && editingName === name && r.tested) form.key.value = r.key;
     if (r.tested) {
-      askLocal({ kind: 'info', title: 'Fertig', message: `Anmeldung ohne Passwort für „${name}“ ist eingerichtet.`, detail: `Die Verbindung nutzt jetzt den Schlüssel ${r.key}.` });
+      askLocal({ kind: 'info', title: t('common.done'), message: t('hostsExtra.keyDone', { name }), detail: t('hostsExtra.keyDoneDetail', { key: r.key }) });
     } else {
-      askLocal({ kind: 'info', title: 'Schlüssel eingetragen, Test fehlgeschlagen', message: 'Der Schlüssel steht jetzt auf dem Server, aber die Anmeldung damit hat nicht geklappt. Vielleicht erlaubt der Server keine Schlüssel.', detail: r.testError || '' });
+      askLocal({ kind: 'info', title: t('hostsExtra.keyTestFailedTitle'), message: t('hostsExtra.keyTestFailed'), detail: r.testError || '' });
     }
   } catch (err) {
     $('#progress').hidden = true;

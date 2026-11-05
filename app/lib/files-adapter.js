@@ -2,6 +2,7 @@
 // get(tabId) liefert für SSH-Tabs das SFTP-Objekt von ssh2, für FTP-Tabs den FTP-Adapter aus lib/ftp.js –
 // beide haben dieselben Funktionen. main.js ruft getSftp(tabId) wie bisher auf.
 const path = require('path');
+const { t } = require('./i18n');
 const { openFtp, parseFtpUrl, isFtpProtocol, createCertStore, PROTOCOLS } = require('./ftp');
 
 function createFilesAdapter({ configDir, loadHosts, ask, passwords, sshSftp }) {
@@ -21,7 +22,7 @@ function createFilesAdapter({ configDir, loadHosts, ask, passwords, sshSftp }) {
 
   async function connect(tabId, spec) {
     const target = ftpTarget(spec);
-    if (!target) throw new Error('Keine FTP-Verbindung.');
+    if (!target) throw new Error(t('files.noFtp'));
     close(tabId);
     if (!caches.has(tabId)) caches.set(tabId, new Map());
     const adapter = await openFtp(target, {

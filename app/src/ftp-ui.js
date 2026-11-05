@@ -8,8 +8,8 @@ const FtpUi = (() => {
   const PROTOCOLS = {
     sftp: { label: 'SFTP / SSH', port: 22 },
     ftp: { label: 'FTP', port: 21 },
-    ftps: { label: 'FTPS (explizit)', port: 21 },
-    'ftps-implicit': { label: 'FTPS (implizit)', port: 990 },
+    ftps: { label: t('ftp.protoExplicit'), port: 21 },
+    'ftps-implicit': { label: t('ftp.protoImplicit'), port: 990 },
   };
   const SHORT = { ftp: 'FTP', ftps: 'FTPS', 'ftps-implicit': 'FTPS' };
   const isFtpProto = p => p === 'ftp' || p === 'ftps' || p === 'ftps-implicit';
@@ -21,7 +21,7 @@ const FtpUi = (() => {
   const protoOf = tab => tab.info?.protocol || (tab.spec.name ? hosts[tab.spec.name]?.protocol
     : { ftp: 'ftp', ftpes: 'ftps', ftps: 'ftps-implicit' }[(URL_RE.exec(tab.spec.text || '') || [])[1]?.toLowerCase()]);
 
-  const NO_TERMINAL = 'FTP-Verbindungen haben kein Terminal – nur die Dateiansicht.';
+  const NO_TERMINAL = t('ftp.noTerminal');
 
   // ---------- Werkzeugleiste ----------
 
@@ -41,8 +41,8 @@ const FtpUi = (() => {
     $('#btn-quick').hidden = true;
     const proto = protoOf(tab);
     if (tab.state === 'open' && tab.info) {
-      $('#tab-status-text').textContent = `Verbunden mit ${tab.info.user}@${tab.info.host} · ${SHORT[proto] || 'FTP'}`
-        + (proto === 'ftp' ? ' (unverschlüsselt)' : '');
+      $('#tab-status-text').textContent = t(proto === 'ftp' ? 'ftp.statusPlain' : 'ftp.status',
+        { user: tab.info.user, host: tab.info.host, proto: SHORT[proto] || 'FTP' });
     }
   }
 
@@ -53,9 +53,10 @@ const FtpUi = (() => {
     return true;
   }
 
-  // Bei FTP ist das Terminal unsichtbar – Fehler beim Verbinden deshalb als Dialog zeigen
+  // Bei FTP ist das Terminal unsichtbar – Fehler beim Verbinden deshalb als Dialog zeigen.
+  // Vom Nutzer abgebrochen („… abgebrochen …“ / „… cancelled …“, Text aus dem Hauptprozess) -> kein Dialog
   function connectFailed(tab, msg) {
-    if (isFtpTab(tab) && !/abgebrochen/.test(msg)) showError(msg);
+    if (isFtpTab(tab) && !/abgebrochen|cancel/i.test(msg)) showError(msg); // i18n-ignore
   }
 
   // ---------- Verbindungs-Dialog ----------
@@ -71,7 +72,7 @@ const FtpUi = (() => {
     $('#ftp-insecure-warn').hidden = !form.ftpInsecure.checked;
     for (const id of ['#key-field', '#jump-field']) { const el = $(id); if (el) el.hidden = ftp; }
     if (ftp) $('#setup-key').hidden = true;
-    form.user.placeholder = ftp ? 'Benutzername vom Hoster' : 'pi';
+    form.user.placeholder = ftp ? t('ftp.userPlaceholder') : 'pi';
   }
 
   function onProtocolChange(form) {
@@ -118,11 +119,11 @@ const FtpUi = (() => {
     const badge = document.createElement('span');
     badge.className = 'proto-badge' + (proto === 'ftp' ? ' plain' : '');
     badge.textContent = SHORT[proto];
-    badge.title = PROTOCOLS[proto].label + (proto === 'ftp' ? ' – unverschlüsselt' : ' – verschlüsselt');
+    badge.title = t(proto === 'ftp' ? 'ftp.badgePlain' : 'ftp.badgeSecure', { proto: PROTOCOLS[proto].label });
     li.querySelector('.host-name')?.appendChild(badge);
     const files = li.querySelector('[data-act=files]');
-    if (files) files.title = `Dateien öffnen (${PROTOCOLS[proto].label})`;
-    li.title = 'Doppelklick öffnet die Dateien';
+    if (files) files.title = t('ftp.openFiles', { proto: PROTOCOLS[proto].label });
+    li.title = t('ftp.dblClickHint');
   }
 
   return { isFtpHost, isFtpSpec, isFtpTab, update, blockTerminal, connectFailed, fillForm, readForm, decorateHost, NO_TERMINAL };

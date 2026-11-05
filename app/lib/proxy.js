@@ -5,6 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const net = require('net');
+const { t } = require('./i18n');
 
 const TYPES = ['socks5', 'http'];
 const TIMEOUT = 15000;
@@ -23,7 +24,7 @@ function cleanProxy(p) {
 
 // Schlüssel für das gespeicherte Passwort – gleicher Proxy = gleiches Passwort, egal wo eingestellt
 const secretKey = p => `${p.type}://${p.user || ''}@${p.host}:${p.port}`;
-const describe = p => `${p.type === 'http' ? 'HTTP' : 'SOCKS5'}-Proxy ${p.host}:${p.port}`;
+const describe = p => t('proxy.describe', { type: p.type === 'http' ? 'HTTP' : 'SOCKS5', host: p.host, port: p.port });
 
 function readExactly(sock, n, state) {
   return new Promise((resolve, reject) => {
@@ -36,7 +37,7 @@ function readExactly(sock, n, state) {
       }
     };
     const onData = d => { state.buf = Buffer.concat([state.buf, d]); tryRead(); };
-    const onEnd = () => { cleanup(); reject(new Error('Proxy hat die Verbindung geschlossen.')); };
+    const onEnd = () => { cleanup(); reject(new Error(t('proxy.closed'))); };
     const onError = err => { cleanup(); reject(err); };
     const cleanup = () => { sock.off('data', onData); sock.off('end', onEnd); sock.off('close', onEnd); sock.off('error', onError); };
     sock.on('data', onData); sock.on('end', onEnd); sock.on('close', onEnd); sock.on('error', onError);
@@ -44,10 +45,10 @@ function readExactly(sock, n, state) {
   });
 }
 
+// Fehlercodes der SOCKS5-Antwort -> Schlüssel im Wörterbuch
 const SOCKS_ERRORS = {
-  1: 'allgemeiner Fehler', 2: 'Verbindung vom Proxy nicht erlaubt', 3: 'Netz nicht erreichbar',
-  4: 'Server nicht erreichbar', 5: 'Verbindung abgelehnt', 6: 'Zeitüberschreitung',
-  7: 'Befehl nicht unterstützt', 8: 'Adresstyp nicht unterstützt',
+  1: 'proxy.socksErr1', 2: 'proxy.socksErr2', 3: 'proxy.socksErr3', 4: 'proxy.socksErr4',
+  5: 'proxy.socksErr5', 6: 'proxy.socksErr6', 7: 'proxy.socksErr7', 8: 'proxy.socksErr8',
 };
 
 async function socks5(sock, host, port, user, password) {
@@ -55,15 +56,15 @@ async function socks5(sock, host, port, user, password) {
   const methods = user ? [0x00, 0x02] : [0x00];
   sock.write(Buffer.from([0x05, methods.length, ...methods]));
   const [ver, method] = await readExactly(sock, 2, st);
-  if (ver !== 0x05) throw new Error('Das ist kein SOCKS5-Proxy.');
-  if (method === 0xff) throw new Error(user ? 'Der Proxy lehnt die Anmeldung ab.' : 'Der Proxy verlangt eine Anmeldung (Benutzer und Passwort).');
+  if (ver !== 0x05) throw new Error(t('proxy.notSocks'));
+  if (method === 0xff) throw new Error(user ? t('proxy.authRejected') : t('proxy.authRequired'));
   if (method === 0x02) {
-    if (password == null) { const e = new Error('Proxy-Passwort fehlt.'); e.needPassword = true; throw e; }
+    if (password == null) { const e = new Error(t('proxy.passwordMissing')); e.needPassword = true; throw e; }
     const u = Buffer.from(user || ''); const pw = Buffer.from(password);
     sock.write(Buffer.concat([Buffer.from([0x01, u.length]), u, Buffer.from([pw.length]), pw]));
     const [, status] = await readExactly(sock, 2, st);
-    if (status !== 0x00) { const e = new Error('Proxy-Anmeldung fehlgeschlagen (Benutzer oder Passwort falsch).'); e.badPassword = true; throw e; }
-  } else if (method !== 0x00) throw new Error('Der Proxy bietet keine passende Anmeldung an.');
+    if (status !== 0x00) { const e = new Error(t('proxy.authFailedCreds')); e.badPassword = true; throw e; }
+  } else if (method !== 0x00) throw new Error(t('proxy.noAuthMethod'));
 
   let addr;
   if (net.isIPv4(host)) addr = Buffer.from([0x01, ...host.split('.').map(Number)]);
@@ -74,13 +75,13 @@ async function socks5(sock, host, port, user, password) {
     addr = b;
   } else {
     const h = Buffer.from(host);
-    if (h.length > 255) throw new Error('Servername ist zu lang.');
+    if (h.length > 255) throw new Error(t('proxy.hostTooLong'));
     addr = Buffer.concat([Buffer.from([0x03, h.length]), h]);
   }
   const portBuf = Buffer.alloc(2); portBuf.writeUInt16BE(port);
   sock.write(Buffer.concat([Buffer.from([0x05, 0x01, 0x00]), addr, portBuf]));
   const head = await readExactly(sock, 4, st);
-  if (head[1] !== 0x00) throw new Error(`Proxy kann ${host}:${port} nicht erreichen (${SOCKS_ERRORS[head[1]] || 'Fehler ' + head[1]}).`);
+  if (head[1] !== 0x00) throw new Error(t('proxy.cantReach', { host, port, reason: SOCKS_ERRORS[head[1]] ? t(SOCKS_ERRORS[head[1]]) : t('proxy.socksErrN', { code: head[1] }) }));
   const rest = head[3] === 0x01 ? 4 : head[3] === 0x04 ? 16 : (await readExactly(sock, 1, st))[0];
   await readExactly(sock, rest + 2, st);
   if (st.buf.length) sock.unshift(st.buf);
@@ -98,7 +99,7 @@ async function httpConnect(sock, host, port, user, password) {
   const hostPort = net.isIPv6(host) ? `[${host}]:${port}` : `${host}:${port}`;
   let req = `CONNECT ${hostPort} HTTP/1.1\r\nHost: ${hostPort}\r\n`;
   if (user) {
-    if (password == null) { const e = new Error('Proxy-Passwort fehlt.'); e.needPassword = true; throw e; }
+    if (password == null) { const e = new Error(t('proxy.passwordMissing')); e.needPassword = true; throw e; }
     req += `Proxy-Authorization: Basic ${Buffer.from(`${user}:${password}`).toString('base64')}\r\n`;
   }
   sock.write(req + '\r\n');
@@ -112,22 +113,22 @@ async function httpConnect(sock, host, port, user, password) {
         const rest = buf.subarray(end + 4);
         if (rest.length) sock.unshift(rest);
         resolve(buf.subarray(0, end).toString('latin1'));
-      } else if (buf.length > 16384) { cleanup(); reject(new Error('Ungültige Antwort vom Proxy.')); }
+      } else if (buf.length > 16384) { cleanup(); reject(new Error(t('proxy.badResponse'))); }
     };
-    const onEnd = () => { cleanup(); reject(new Error('Proxy hat die Verbindung geschlossen.')); };
+    const onEnd = () => { cleanup(); reject(new Error(t('proxy.closed'))); };
     const onError = err => { cleanup(); reject(err); };
     const cleanup = () => { sock.off('data', onData); sock.off('end', onEnd); sock.off('close', onEnd); sock.off('error', onError); };
     sock.on('data', onData); sock.on('end', onEnd); sock.on('close', onEnd); sock.on('error', onError);
   });
   const m = /^HTTP\/1\.[01] (\d{3})/.exec(head);
-  if (!m) throw new Error('Das ist kein HTTP-Proxy.');
+  if (!m) throw new Error(t('proxy.notHttp'));
   const code = Number(m[1]);
   if (code === 407) {
-    const e = new Error(user ? 'Proxy-Anmeldung fehlgeschlagen (Benutzer oder Passwort falsch).' : 'Der Proxy verlangt eine Anmeldung (Benutzer und Passwort).');
+    const e = new Error(user ? t('proxy.authFailedCreds') : t('proxy.authRequired'));
     e.badPassword = !!user;
     throw e;
   }
-  if (code < 200 || code >= 300) throw new Error(`Proxy kann ${host}:${port} nicht erreichen (HTTP ${code}).`);
+  if (code < 200 || code >= 300) throw new Error(t('proxy.cantReach', { host, port, reason: `HTTP ${code}` }));
 }
 
 // Socket über den Proxy zum Ziel öffnen
@@ -135,7 +136,7 @@ function openProxySocket(proxy, host, port, password) {
   return new Promise((resolve, reject) => {
     const sock = net.connect({ host: proxy.host, port: proxy.port });
     let done = false;
-    const timer = setTimeout(() => finish(new Error(`${describe(proxy)} antwortet nicht (Zeitüberschreitung).`)), TIMEOUT);
+    const timer = setTimeout(() => finish(new Error(t('proxy.timeout', { proxy: describe(proxy) }))), TIMEOUT);
     const finish = (err) => {
       if (done) return;
       done = true;
@@ -146,8 +147,8 @@ function openProxySocket(proxy, host, port, password) {
       resolve(sock);
     };
     const onError = err => {
-      const msg = /ECONNREFUSED/.test(err.message) ? `${describe(proxy)} lehnt die Verbindung ab. Läuft der Proxy?`
-        : /ENOTFOUND|EAI_AGAIN/.test(err.message) ? `${describe(proxy)}: Adresse nicht gefunden.`
+      const msg = /ECONNREFUSED/.test(err.message) ? t('proxy.refused', { proxy: describe(proxy) })
+        : /ENOTFOUND|EAI_AGAIN/.test(err.message) ? t('proxy.notFound', { proxy: describe(proxy) })
           : `${describe(proxy)}: ${err.message}`;
       finish(new Error(msg));
     };
@@ -155,7 +156,7 @@ function openProxySocket(proxy, host, port, password) {
     sock.once('connect', () => {
       const fn = proxy.type === 'http' ? httpConnect : socks5;
       fn(sock, host, port, proxy.user, password).then(() => finish(null), err => {
-        if (!/Proxy/.test(err.message)) err.message = `${describe(proxy)}: ${err.message}`;
+        if (!/proxy/i.test(err.message)) err.message = `${describe(proxy)}: ${err.message}`;
         finish(err);
       });
     });
@@ -192,16 +193,16 @@ function createProxyManager({ configDir, secrets, ask }) {
         if (err.badPassword) { if (cache) cache.delete(key); }
         if (i === 3) throw err;
         const answer = await ask({
-          kind: 'secret', title: err.badPassword ? 'Proxy-Passwort falsch' : 'Proxy-Anmeldung',
-          message: `${err.badPassword ? 'Nochmal versuchen. ' : ''}Passwort für ${proxy.user || '?'} am ${describe(proxy)}:`,
-          remember: true, rememberLabel: 'Proxy-Passwort merken (verschlüsselt)',
+          kind: 'secret', title: err.badPassword ? t('proxy.passwordWrongTitle') : t('proxy.loginTitle'),
+          message: t(err.badPassword ? 'proxy.passwordPromptAgain' : 'proxy.passwordPrompt', { user: proxy.user || '?', proxy: describe(proxy) }),
+          remember: true, rememberLabel: t('proxy.rememberPassword'),
         });
-        if (answer == null) throw new Error('Verbindung abgebrochen: kein Proxy-Passwort.');
+        if (answer == null) throw new Error(t('proxy.cancelledNoPassword'));
         password = typeof answer === 'object' ? answer.value : answer;
         if (typeof answer === 'object' && answer.remember) secrets.write(key, password);
       }
     }
-    throw new Error('Proxy-Anmeldung fehlgeschlagen.');
+    throw new Error(t('proxy.authFailed'));
   }
 
   // Passwort aus dem Host-Dialog bzw. den Einstellungen speichern
@@ -209,7 +210,7 @@ function createProxyManager({ configDir, secrets, ask }) {
     const proxy = cleanProxy(p);
     if (!proxy || !proxy.user) return false;
     if (!password) { secrets.remove(secretKey(proxy)); return true; }
-    if (!secrets.write(secretKey(proxy), password)) throw new Error('Proxy-Passwort konnte nicht verschlüsselt gespeichert werden (Schlüsselbund nicht verfügbar).');
+    if (!secrets.write(secretKey(proxy), password)) throw new Error(t('proxy.saveFailed'));
     return true;
   }
 
@@ -220,7 +221,7 @@ function createProxyManager({ configDir, secrets, ask }) {
     });
     ipcMain.handle('proxy:set', (_e, p, password) => {
       const proxy = p ? cleanProxy(p) : null;
-      if (p && !proxy) throw new Error('Bitte Art, Adresse und Port des Proxys angeben.');
+      if (p && !proxy) throw new Error(t('proxy.incomplete'));
       saveGlobal(proxy);
       if (proxy && password) setPassword(proxy, password);
       return proxy;
@@ -230,7 +231,7 @@ function createProxyManager({ configDir, secrets, ask }) {
     // Kurzer Test: kommt man über den Proxy zu host:port?
     ipcMain.handle('proxy:test', async (_e, p, password, host, port) => {
       const proxy = cleanProxy(p);
-      if (!proxy) throw new Error('Bitte Art, Adresse und Port des Proxys angeben.');
+      if (!proxy) throw new Error(t('proxy.incomplete'));
       const pw = password || (proxy.user ? secrets.read(secretKey(proxy)) : null);
       const sock = await openProxySocket(proxy, host, Number(port) || 22, pw ?? undefined);
       sock.resume();
