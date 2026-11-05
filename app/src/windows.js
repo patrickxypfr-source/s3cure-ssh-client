@@ -114,8 +114,8 @@ window.WindowTabs = (() => {
     el.addEventListener('contextmenu', e => { e.preventDefault(); activate(tab.id); showMenu(tab, e.clientX, e.clientY); });
     el.addEventListener('dragstart', e => {
       if (e.target.closest('.close')) { e.preventDefault(); return; }
+      // Nur eigener Typ – kein Text, sonst landet der Tab-Name in Eingabefeldern oder als Textschnipsel im Finder
       e.dataTransfer.setData(MIME, tab.id);
-      e.dataTransfer.setData('text/plain', tab.title);
       e.dataTransfer.effectAllowed = 'move';
       el.classList.add('dragging-tab');
     });
