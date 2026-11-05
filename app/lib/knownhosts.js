@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
+const { t } = require('./i18n');
 
 function knownName(host, port) {
   return Number(port) === 22 ? host : `[${host}]:${port}`;
@@ -101,29 +102,26 @@ function createKnownHosts({ configDir, ask, systemFile = path.join(os.homedir(),
       const old = sameType[0];
       const accept = await ask({
         kind: 'confirm',
-        title: 'Achtung: Server-Schlüssel hat sich geändert',
-        message: `Der Server ${name} meldet sich mit einem anderen Schlüssel als beim letzten Mal.\n\n`
-          + 'Das passiert, wenn der Server neu installiert wurde oder einen neuen Schlüssel bekommen hat. '
-          + 'Es kann aber auch bedeuten, dass sich jemand dazwischenschaltet und mitlesen will. '
-          + 'Frag im Zweifel beim Betreiber des Servers nach, bevor du weitermachst.',
-        detail: `Bisher (${old.label}):\n${old.type} ${fingerprint(old.b64)}\n\nJetzt:\n${type} ${fp}`,
-        okLabel: 'Neuen Schlüssel annehmen',
+        title: t('knownHosts.changedTitle'),
+        message: t('knownHosts.changedMsg', { name }),
+        detail: t('knownHosts.changedDetail', { label: old.label, oldType: old.type, oldFingerprint: fingerprint(old.b64), type, fingerprint: fp }),
+        okLabel: t('knownHosts.acceptNew'),
         danger: true,
         focusCancel: true,
       });
-      if (!accept) return { ok: false, error: `Verbindung abgebrochen: Der Server-Schlüssel von ${name} hat sich geändert.` };
+      if (!accept) return { ok: false, error: t('knownHosts.changedAbort', { name }) };
       store(name, type, b64);
       return { ok: true };
     }
 
     const trust = await ask({
       kind: 'confirm',
-      title: 'Unbekannter Server',
-      message: `Du verbindest dich zum ersten Mal mit ${name}.`,
-      detail: `${type} Fingerprint:\n${fp}\n\nVertraust du diesem Server?`,
-      okLabel: 'Vertrauen & verbinden',
+      title: t('knownHosts.unknownTitle'),
+      message: t('knownHosts.unknownMsg', { name }),
+      detail: t('knownHosts.unknownDetail', { type, fingerprint: fp }),
+      okLabel: t('knownHosts.trust'),
     });
-    if (!trust) return { ok: false, error: 'Verbindung abgebrochen: Server nicht vertraut.' };
+    if (!trust) return { ok: false, error: t('knownHosts.untrustedAbort') };
     store(name, type, b64);
     return { ok: true };
   }
@@ -173,11 +171,11 @@ function createKnownHosts({ configDir, ask, systemFile = path.join(os.homedir(),
   // Einen Eintrag aus ~/.myssh/known_hosts entfernen. b64 schützt davor, dass sich die Datei inzwischen geändert hat.
   function remove(id, b64) {
     const [source, idx] = String(id).split(':');
-    if (source !== 's3cure') throw new Error('Einträge aus ~/.ssh/known_hosts gehören zu OpenSSH und werden hier nur angezeigt.');
+    if (source !== 's3cure') throw new Error(t('knownHosts.readOnly'));
     const lines = (read(ownFile) || '').split('\n');
     const i = Number(idx);
     const e = parseLine(lines[i] || '');
-    if (!e || e.b64 !== b64) throw new Error('Die Liste ist nicht mehr aktuell. Bitte neu laden.');
+    if (!e || e.b64 !== b64) throw new Error(t('knownHosts.stale'));
     lines.splice(i, 1);
     writeOwn(lines);
     return list();

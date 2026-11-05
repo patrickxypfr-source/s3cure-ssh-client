@@ -7,6 +7,7 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 const { utils } = require('ssh2');
+const { t } = require('./i18n');
 
 const MAX_FILES = 200;
 const MAX_KEY_BYTES = 64 * 1024;
@@ -14,11 +15,17 @@ const MAX_KEY_BYTES = 64 * 1024;
 const sshDir = () => path.join(os.homedir(), '.ssh');
 const short = file => file.startsWith(os.homedir()) ? '~' + file.slice(os.homedir().length) : file;
 
+// Werte: fester Name oder Funktion (übersetzt, erst beim Gebrauch aufrufen)
 const TYPE_NAMES = {
   'ssh-ed25519': 'Ed25519', 'ssh-rsa': 'RSA', 'ecdsa-sha2-nistp256': 'ECDSA 256',
   'ecdsa-sha2-nistp384': 'ECDSA 384', 'ecdsa-sha2-nistp521': 'ECDSA 521',
-  'sk-ssh-ed25519@openssh.com': 'Ed25519 (Sicherheitsschlüssel)', 'sk-ecdsa-sha2-nistp256@openssh.com': 'ECDSA (Sicherheitsschlüssel)',
-  'ssh-dss': 'DSA (veraltet)',
+  'sk-ssh-ed25519@openssh.com': () => t('keyring.typeSkEd25519'), 'sk-ecdsa-sha2-nistp256@openssh.com': () => t('keyring.typeSkEcdsa'),
+  'ssh-dss': () => t('keyring.typeDsa'),
+};
+
+const typeName = type => {
+  const n = Object.prototype.hasOwnProperty.call(TYPE_NAMES, type) ? TYPE_NAMES[type] : type;
+  return typeof n === 'function' ? n() : n;
 };
 
 // Öffentlichen Schlüssel lesen: Typ, Fingerprint, Kommentar
@@ -42,7 +49,7 @@ function parsePublic(text) {
     } catch {}
   }
   return {
-    type, typeName: (TYPE_NAMES[type] || type) + (bits ? ` ${bits}` : ''),
+    type, typeName: typeName(type) + (bits ? ` ${bits}` : ''),
     fingerprint: 'SHA256:' + crypto.createHash('sha256').update(blob).digest('base64').replace(/=+$/, ''),
     comment: parts.slice(idx + 2).join(' '),
     publicKey: `${type} ${parts[idx + 1]}${parts[idx + 2] ? ' ' + parts.slice(idx + 2).join(' ') : ''}`,
@@ -92,7 +99,7 @@ function listKeys(extraFiles = []) {
 // Nur Dateien aus der aktuellen Liste zulassen (keine beliebigen Pfade aus der Oberfläche)
 function findKey(file, extraFiles) {
   const k = listKeys(extraFiles).find(x => x.file === file);
-  if (!k) throw new Error('Diesen Schlüssel gibt es nicht mehr. Bitte Liste neu laden.');
+  if (!k) throw new Error(t('keyring.gone'));
   return k;
 }
 

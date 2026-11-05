@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { t } = require('./i18n');
 
 const WANTED = ['hostname', 'user', 'port', 'identityfile', 'proxyjump'];
 
@@ -121,8 +122,8 @@ function planImport(entries, hosts) {
   const rename = {}; // Alias aus der config -> Name in der App (für ProxyJump)
   for (const e of entries) {
     const existing = Object.keys(hosts).find(n => sameAddr(hosts[n], e));
-    if (existing) { skip.push({ name: e.name, reason: `gibt es schon als „${existing}“` }); rename[e.name] = existing; continue; }
-    if (hosts[e.name]) { skip.push({ name: e.name, reason: 'Name schon vergeben' }); continue; }
+    if (existing) { skip.push({ name: e.name, reason: t('sshConfig.existsAs', { name: existing }) }); rename[e.name] = existing; continue; }
+    if (hosts[e.name]) { skip.push({ name: e.name, reason: t('sshConfig.nameTaken') }); continue; }
     add.push(e);
   }
   for (const e of add) {
@@ -134,7 +135,7 @@ function planImport(entries, hosts) {
 function register(ipcMain, { loadHosts, saveHosts }) {
   const plan = () => {
     const entries = readSshConfig();
-    if (!entries) throw new Error('Keine Datei ~/.ssh/config gefunden.');
+    if (!entries) throw new Error(t('sshConfig.noConfig'));
     return planImport(entries, loadHosts());
   };
   ipcMain.handle('sshconfig:scan', () => plan());

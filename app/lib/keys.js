@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { utils } = require('ssh2');
+const { t } = require('./i18n');
 
 const KEY_FILE = path.join(os.homedir(), '.ssh', 's3cure_ed25519');
 const KEY_SHORT = '~/.ssh/s3cure_ed25519';
@@ -19,7 +20,7 @@ function keyStatus() {
 // Erzeugt den Schlüssel nur, wenn es ihn noch nicht gibt – nie überschreiben
 function generateKey(passphrase, file = KEY_FILE) {
   const shortName = file === KEY_FILE ? KEY_SHORT : '~/.ssh/' + path.basename(file);
-  if (fs.existsSync(file) || fs.existsSync(file + '.pub')) throw new Error(`${shortName} gibt es schon – er wird nicht überschrieben.`);
+  if (fs.existsSync(file) || fs.existsSync(file + '.pub')) throw new Error(t('keys.exists', { name: shortName }));
   const comment = `s3cure@${os.hostname()}`;
   const opts = { comment };
   if (passphrase) Object.assign(opts, { passphrase, cipher: 'aes256-ctr', rounds: 16 });
@@ -34,7 +35,7 @@ function generateKey(passphrase, file = KEY_FILE) {
 function namedKeyFile(name) {
   const clean = String(name || '').trim();
   if (!clean) return KEY_FILE;
-  if (!/^[\w.-]{1,40}$/.test(clean) || clean.startsWith('.')) throw new Error('Name bitte nur aus Buchstaben, Ziffern, Punkt, Minus und Unterstrich.');
+  if (!/^[\w.-]{1,40}$/.test(clean) || clean.startsWith('.')) throw new Error(t('keys.badName'));
   return path.join(path.dirname(KEY_FILE), clean.startsWith('s3cure_') ? clean : 's3cure_' + clean);
 }
 
@@ -81,14 +82,14 @@ function register(ipcMain, { connection, loadHosts, saveHosts, passphrases }) {
     const keyShort = keyFile.startsWith(os.homedir()) ? '~' + keyFile.slice(os.homedir().length) : keyFile;
     const hosts = loadHosts();
     const target = hosts[name];
-    if (!target) throw new Error(`Keine Verbindung namens „${name}“ gespeichert.`);
+    if (!target) throw new Error(t('keys.noHost', { name }));
     const cache = { passwords: new Map(), passphrases: new Map() };
     const id = path.resolve(keyFile);
     if (fresh.has(id)) cache.passphrases.set(id, fresh.get(id));
     const client = await connection.connectTo(target, name, cache);
     let result;
     try { result = await installKey(client, publicKey); }
-    catch (err) { throw new Error('Schlüssel konnte nicht übertragen werden: ' + (err.message || err)); }
+    catch (err) { throw new Error(t('keys.installFailed', { error: err.message || err })); }
     finally { client.end(); }
 
     let tested = false;
@@ -99,7 +100,7 @@ function register(ipcMain, { connection, loadHosts, saveHosts, passphrases }) {
         test.end();
         tested = true;
       } catch (err) { testError = err.message; }
-    } else testError = 'Der private Schlüssel fehlt auf diesem Computer.';
+    } else testError = t('keys.noPrivate');
     if (tested) {
       const now = loadHosts();
       if (now[name]) { now[name].key = keyShort; saveHosts(now); }
@@ -109,7 +110,7 @@ function register(ipcMain, { connection, loadHosts, saveHosts, passphrases }) {
 
   ipcMain.handle('keys:install', async (_e, name) => {
     const st = keyStatus();
-    if (!st.exists || !st.publicKey) throw new Error('Es gibt noch keinen Schlüssel. Bitte zuerst erzeugen.');
+    if (!st.exists || !st.publicKey) throw new Error(t('keys.noKey'));
     return installFile(KEY_FILE, st.publicKey, name);
   });
 

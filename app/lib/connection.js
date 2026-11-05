@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { Client, utils } = require('ssh2');
+const { t } = require('./i18n');
 
 const KEEPALIVE_INTERVAL = 10000; // alle 10 s ein Lebenszeichen an den Server
 const KEEPALIVE_COUNT_MAX = 3;    // bleiben 3 unbeantwortet, gilt die Verbindung als verloren
@@ -58,12 +59,10 @@ function createConnection(deps) {
       for (let i = 0; i < 3; i++) {
         const answer = await ask({
           kind: 'secret',
-          title: i ? 'Falsche Passphrase' : rejected ? 'Passphrase geändert?' : 'Schlüssel entsperren',
-          message: i ? `Nochmal versuchen. Passphrase für ${path.basename(file)}:`
-            : rejected ? `Die gespeicherte Passphrase passt nicht mehr. Bitte neu eingeben für ${path.basename(file)}:`
-              : `Der Schlüssel ${path.basename(file)} ist mit einer Passphrase geschützt:`,
+          title: i ? t('conn.wrongPassphrase') : rejected ? t('conn.passphraseChanged') : t('conn.unlockKey'),
+          message: t(i ? 'conn.passphraseRetry' : rejected ? 'conn.passphraseRejected' : 'conn.passphraseProtected', { file: path.basename(file) }),
           remember: true,
-          rememberLabel: 'Passphrase merken (verschlüsselt)',
+          rememberLabel: t('conn.rememberPassphrase'),
         });
         if (answer == null) return null;
         const value = typeof answer === 'object' ? answer.value : answer;
@@ -111,10 +110,9 @@ function createConnection(deps) {
       passwordTries++;
       const answer = await ask({
         kind: 'secret',
-        title: savedRejected && !again ? 'Passwort geändert?' : again ? 'Falsches Passwort' : 'Anmeldung',
-        message: savedRejected && !again
-          ? `Das gespeicherte Passwort wurde abgelehnt. Bitte neu eingeben für ${user}@${target.host}:`
-          : `${again ? 'Nochmal versuchen. ' : ''}Passwort für ${user}@${target.host}:`,
+        title: savedRejected && !again ? t('conn.passwordChanged') : again ? t('conn.wrongPassword') : t('conn.login'),
+        message: t(savedRejected && !again ? 'conn.passwordRejected' : again ? 'conn.passwordRetry' : 'conn.passwordPrompt',
+          { user, host: target.host }),
         remember: !!hostName,
       });
       if (answer == null) return null;
@@ -149,7 +147,7 @@ function createConnection(deps) {
                 const answers = [];
                 for (const p of prompts) {
                   const a = /passw/i.test(p.prompt) ? await askPassword()
-                    : await ask({ kind: p.echo ? 'text' : 'secret', title: 'Anmeldung', message: p.prompt });
+                    : await ask({ kind: p.echo ? 'text' : 'secret', title: t('conn.login'), message: p.prompt });
                   if (a == null) return finish([]);
                   answers.push(a);
                 }
@@ -186,7 +184,7 @@ function createConnection(deps) {
         resolve(client);
       });
       client.on('error', fail); // bleibt auch nach „ready“ dran, damit Fehler nicht die App beenden
-      client.on('close', () => fail(new Error('Verbindung geschlossen')));
+      client.on('close', () => fail(new Error(t('conn.closed'))));
       // Agent-Weiterleitung (pro Verbindung, Standard aus): der Server darf den lokalen SSH-Agent benutzen
       const agent = target.agentForward ? agentPath() : null;
       client.connect({
@@ -212,7 +210,7 @@ function createConnection(deps) {
   // Sprung-Server auflösen: gespeicherte Verbindung (Name) oder user@host:port, mehrere mit Komma
   function resolveChain(jump, hosts, depth = 0) {
     if (!jump) return [];
-    if (depth > MAX_JUMPS) throw new Error('Zu viele Sprung-Server hintereinander. Verweisen sich zwei Verbindungen gegenseitig?');
+    if (depth > MAX_JUMPS) throw new Error(t('conn.jumpLoop'));
     const hops = [];
     for (const part of String(jump).split(',').map(s => s.trim()).filter(Boolean)) {
       if (hosts[part]) {
@@ -222,14 +220,14 @@ function createConnection(deps) {
         hops.push({ target: parseTarget(part), hostName: null });
       }
     }
-    if (hops.length > MAX_JUMPS) throw new Error('Zu viele Sprung-Server hintereinander.');
+    if (hops.length > MAX_JUMPS) throw new Error(t('conn.tooManyJumps'));
     return hops;
   }
 
   function forward(via, viaHop, target) {
     return new Promise((resolve, reject) => {
       via.forwardOut('127.0.0.1', 0, target.host, target.port, (err, stream) => {
-        if (err) reject(new Error(`Sprung-Server ${label(viaHop)} kann ${target.host}:${target.port} nicht erreichen (${err.message}).`));
+        if (err) reject(new Error(t('conn.jumpUnreachable', { jump: label(viaHop), host: target.host, port: target.port, error: err.message })));
         else resolve(stream);
       });
     });
@@ -249,7 +247,7 @@ function createConnection(deps) {
         try {
           clients.push(await connectOne(hops[i], cache, sock, i === hops.length - 1 ? opts : {}));
         } catch (err) {
-          if (i < hops.length - 1) throw new Error(`Sprung-Server ${label(hops[i])}: ${err.message}`);
+          if (i < hops.length - 1) throw new Error(t('conn.jumpError', { jump: label(hops[i]), error: err.message }));
           throw err;
         }
       }
@@ -271,7 +269,7 @@ function createConnection(deps) {
 
   async function openShell(tabId, spec, cols, rows) {
     const target = spec.name ? loadHosts()[spec.name] : parseTarget(spec.text);
-    if (!target) throw new Error(`Keine Verbindung namens „${spec.name}“ gespeichert.`);
+    if (!target) throw new Error(t('conn.noHost', { name: spec.name }));
     const client = await connectTo(target, spec.name || null, cacheFor(tabId));
     let stream;
     try {

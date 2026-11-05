@@ -30,14 +30,13 @@
     box.className = 'cp-pane';
     const top = el('div', 'cp-top');
     const search = el('input', 'cp-search');
-    search.placeholder = 'Suchen: Server, Typ oder Fingerprint';
+    search.placeholder = t('connPro.knownSearch');
     search.spellcheck = false;
-    const reload = iconBtn('refresh', 'Neu laden', () => load());
+    const reload = iconBtn('refresh', t('connPro.reload'), () => load());
     top.append(search, reload);
     const list = el('ul', 'cp-list');
     const foot = el('p', 'cp-note');
-    foot.textContent = 'Einträge aus ~/.myssh/known_hosts gehören zu dieser App und können entfernt werden. '
-      + 'Einträge aus ~/.ssh/known_hosts gehören zu OpenSSH (Terminal) und werden hier nur angezeigt.';
+    foot.textContent = t('connPro.knownNote');
     box.append(top, list, foot);
 
     let entries = [];
@@ -55,27 +54,27 @@
       const shown = entries.filter(e => !q || hashedHits.has(e.id)
         || [e.hosts || '', e.type, e.fingerprint, e.file].some(s => s.toLowerCase().includes(q)));
       if (!shown.length) {
-        list.appendChild(el('li', 'cp-empty', entries.length ? 'Keine Treffer.' : 'Noch keine bekannten Server. Beim ersten Verbinden wird der Schlüssel des Servers hier gespeichert.'));
+        list.appendChild(el('li', 'cp-empty', entries.length ? t('connPro.noHits') : t('connPro.knownEmpty')));
         return;
       }
       for (const e of shown) {
         const li = el('li', 'cp-item');
         const main = el('div', 'cp-main');
         const title = el('div', 'cp-title');
-        title.append(el('span', 'cp-name', e.hosts || 'Verschlüsselter Name'));
-        if (e.hashed) title.title = 'OpenSSH speichert den Namen nur verschlüsselt. Tipp den Server ins Suchfeld, um ihn zu finden.';
+        title.append(el('span', 'cp-name', e.hosts || t('connPro.hashedName')));
+        if (e.hashed) title.title = t('connPro.hashedTip');
         title.append(el('span', 'cp-badge', e.type.replace(/^ssh-/, '')));
         const fp = el('div', 'cp-fp', e.fingerprint);
-        fp.title = 'Fingerprint (SHA256)';
-        const meta = el('div', 'cp-meta', `aus ${e.file}`);
+        fp.title = t('connPro.fingerprintTitle');
+        const meta = el('div', 'cp-meta', t('connPro.fromFile', { file: e.file }));
         main.append(title, fp, meta);
         li.appendChild(main);
         if (e.writable) {
-          li.appendChild(iconBtn('trash', 'Entfernen', () => removeEntry(e), 'danger'));
+          li.appendChild(iconBtn('trash', t('common.remove'), () => removeEntry(e), 'danger'));
         } else {
           const ro = el('span', 'cp-ro');
           ro.innerHTML = icon('lock');
-          ro.title = 'Nur lesen – gehört zu OpenSSH. Entfernen im Terminal mit: ssh-keygen -R <server>';
+          ro.title = t('connPro.readOnlyTip');
           li.appendChild(ro);
         }
         list.appendChild(li);
@@ -84,13 +83,13 @@
 
     async function removeEntry(e) {
       const ok = await askLocal({
-        kind: 'confirm', title: 'Bekannten Server entfernen?',
-        message: `Den gespeicherten Schlüssel von „${e.hosts || 'verschlüsselter Name'}“ entfernen?`,
-        detail: `${e.type} ${e.fingerprint}\n\nBeim nächsten Verbinden fragt die App wieder, ob du dem Server vertraust.`,
-        okLabel: 'Entfernen', danger: true,
+        kind: 'confirm', title: t('connPro.removeKnownTitle'),
+        message: t('connPro.removeKnownMsg', { name: e.hosts || t('connPro.hashedNameLower') }),
+        detail: `${e.type} ${e.fingerprint}\n\n${t('connPro.removeKnownDetail')}`,
+        okLabel: t('common.remove'), danger: true,
       });
       if (!ok) return;
-      try { entries = await conn.knownRemove(e.id, e.key); flash('Eintrag entfernt'); } catch (err) { showError(err); await load(); return; }
+      try { entries = await conn.knownRemove(e.id, e.key); flash(t('connPro.entryRemoved')); } catch (err) { showError(err); await load(); return; }
       render();
     }
 
@@ -112,14 +111,13 @@
   function renderKeys(box) {
     box.className = 'cp-pane';
     const top = el('div', 'cp-top');
-    const gen = el('button', 'btn primary', 'Neuen Schlüssel erzeugen');
+    const gen = el('button', 'btn primary', t('connPro.genKey'));
     gen.type = 'button';
     gen.insertAdjacentHTML('afterbegin', icon('plus'));
     gen.addEventListener('click', () => generate());
-    top.append(gen, el('div', 'spacer'), iconBtn('refresh', 'Neu laden', () => load()));
+    top.append(gen, el('div', 'spacer'), iconBtn('refresh', t('connPro.reload'), () => load()));
     const list = el('ul', 'cp-list');
-    const note = el('p', 'cp-note', 'Gezeigt werden Schlüssel aus ~/.ssh, zu denen es eine .pub-Datei gibt. '
-      + 'Der private Teil bleibt immer auf diesem Computer – kopiert oder übertragen wird nur der öffentliche Schlüssel.');
+    const note = el('p', 'cp-note', t('connPro.keysNote'));
     box.append(top, list, note);
     let keys = [];
 
@@ -131,7 +129,7 @@
     function render() {
       list.innerHTML = '';
       if (!keys.length) {
-        list.appendChild(el('li', 'cp-empty', 'Noch keine SSH-Schlüssel gefunden. Mit „Neuen Schlüssel erzeugen“ legst du einen an.'));
+        list.appendChild(el('li', 'cp-empty', t('connPro.keysEmpty')));
         return;
       }
       for (const k of keys) {
@@ -139,69 +137,69 @@
         const main = el('div', 'cp-main');
         const title = el('div', 'cp-title');
         title.append(el('span', 'cp-name', k.name), el('span', 'cp-badge', k.typeName));
-        if (!k.hasPrivate) title.append(el('span', 'cp-badge warn', 'nur öffentlich'));
-        else if (k.passphrase === true) title.append(el('span', 'cp-badge ok', 'mit Passphrase'));
-        else if (k.passphrase === false) title.append(el('span', 'cp-badge', 'ohne Passphrase'));
+        if (!k.hasPrivate) title.append(el('span', 'cp-badge warn', t('connPro.publicOnly')));
+        else if (k.passphrase === true) title.append(el('span', 'cp-badge ok', t('connPro.withPassphrase')));
+        else if (k.passphrase === false) title.append(el('span', 'cp-badge', t('connPro.withoutPassphrase')));
         const fp = el('div', 'cp-fp', k.fingerprint);
         const meta = el('div', 'cp-meta', [k.file, k.comment].filter(Boolean).join(' · '));
         main.append(title, fp, meta);
         const btns = el('div', 'cp-btns');
         btns.append(
-          iconBtn('copy', 'Öffentlichen Schlüssel kopieren', async () => {
-            try { await conn.keyCopy(k.file); flash('Öffentlicher Schlüssel kopiert'); } catch (err) { showError(err); }
+          iconBtn('copy', t('connPro.copyPublic'), async () => {
+            try { await conn.keyCopy(k.file); flash(t('connPro.publicCopied')); } catch (err) { showError(err); }
           }),
-          iconBtn('folder', `Im ${fileManager} zeigen`, () => conn.keyShow(k.file).catch(showError)),
+          iconBtn('folder', t('connPro.showIn', { app: fileManager }), () => conn.keyShow(k.file).catch(showError)),
         );
-        if (k.hasPrivate) btns.append(iconBtn('send', 'Auf Server übertragen …', ev => pickHost(k, ev)));
+        if (k.hasPrivate) btns.append(iconBtn('send', t('connPro.installTo'), ev => pickHost(k, ev)));
         li.append(main, btns);
         list.appendChild(li);
       }
     }
 
     function pickHost(k, ev) {
-      const names = Object.keys(hosts).sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
-      if (!names.length) { askLocal({ kind: 'info', title: 'Keine Verbindungen', message: 'Lege zuerst eine Verbindung an.' }); return; }
+      const names = Object.keys(hosts).sort((a, b) => a.localeCompare(b, I18N.locale, { sensitivity: 'base' }));
+      if (!names.length) { askLocal({ kind: 'info', title: t('connPro.noHostsTitle'), message: t('connPro.noHostsMsg') }); return; }
       const r = ev.currentTarget.getBoundingClientRect();
       openMenu(names.map(n => [`${n}  (${hosts[n].host})`, () => install(k, n), '', 'server']), r.left, r.bottom + 4);
     }
 
     async function install(k, name) {
       const ok = await askLocal({
-        kind: 'confirm', title: 'Schlüssel auf Server übertragen',
-        message: `Den öffentlichen Schlüssel „${k.name}“ auf „${name}“ eintragen? Danach meldest du dich dort ohne Passwort an.`,
-        detail: `${k.typeName} ${k.fingerprint}\nAuf dem Server: ~/.ssh/authorized_keys (wird nur ergänzt)`,
-        okLabel: 'Übertragen',
+        kind: 'confirm', title: t('connPro.installTitle'),
+        message: t('connPro.installMsg', { key: k.name, host: name }),
+        detail: `${k.typeName} ${k.fingerprint}\n${t('connPro.installDetail')}`,
+        okLabel: t('connPro.installOk'),
       });
       if (!ok) return;
-      flash(`Trage Schlüssel auf „${name}“ ein …`, 40);
+      flash(t('connPro.installing', { host: name }), 40);
       try {
         const r = await conn.keyInstall(k.file, name);
-        flash(r.already ? 'Schlüssel war schon eingetragen' : 'Schlüssel eingetragen');
+        flash(r.already ? t('connPro.alreadyInstalled') : t('connPro.installed'));
         await refreshHosts();
-        if (r.tested) askLocal({ kind: 'info', title: 'Fertig', message: `Anmeldung ohne Passwort für „${name}“ ist eingerichtet.`, detail: `Die Verbindung nutzt jetzt den Schlüssel ${r.key}.` });
-        else askLocal({ kind: 'info', title: 'Schlüssel eingetragen, Test fehlgeschlagen', message: 'Der Schlüssel steht jetzt auf dem Server, aber die Anmeldung damit hat nicht geklappt.', detail: r.testError || '' });
+        if (r.tested) askLocal({ kind: 'info', title: t('common.done'), message: t('connPro.installedMsg', { host: name }), detail: t('connPro.installedDetail', { key: r.key }) });
+        else askLocal({ kind: 'info', title: t('connPro.testFailedTitle'), message: t('connPro.testFailedMsg'), detail: r.testError || '' });
       } catch (err) { $('#progress').hidden = true; showError(err); }
     }
 
     async function generate() {
       const hasDefault = keys.some(k => k.name === 's3cure_ed25519');
       const name = await askLocal({
-        kind: 'text', title: 'Neuen Schlüssel erzeugen',
-        message: 'Name für den Schlüssel (Typ Ed25519). Er wird in ~/.ssh gespeichert und beginnt mit „s3cure_“.',
-        value: hasDefault ? '' : 'ed25519', placeholder: 'z. B. arbeit', okLabel: 'Weiter',
+        kind: 'text', title: t('connPro.genKey'),
+        message: t('connPro.genMsg'),
+        value: hasDefault ? '' : 'ed25519', placeholder: t('connPro.genPlaceholder'), okLabel: t('common.next'),
       });
       if (name == null) return;
       const clean = name.trim().replace(/^s3cure_/, '') || 'ed25519';
       const pass = await askLocal({
-        kind: 'secret', title: 'Schlüssel mit Passphrase schützen?',
-        message: 'Optional. Leer lassen = ohne Passphrase (bequemer; wer an diesen Rechner kommt, kann den Schlüssel aber benutzen).',
-        placeholder: 'Leer lassen = keine Passphrase', remember: true, rememberLabel: 'Passphrase merken (verschlüsselt)',
-        okLabel: 'Schlüssel erzeugen',
+        kind: 'secret', title: t('connPro.passTitle'),
+        message: t('connPro.passMsg'),
+        placeholder: t('connPro.passPlaceholder'), remember: true, rememberLabel: t('connPro.rememberPassphrase'),
+        okLabel: t('connPro.genOk'),
       });
       if (pass == null) return;
       try {
         const st = await conn.keyGenerate(clean === 'ed25519' ? '' : clean, pass.value, pass.remember);
-        flash(`Schlüssel ${st.path} erzeugt`);
+        flash(t('connPro.generated', { path: st.path }));
       } catch (err) { showError(err); }
       await load();
     }
@@ -216,9 +214,9 @@
     const root = el('div', 'cp-proxy');
     const typeSel = el('select');
     const options = withDefault
-      ? [['', 'Standard (wie in den Einstellungen)'], ['none', 'Kein Proxy – direkt verbinden'], ['socks5', 'SOCKS5-Proxy'], ['http', 'HTTP-Proxy (CONNECT)']]
-      : [['none', 'Kein Proxy – direkt verbinden'], ['socks5', 'SOCKS5-Proxy'], ['http', 'HTTP-Proxy (CONNECT)']];
-    for (const [v, t] of options) typeSel.appendChild(new Option(t, v));
+      ? [['', t('connPro.proxyDefault')], ['none', t('connPro.proxyNone')], ['socks5', t('connPro.proxySocks')], ['http', t('connPro.proxyHttp')]]
+      : [['none', t('connPro.proxyNone')], ['socks5', t('connPro.proxySocks')], ['http', t('connPro.proxyHttp')]];
+    for (const [v, label] of options) typeSel.appendChild(new Option(label, v));
     const details = el('div', 'cp-proxy-details');
     const mk = (labelText, attrs, cls = '') => {
       const l = el('label', cls);
@@ -228,11 +226,11 @@
       l.appendChild(i);
       return [l, i];
     };
-    const [hostL, hostI] = mk('Proxy-Adresse', { placeholder: 'proxy.firma.de' }, 'grow');
-    const [portL, portI] = mk('Port', { type: 'number', min: 1, max: 65535, placeholder: '1080' }, 'port');
-    const [userL, userI] = mk('Benutzer ', { placeholder: 'leer = ohne Anmeldung' }, 'grow');
-    userL.insertBefore(el('span', 'muted', '(optional)'), userI);
-    const [pwL, pwI] = mk('Passwort', { type: 'password', autocomplete: 'new-password' }, 'grow');
+    const [hostL, hostI] = mk(t('connPro.proxyAddress'), { placeholder: t('connPro.proxyHostPlaceholder') }, 'grow');
+    const [portL, portI] = mk(t('connPro.port'), { type: 'number', min: 1, max: 65535, placeholder: '1080' }, 'port');
+    const [userL, userI] = mk(t('connPro.user') + ' ', { placeholder: t('connPro.userPlaceholder') }, 'grow');
+    userL.insertBefore(el('span', 'muted', t('common.optional')), userI);
+    const [pwL, pwI] = mk(t('connPro.password'), { type: 'password', autocomplete: 'new-password' }, 'grow');
     const r1 = el('div', 'row'); r1.append(hostL, portL);
     const r2 = el('div', 'row'); r2.append(userL, pwL);
     details.append(r1, r2);
@@ -267,7 +265,7 @@
         sync();
         if (p && typeof p === 'object' && p.user) {
           const has = await conn.proxyHasPassword(p).catch(() => false);
-          pwI.placeholder = has ? '•••••••• gespeichert' : 'Wird beim Verbinden abgefragt';
+          pwI.placeholder = has ? t('connPro.passwordSaved') : t('connPro.passwordAsk');
         }
       },
       password: () => (userI.value.trim() ? pwI.value : ''),
@@ -281,13 +279,12 @@
 
   function renderProxy(box) {
     box.className = 'cp-pane';
-    const intro = el('p', 'cp-note', 'Gilt für alle Verbindungen, bei denen im Verbindungs-Dialog „Standard“ eingestellt ist. '
-      + 'Mit Sprung-Server geht nur die Verbindung zum ersten Server über den Proxy.');
+    const intro = el('p', 'cp-note', t('connPro.proxyIntro'));
     const f = proxyFields({ withDefault: false });
     const actions = el('div', 'cp-top');
-    const test = el('button', 'btn', 'Testen');
+    const test = el('button', 'btn', t('connPro.test'));
     test.type = 'button';
-    const save = el('button', 'btn primary', 'Speichern');
+    const save = el('button', 'btn primary', t('common.save'));
     save.type = 'button';
     actions.append(el('div', 'spacer'), test, save);
     box.append(intro, f.root, actions);
@@ -299,26 +296,26 @@
       try {
         await conn.proxySet(typeof p === 'object' ? p : null, f.password());
         await f.set((await conn.proxyGet()) || 'none');
-        flash(typeof p === 'object' ? 'Proxy gespeichert' : 'Kein Proxy – direkte Verbindungen');
+        flash(typeof p === 'object' ? t('connPro.proxySaved') : t('connPro.proxyOff'));
       } catch (err) { showError(err); }
     });
 
     test.addEventListener('click', async () => {
       if (!f.validate()) return;
       const p = f.get();
-      if (typeof p !== 'object') { askLocal({ kind: 'info', title: 'Kein Proxy', message: 'Wähle zuerst SOCKS5 oder HTTP.' }); return; }
+      if (typeof p !== 'object') { askLocal({ kind: 'info', title: t('connPro.noProxyTitle'), message: t('connPro.noProxyMsg') }); return; }
       const first = Object.values(hosts)[0];
       const where = await askLocal({
-        kind: 'text', title: 'Proxy testen', message: 'Welcher Server soll über den Proxy erreicht werden? (Adresse:Port)',
-        value: first ? `${first.host}:${first.port || 22}` : '', placeholder: 'server.de:22', okLabel: 'Testen',
+        kind: 'text', title: t('connPro.testTitle'), message: t('connPro.testMsg'),
+        value: first ? `${first.host}:${first.port || 22}` : '', placeholder: t('connPro.testPlaceholder'), okLabel: t('connPro.test'),
       });
       if (!where) return;
       const m = /^(.+?)(?::(\d+))?$/.exec(where.trim().replace(/^\[(.+)\]/, '$1'));
-      flash('Teste Proxy …', 40);
+      flash(t('connPro.testing'), 40);
       try {
         const r = await conn.proxyTest(p, f.password(), m[1], Number(m[2]) || 22);
-        flash('Proxy funktioniert');
-        askLocal({ kind: 'info', title: 'Proxy funktioniert', message: `${where} ist über den Proxy erreichbar.`, detail: r.banner ? `Antwort des Servers: ${r.banner}` : '' });
+        flash(t('connPro.works'));
+        askLocal({ kind: 'info', title: t('connPro.works'), message: t('connPro.reachable', { where }), detail: r.banner ? t('connPro.banner', { banner: r.banner }) : '' });
       } catch (err) { $('#progress').hidden = true; showError(err); }
     });
   }
@@ -326,18 +323,18 @@
   // ---------- Einstellungen + Seitenleiste ----------
 
   registerSettingsSection({
-    id: 'knownhosts', title: 'Bekannte Server', icon: 'shield', order: 60,
-    description: 'Die Schlüssel der Server, denen du vertraust. Meldet sich ein Server später mit einem anderen Schlüssel, warnt die App.',
+    id: 'knownhosts', title: t('connPro.knownTitle'), icon: 'shield', order: 60,
+    description: t('connPro.knownDesc'),
     render: renderKnownHosts,
   });
   registerSettingsSection({
-    id: 'sshkeys', title: 'SSH-Schlüssel', icon: 'key', order: 61,
-    description: 'Mit einem Schlüssel meldest du dich ohne Passwort an.',
+    id: 'sshkeys', title: t('connPro.keysTitle'), icon: 'key', order: 61,
+    description: t('connPro.keysDesc'),
     render: renderKeys,
   });
   registerSettingsSection({
-    id: 'proxy', title: 'Proxy', icon: 'globe', order: 62,
-    description: 'Verbindungen über einen Proxy-Server leiten, z. B. im Firmennetz.',
+    id: 'proxy', title: t('connPro.proxyTitle'), icon: 'globe', order: 62,
+    description: t('connPro.proxyDesc'),
     render: renderProxy,
   });
 
@@ -346,15 +343,15 @@
     const b = el('button', 'foot-btn');
     b.id = 'open-conn-pro';
     b.type = 'button';
-    b.title = 'Bekannte Server, SSH-Schlüssel und Proxy';
+    b.title = t('connPro.footTitle');
     b.innerHTML = icon('key');
-    b.append('Schlüssel & Server');
+    b.append(t('connPro.footLabel'));
     b.addEventListener('click', () => {
       const r = b.getBoundingClientRect();
       openMenu([
-        ['Bekannte Server …', () => Settings.open('knownhosts'), '', 'shield'],
-        ['SSH-Schlüssel …', () => Settings.open('sshkeys'), '', 'key'],
-        ['Proxy …', () => Settings.open('proxy'), '', 'globe'],
+        [t('connPro.menuKnown'), () => Settings.open('knownhosts'), '', 'shield'],
+        [t('connPro.menuKeys'), () => Settings.open('sshkeys'), '', 'key'],
+        [t('connPro.menuProxy'), () => Settings.open('proxy'), '', 'globe'],
       ], r.left, r.top - 4 - 3 * 32);
     });
     foot.insertBefore(b, foot.firstChild);
@@ -366,19 +363,17 @@
   const anchor = document.getElementById('conn-pro-fields');
   if (form && anchor) {
     const wrap = el('details', 'cp-host');
-    const sum = el('summary', '', 'Erweitert: Agent-Weiterleitung, Proxy');
+    const sum = el('summary', '', t('connPro.hostAdvanced'));
     wrap.appendChild(sum);
 
     const agentRow = el('div', 'cp-agent');
     const toggle = el('label', 'toggle');
     toggle.innerHTML = '<input type="checkbox" name="agentForward"><span class="track"><span class="knob"></span></span>';
-    toggle.append('Agent-Weiterleitung');
-    const hint = el('p', 'cp-hint', 'Damit kann der Server deinen lokalen SSH-Schlüssel benutzen, z. B. für „git pull“ dort. '
-      + 'Nur bei Servern einschalten, denen du vertraust: Wer dort Administrator ist, kann deinen Schlüssel benutzen, solange du verbunden bist. '
-      + 'Der Schlüssel muss im SSH-Agent geladen sein (ssh-add).');
+    toggle.append(t('connPro.agentForward'));
+    const hint = el('p', 'cp-hint', t('connPro.agentHint'));
     agentRow.append(toggle, hint);
 
-    const proxyLabel = el('div', 'cp-label', 'Proxy');
+    const proxyLabel = el('div', 'cp-label', t('connPro.proxyLabel'));
     const pf = proxyFields({ withDefault: true });
     wrap.append(agentRow, proxyLabel, pf.root);
     anchor.appendChild(wrap);
