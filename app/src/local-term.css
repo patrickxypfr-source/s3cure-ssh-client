@@ -1,0 +1,4 @@
+/* Lokales Terminal (src/local-term.js): nur das Terminal, keine Server-Funktionen */
+body.local-tab #view-switch, body.local-tab #btn-tunnels, body.local-tab #btn-quick,
+body.local-tab #monitor, body.local-tab #quickbar,
+body.local-tab #term-tools [data-t=split], body.local-tab #term-tools [data-t=log] { display: none !important; }

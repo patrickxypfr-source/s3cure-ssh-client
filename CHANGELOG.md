@@ -14,6 +14,11 @@ So wird ein Abschnitt geschrieben (für Mitwirkende):
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Lokales Terminal:** Ein Tab mit der Konsole deines eigenen Computers direkt neben den Servern – Knopf neben „+“ bei den Verbindungen, Cmd+Umschalt+T (Mac) bzw. Strg+Umschalt+T oder über die Befehlspalette. Mac/Linux: deine gewohnte Shell (zsh/bash), Windows: PowerShell.
+- **Alle Server auf einen Blick:** Unten in der Seitenleiste unter „Alle Server“: eine Karte pro Verbindung mit Ampel, CPU, Arbeitsspeicher, Platte, Laufzeit und ausgefallenen Diensten. Die App prüft im Hintergrund (Standard alle 15 Min.) und schickt eine Mitteilung, wenn ein Server nicht erreichbar ist, die Platte fast voll ist, der Arbeitsspeicher knapp wird oder ein Dienst ausfällt – und wenn er wieder da ist. Dabei fragt sie nie nach Passwörtern: Server ohne gespeicherte Anmeldung erscheinen als „Anmeldung nötig“.
+- **Mitteilung, wenn ein langer Befehl fertig ist:** Läuft ein Befehl länger als 30 Sekunden und du bist gerade in einem anderen Programm oder Tab, meldet sich S3cure, sobald er durch ist. Der Tab bekommt einen roten Punkt. Einstellbar unter Einstellungen → Mitteilungen.
+
 ## 1.5.1 – 2026-11-05
 
 ### Verbessert

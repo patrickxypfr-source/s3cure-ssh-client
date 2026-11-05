@@ -10,10 +10,10 @@
     "start": "electron .",
     "test": "node --test \"test/unit/*.test.js\"",
     "test:integration": "node --test --test-concurrency=1 \"test/integration/*.test.mjs\"",
-    "build": "electron-packager . \"S3cure SSH Client\" --platform=darwin --arch=arm64 --out=../dist --overwrite --app-bundle-id=local.s3cure.sshclient --icon=icon.icns --ignore=\"^/(assets|tools|build|test)\" --ignore=\"/node_modules/(cpu-features|buildcheck|nan)(/|$)\" && node tools/zip.mjs \"../dist/S3cure SSH Client-darwin-arm64/S3cure SSH Client.app\" ../dist/S3cure-SSH-Client-Mac-AppleSilicon.zip && node tools/mac-dmg.mjs arm64",
-    "build:mac-intel": "electron-packager . \"S3cure SSH Client\" --platform=darwin --arch=x64 --out=../dist --overwrite --app-bundle-id=local.s3cure.sshclient --icon=icon.icns --ignore=\"^/(assets|tools|build|test)\" --ignore=\"/node_modules/(cpu-features|buildcheck|nan)(/|$)\" && node tools/zip.mjs \"../dist/S3cure SSH Client-darwin-x64/S3cure SSH Client.app\" ../dist/S3cure-SSH-Client-Mac-Intel.zip && node tools/mac-dmg.mjs x64",
-    "build:win": "electron-packager . \"S3cure SSH Client\" --platform=win32 --arch=x64 --out=../dist --overwrite --ignore=\"^/(assets|tools|build|test)\" --ignore=\"/node_modules/(cpu-features|buildcheck|nan)(/|$)\" && node tools/win-finish.mjs && node tools/win-installers.mjs",
-    "build:linux": "electron-packager . \"S3cure SSH Client\" --platform=linux --arch=x64 --out=../dist --overwrite --ignore=\"^/(assets|tools|build|test)\" --ignore=\"/node_modules/(cpu-features|buildcheck|nan)(/|$)\" && node tools/linux-appimage.mjs",
+    "build": "node tools/pty-prepare.mjs && electron-packager . \"S3cure SSH Client\" --platform=darwin --arch=arm64 --out=../dist --asar.unpack=\"**/node_modules/node-pty/{prebuilds,build}/**\" --overwrite --app-bundle-id=local.s3cure.sshclient --icon=icon.icns --ignore=\"^/(assets|tools|build|test)\" --ignore=\"/node_modules/(cpu-features|buildcheck|nan)(/|$)\" --ignore=\"/node_modules/node-pty/(src|deps|third_party|scripts|typings)(/|$)\" --ignore=\"\\.pdb$\" --ignore=\"/node_modules/node-pty/prebuilds/(win32|linux)\" && node tools/zip.mjs \"../dist/S3cure SSH Client-darwin-arm64/S3cure SSH Client.app\" ../dist/S3cure-SSH-Client-Mac-AppleSilicon.zip && node tools/mac-dmg.mjs arm64",
+    "build:mac-intel": "node tools/pty-prepare.mjs && electron-packager . \"S3cure SSH Client\" --platform=darwin --arch=x64 --out=../dist --asar.unpack=\"**/node_modules/node-pty/{prebuilds,build}/**\" --overwrite --app-bundle-id=local.s3cure.sshclient --icon=icon.icns --ignore=\"^/(assets|tools|build|test)\" --ignore=\"/node_modules/(cpu-features|buildcheck|nan)(/|$)\" --ignore=\"/node_modules/node-pty/(src|deps|third_party|scripts|typings)(/|$)\" --ignore=\"\\.pdb$\" --ignore=\"/node_modules/node-pty/prebuilds/(win32|linux)\" && node tools/zip.mjs \"../dist/S3cure SSH Client-darwin-x64/S3cure SSH Client.app\" ../dist/S3cure-SSH-Client-Mac-Intel.zip && node tools/mac-dmg.mjs x64",
+    "build:win": "node tools/pty-prepare.mjs && electron-packager . \"S3cure SSH Client\" --platform=win32 --arch=x64 --out=../dist --asar.unpack=\"**/node_modules/node-pty/{prebuilds,build}/**\" --overwrite --ignore=\"^/(assets|tools|build|test)\" --ignore=\"/node_modules/(cpu-features|buildcheck|nan)(/|$)\" --ignore=\"/node_modules/node-pty/(src|deps|third_party|scripts|typings)(/|$)\" --ignore=\"\\.pdb$\" --ignore=\"/node_modules/node-pty/prebuilds/(darwin|linux)\" && node tools/win-finish.mjs && node tools/win-installers.mjs",
+    "build:linux": "node tools/pty-prepare.mjs && electron-packager . \"S3cure SSH Client\" --platform=linux --arch=x64 --out=../dist --asar.unpack=\"**/node_modules/node-pty/{prebuilds,build}/**\" --overwrite --ignore=\"^/(assets|tools|build|test)\" --ignore=\"/node_modules/(cpu-features|buildcheck|nan)(/|$)\" --ignore=\"/node_modules/node-pty/(src|deps|third_party|scripts|typings)(/|$)\" --ignore=\"\\.pdb$\" --ignore=\"/node_modules/node-pty/prebuilds/\" && node tools/linux-appimage.mjs",
     "build:all": "npm run build && npm run build:mac-intel && npm run build:win",
     "smoke-test": "node tools/smoke-test.mjs"
   },
@@ -25,6 +25,7 @@
     "@xterm/addon-web-links": "^0.12.0",
     "@xterm/xterm": "^6.0.0",
     "basic-ftp": "^5.3.1",
+    "node-pty": "^1.1.0",
     "ssh2": "^1.17.0",
     "ws": "^8.22.1"
   },

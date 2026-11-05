@@ -25,7 +25,7 @@
     const list = orderedTabs();
     return {
       tabs: list.map(t => ({
-        spec: t.spec.name ? { name: t.spec.name } : { text: t.spec.text },
+        spec: t.spec.local ? { local: true } : t.spec.name ? { name: t.spec.name } : { text: t.spec.text },
         title: t.title,
         view: t.view,
         remotePath: t.files.path || t.restore?.remotePath || null,
@@ -47,7 +47,8 @@
     } catch (err) { console.error('Sitzung nicht gespeichert', err); }
   }
 
-  const connKey = t => (t.spec.name ? 'n:' + t.spec.name : 't:' + t.spec.text);
+  let localNo = 0; // lokale Terminals: jedes für sich
+  const connKey = t => (t.spec.local ? 'l:' + (t.localKey ??= ++localNo) : t.spec.name ? 'n:' + t.spec.name : 't:' + t.spec.text);
 
   async function restore() {
     let data = null;

@@ -1,5 +1,5 @@
 // S3cure SSH Client – Hauptprozess: Fenster, gespeicherte Verbindungen und SSH-Sitzungen
-const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, safeStorage, Menu, MenuItem, powerMonitor, clipboard, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, safeStorage, Menu, MenuItem, powerMonitor, clipboard, screen, Notification } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -198,9 +198,15 @@ const connection = createConnection({
   passphrases, defaultKeys: DEFAULT_KEYS, vault,
 });
 
+// Lokales Terminal (Shell des eigenen Computers): app/lib/local-term.js, Oberfläche: src/local-term.js
+const localTerm = require('./lib/local-term').createLocalTerm({ send: sendToTab, platform: process.platform, lang: () => i18n.lang() });
+
 ipcMain.handle('ssh:connect', (e, tabId, spec, cols, rows) => {
   windows.setOwner(tabId, e.sender); // dieser Tab gehört ab jetzt diesem Fenster
   closeSession(tabId, { keepTransfers: true }); // Übertragungen warten aufs Neuverbinden
+  if (spec && spec.local) {
+    try { return localTerm.open(tabId, cols, rows); } catch (err) { throw new Error(t('localTerm.errStart', { error: err.message })); }
+  }
   if (files.isFtpSpec(spec)) return files.connect(tabId, spec); // FTP/FTPS: nur Dateien (lib/files-adapter.js)
   return connection.openShell(tabId, spec, cols, rows).then(info => {
     tunnels.onConnected(tabId);
@@ -213,6 +219,7 @@ ipcMain.handle('ssh:connect', (e, tabId, spec, cols, rows) => {
 function closeTabs(tabIds) {
   const open = new Set([...sessions.keys(), ...files.ftpTabIds()]);
   for (const id of tabIds) {
+    localTerm.close(id);
     if (open.has(id)) closeSession(id); else transfers.cancelTab(id);
     connection.forget(id);
     files.forget(id);
@@ -220,6 +227,7 @@ function closeTabs(tabIds) {
 }
 
 function closeSession(tabId, { keepTransfers = false } = {}) {
+  localTerm.close(tabId);
   stopSearch(tabId);
   tunnels.stopAll(tabId);
   vnc.stopAll(tabId);
@@ -229,8 +237,8 @@ function closeSession(tabId, { keepTransfers = false } = {}) {
   if (s) { sessions.delete(tabId); s.client.end(); }
 }
 
-ipcMain.on('ssh:write', (_e, tabId, data) => sessions.get(tabId)?.stream.write(data));
-ipcMain.on('ssh:resize', (_e, tabId, cols, rows) => sessions.get(tabId)?.stream.setWindow(rows, cols, 0, 0));
+ipcMain.on('ssh:write', (_e, tabId, data) => localTerm.write(tabId, data) || sessions.get(tabId)?.stream.write(data));
+ipcMain.on('ssh:resize', (_e, tabId, cols, rows) => localTerm.resize(tabId, cols, rows) || sessions.get(tabId)?.stream.setWindow(rows, cols, 0, 0));
 ipcMain.on('ssh:close', (e, tabId) => {
   if (windows.holding(tabId)) return; // wird gerade in ein anderes Fenster verschoben
   const owner = windows.ownerId(tabId);
@@ -742,6 +750,46 @@ function setupMacMenus() {
 
 // Einstellungen und Terminal-Extras (eigene Dateien in lib/)
 const settingsStore = require('./lib/settings').register({ app, ipcMain, nativeTheme, configDir: CONFIG_DIR, sendOthers: windows.sendOthers });
+
+// Alle Server auf einen Blick + Mitteilungen bei Problemen: app/lib/server-watch.js, Oberfläche: src/server-watch.js
+const shownNotes = new Set(); // Mitteilungen festhalten, sonst verschwinden ihre Klicks (Garbage Collection)
+function systemNotify({ title, body, onClick }) {
+  if (!Notification.isSupported()) return;
+  const n = new Notification({ title, body });
+  shownNotes.add(n);
+  const done = () => shownNotes.delete(n);
+  n.on('click', () => { done(); onClick?.(); });
+  n.on('close', done);
+  n.show();
+}
+function showWindow() {
+  const w = currentWin();
+  if (!w) return null;
+  if (w.isMinimized()) w.restore();
+  w.show(); w.focus();
+  return w;
+}
+const serverWatch = require('./lib/server-watch').createServerWatch({
+  connection, loadHosts, settings: () => settingsStore.load(), send: windows.sendAll,
+  isFtpHost: h => ['ftp', 'ftps', 'ftps-implicit'].includes(h && h.protocol),
+  notify: ({ title, body, name }) => systemNotify({ title, body, onClick: () => showWindow()?.webContents.send('srvwatch:show', name) }),
+});
+serverWatch.register(ipcMain);
+serverWatch.schedule();
+// Mitteilung „Befehl fertig“ aus dem Terminal (src/cmd-notify.js): Klick holt Fenster und Tab nach vorn
+ipcMain.on('notify:show', (e, { title, body, tabId } = {}) => {
+  const wc = e.sender;
+  systemNotify({
+    title: String(title || '').slice(0, 200), body: String(body || '').slice(0, 500),
+    onClick: () => {
+      const w = BrowserWindow.fromWebContents(wc);
+      if (!w || w.isDestroyed()) return;
+      if (w.isMinimized()) w.restore();
+      w.show(); w.focus();
+      wc.send('notify:clicked', tabId);
+    },
+  });
+});
 // Sprache gewechselt: alle Fenster neu laden (ihre Verbindungen werden geschlossen, die Sitzung stellt die Tabs wieder her)
 ipcMain.handle('i18n:reload', () => {
   for (const e of windows.list()) e.wc.reload();

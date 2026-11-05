@@ -166,6 +166,7 @@ function createConnection(deps) {
                 const answers = [];
                 for (const p of prompts) {
                   const a = /passw/i.test(p.prompt) ? await askPassword()
+                    : opts.noPrompt ? null // z. B. 2-Faktor-Code: im Hintergrund nicht fragen
                     : await ask({ kind: p.echo ? 'text' : 'secret', title: t('conn.login'), message: p.prompt });
                   if (a == null) return finish([]);
                   answers.push(a);
@@ -197,7 +198,10 @@ function createConnection(deps) {
         if (settled) return;
         settled = true;
         client.end();
-        reject(new Error(hostError || friendlyError(err, target)));
+        const e = new Error(hostError || friendlyError(err, target));
+        // Art des Fehlers für die Server-Übersicht (lib/server-watch.js): Anmeldung, Netz, Server-Schlüssel
+        e.level = hostError ? 'host-key' : err && err.level; e.code = err && err.code;
+        reject(e);
       };
       client.on('ready', () => {
         settled = true;
@@ -223,7 +227,7 @@ function createConnection(deps) {
         keepaliveInterval: KEEPALIVE_INTERVAL,
         keepaliveCountMax: KEEPALIVE_COUNT_MAX,
         hostVerifier: (rawKey, verify) => {
-          verifyHostKey(target, rawKey).then(r => {
+          verifyHostKey(target, rawKey, { noPrompt: !!opts.noPrompt }).then(r => {
             if (!r.ok) hostError = r.error;
             verify(r.ok);
           }, () => verify(false));
@@ -271,7 +275,8 @@ function createConnection(deps) {
       for (let i = 0; i < hops.length; i++) {
         if (i > 0) sock = await forward(clients[i - 1], hops[i - 1], hops[i].target);
         try {
-          clients.push(await connectOne(hops[i], cache, sock, i === hops.length - 1 ? opts : {}));
+          // Sprung-Server: ohne die Optionen des Ziels – außer „nichts fragen“ (Prüfung im Hintergrund)
+          clients.push(await connectOne(hops[i], cache, sock, i === hops.length - 1 ? opts : opts.noPrompt ? { noPrompt: true } : {}));
         } catch (err) {
           if (i < hops.length - 1) throw new Error(t('conn.jumpError', { jump: label(hops[i]), error: err.message }));
           throw err;

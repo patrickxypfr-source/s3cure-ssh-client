@@ -3,7 +3,7 @@
 // { version: 2, savedAt,
 //   windows: [{ key, window: { x, y, width, height, maximized, fullscreen }, tabs: [...], active }],
 //   window, tabs, active }   ← erstes Fenster noch einmal oben: ältere Versionen lesen nur das
-// Ein Tab: { spec: { name } | { text }, title, view, remotePath, local: { open, path, w }, split }
+// Ein Tab: { spec: { name } | { text } | { local: true }, title, view, remotePath, local: { open, path, w }, split }
 //
 // Jede Oberfläche (src/session.js) schickt laufend eine Momentaufnahme ihrer Tabs ('session:update'),
 // der Hauptprozess merkt sich zusätzlich Position und Größe jedes Fensters. So ist beim Beenden –
@@ -23,14 +23,15 @@ const str = (v, max = 1000) => (typeof v === 'string' ? v.slice(0, max) : null);
 // Nur bekannte Felder übernehmen – die Datei kommt aus der Oberfläche
 function cleanTab(t) {
   if (!t || typeof t !== 'object' || !t.spec || typeof t.spec !== 'object') return null;
-  const spec = str(t.spec.name, 300) ? { name: str(t.spec.name, 300) } : str(t.spec.text, 300) ? { text: str(t.spec.text, 300) } : null;
+  const spec = t.spec.local === true ? { local: true } // lokales Terminal (lib/local-term.js)
+    : str(t.spec.name, 300) ? { name: str(t.spec.name, 300) } : str(t.spec.text, 300) ? { text: str(t.spec.text, 300) } : null;
   if (!spec) return null;
   const local = t.local && typeof t.local === 'object'
     ? { open: !!t.local.open, path: str(t.local.path), ...(Number.isFinite(t.local.w) ? { w: t.local.w } : {}) }
     : null;
   return {
     spec,
-    title: str(t.title, 300) || spec.name || spec.text,
+    title: str(t.title, 300) || spec.name || spec.text || 'Terminal',
     view: VIEWS.includes(t.view) ? t.view : 'terminal',
     remotePath: str(t.remotePath),
     local,

@@ -1,0 +1,88 @@
+/* „Alle Server“ (src/server-watch.js) und Markierung „Befehl fertig“ am Tab (src/cmd-notify.js) */
+
+.watch-dialog { width: min(1080px, calc(100vw - 48px)); max-height: calc(100vh - 64px); display: flex; flex-direction: column; padding: 22px 24px 16px; }
+.watch-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.watch-head h2 { display: flex; align-items: center; gap: 9px; margin: 0; }
+.watch-head h2 svg.ic { width: 18px; height: 18px; color: var(--accent); }
+.watch-sub { margin-top: 4px; font-size: 12px; color: var(--muted); }
+.watch-actions { display: flex; align-items: center; gap: 8px; }
+.watch-actions .btn.spinning svg.ic { animation: spin .9s linear infinite; }
+
+.watch-summary { display: flex; gap: 8px; margin: 14px 0 12px; flex-wrap: wrap; }
+.wsum {
+  display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 11px; border-radius: 999px;
+  font-size: 12px; font-weight: 550; color: var(--muted); background: var(--hover); box-shadow: var(--neu-inset);
+}
+.wsum.ok .wdot { background: var(--ok); }
+.wsum.warn .wdot { background: var(--warn); }
+.wsum.bad .wdot { background: var(--accent); }
+
+.watch-grid {
+  flex: 1; overflow: auto; display: grid; gap: 12px; padding: 4px 4px 8px; margin: 0 -4px;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); align-content: start;
+}
+.watch-empty { grid-column: 1 / -1; padding: 40px 0; text-align: center; color: var(--muted); font-size: 13px; }
+.watch-note { margin: 10px 0 0; font-size: 11.5px; color: var(--faint); }
+
+.wcard {
+  --host-color: var(--border-strong);
+  position: relative; display: flex; flex-direction: column; gap: 12px; padding: 14px 14px 12px 17px;
+  border-radius: 12px; background: var(--surface); border: 1px solid var(--neu-edge); box-shadow: var(--neu-card);
+  overflow: hidden; transition: box-shadow .15s ease;
+}
+.wcard::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--host-color); }
+.wcard.hl { box-shadow: var(--neu-card), 0 0 0 2px var(--accent-ring); }
+
+.wcard-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.wcard-title { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.wname { font-weight: 650; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.waddr { font-size: 11.5px; color: var(--muted); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.wstate {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; color: var(--muted); background: var(--hover);
+}
+.wdot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); flex-shrink: 0; }
+.wcard.ok .wstate { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); }
+.wcard.ok .wdot { background: var(--ok); }
+.wcard.warn .wstate, .wcard.auth .wstate, .wcard.hostkey .wstate { color: var(--warn); background: color-mix(in srgb, var(--warn) 13%, transparent); }
+.wcard.warn .wdot, .wcard.auth .wdot, .wcard.hostkey .wdot { background: var(--warn); }
+.wcard.offline .wstate, .wcard.error .wstate { color: var(--accent); background: var(--accent-soft); }
+.wcard.offline .wdot, .wcard.error .wdot { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+.wcard.pending .wdot { animation: wpulse 1.2s ease-in-out infinite; }
+@keyframes wpulse { 50% { opacity: .3; } }
+
+.wbars { display: flex; flex-direction: column; gap: 9px; }
+.wbar-top { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
+.wbar-top b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.wbar-track { height: 6px; border-radius: 999px; background: var(--neu-well-bg); box-shadow: var(--neu-inset); overflow: hidden; }
+.wbar-track > div { height: 100%; border-radius: 999px; background: var(--ok); transition: width .4s ease; }
+.wbar.mid .wbar-track > div { background: var(--warn); }
+.wbar.bad .wbar-track > div { background: var(--accent); }
+.wbar.bad .wbar-top b { color: var(--accent); }
+.wbar-detail { margin-top: 3px; font-size: 11px; color: var(--faint); }
+
+.wfailed, .werror {
+  display: flex; gap: 7px; align-items: flex-start; padding: 8px 10px; border-radius: 8px; font-size: 12px; line-height: 1.45;
+}
+.wfailed { color: var(--accent); background: var(--accent-soft); }
+.wfailed svg.ic { width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px; }
+.wfailed span { overflow-wrap: anywhere; }
+.werror { color: var(--muted); background: var(--hover); box-shadow: var(--neu-inset); white-space: pre-line; overflow-wrap: anywhere; }
+
+.wcard-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; }
+.wmeta { font-size: 11px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wbtns { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.wbtns .btn { height: 28px; padding: 0 10px; font-size: 12px; gap: 6px; }
+
+/* Seitenleiste: Zahl der Server mit Problemen */
+#open-watch .lbl { flex: 1; }
+.watch-badge {
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; font-size: 10.5px; font-weight: 700; line-height: 18px;
+  text-align: center; color: #fff; background: var(--warn);
+}
+.watch-badge.bad { background: var(--accent); }
+body.sb-collapsed #open-watch .watch-badge { position: absolute; transform: translate(14px, -9px); min-width: 15px; height: 15px; line-height: 15px; font-size: 9.5px; }
+
+/* Tab: dort ist ein langer Befehl fertig geworden */
+.tab.cmd-done .state { background: var(--accent) !important; box-shadow: 0 0 0 3px var(--accent-ring); }

@@ -9,20 +9,20 @@
 **Terminal, files, editor and tunnels – everything for your servers in one window.**<br>
 A modern SSH & SFTP client for macOS, Windows and Linux. Free, open source, no account needed.
 
-[![Latest version](https://img.shields.io/github/v/release/patrickxypfr-source/s3cure-ssh-client?label=Version&color=e11d2a&style=flat-square)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest)
-[![Build](https://img.shields.io/github/actions/workflow/status/patrickxypfr-source/s3cure-ssh-client/build.yml?branch=main&label=Build&style=flat-square)](https://github.com/patrickxypfr-source/s3cure-ssh-client/actions/workflows/build.yml)
-[![Downloads](https://img.shields.io/github/downloads/patrickxypfr-source/s3cure-ssh-client/total?label=Downloads&color=555&style=flat-square)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases)
+[![Latest version](https://img.shields.io/github/v/release/s3cureofficial/s3cure-ssh-client?label=Version&color=e11d2a&style=flat-square)](https://github.com/s3cureofficial/s3cure-ssh-client/releases/latest)
+[![Build](https://img.shields.io/github/actions/workflow/status/s3cureofficial/s3cure-ssh-client/build.yml?branch=main&label=Build&style=flat-square)](https://github.com/s3cureofficial/s3cure-ssh-client/actions/workflows/build.yml)
+[![Downloads](https://img.shields.io/github/downloads/s3cureofficial/s3cure-ssh-client/total?label=Downloads&color=555&style=flat-square)](https://github.com/s3cureofficial/s3cure-ssh-client/releases)
 [![Platforms](https://img.shields.io/badge/macOS%20%7C%20Windows%20%7C%20Linux-555?style=flat-square&logo=apple&logoColor=white)](#system-requirements)
 [![License: MIT](https://img.shields.io/badge/License-MIT-555?style=flat-square)](LICENSE)
 
 <br>
 
-[![Download for Mac (Apple silicon)](https://img.shields.io/badge/Download-Mac%20%C2%B7%20Apple%20Chip-e11d2a?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Mac-AppleSilicon.dmg)
-[![Download for Mac (Intel)](https://img.shields.io/badge/Download-Mac%20%C2%B7%20Intel-3a3a3c?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Mac-Intel.dmg)
-[![Download for Windows](https://img.shields.io/badge/Download-Windows%2010%2F11-3a3a3c?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Setup.exe)
-[![Download for Linux](https://img.shields.io/badge/Download-Linux%20%C2%B7%20AppImage-3a3a3c?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Linux-x64.AppImage)
+[![Download for Mac (Apple silicon)](https://img.shields.io/badge/Download-Mac%20%C2%B7%20Apple%20Chip-e11d2a?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/s3cureofficial/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Mac-AppleSilicon.dmg)
+[![Download for Mac (Intel)](https://img.shields.io/badge/Download-Mac%20%C2%B7%20Intel-3a3a3c?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/s3cureofficial/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Mac-Intel.dmg)
+[![Download for Windows](https://img.shields.io/badge/Download-Windows%2010%2F11-3a3a3c?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/s3cureofficial/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Setup.exe)
+[![Download for Linux](https://img.shields.io/badge/Download-Linux%20%C2%B7%20AppImage-3a3a3c?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/s3cureofficial/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Linux-x64.AppImage)
 
-<sub>One click downloads the installer for the latest version. All versions: <a href="https://github.com/patrickxypfr-source/s3cure-ssh-client/releases">Releases</a></sub>
+<sub>One click downloads the installer for the latest version. All versions: <a href="https://github.com/s3cureofficial/s3cure-ssh-client/releases">Releases</a></sub>
 
 <br><br>
 
@@ -105,10 +105,10 @@ The app tells you about new versions itself – **one click on “Update”** do
 
 | System | File | |
 |---|---|---|
-| **Mac with Apple silicon** (M1–M4) | [`S3cure-SSH-Client-Mac-AppleSilicon.dmg`](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Mac-AppleSilicon.dmg) | Install window |
-| **Mac with Intel chip** | [`S3cure-SSH-Client-Mac-Intel.dmg`](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Mac-Intel.dmg) | Install window |
-| **Windows 10/11** (64-bit) | [`S3cure-SSH-Client-Setup.exe`](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Setup.exe) | Installer with Start menu & desktop shortcut |
-| **Linux** (64-bit, x86) | [`S3cure-SSH-Client-Linux-x64.AppImage`](https://github.com/patrickxypfr-source/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Linux-x64.AppImage) | A single file – make it executable and run it |
+| **Mac with Apple silicon** (M1–M4) | [`S3cure-SSH-Client-Mac-AppleSilicon.dmg`](https://github.com/s3cureofficial/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Mac-AppleSilicon.dmg) | Install window |
+| **Mac with Intel chip** | [`S3cure-SSH-Client-Mac-Intel.dmg`](https://github.com/s3cureofficial/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Mac-Intel.dmg) | Install window |
+| **Windows 10/11** (64-bit) | [`S3cure-SSH-Client-Setup.exe`](https://github.com/s3cureofficial/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Setup.exe) | Installer with Start menu & desktop shortcut |
+| **Linux** (64-bit, x86) | [`S3cure-SSH-Client-Linux-x64.AppImage`](https://github.com/s3cureofficial/s3cure-ssh-client/releases/latest/download/S3cure-SSH-Client-Linux-x64.AppImage) | A single file – make it executable and run it |
 
 > [!IMPORTANT]
 > Please do **not** use “Source code” or the green “Code → Download ZIP” button – that's the source code, not a ready-to-use app.
@@ -227,6 +227,9 @@ The update window shows **what's new**, and the first time a new version starts,
 - **Agent forwarding** per connection (e.g. `git pull` on the server using the key from your own computer)
 - Import from `~/.ssh/config`
 - **Port forwarding:** local, remote and SOCKS proxy – optionally started automatically on connect
+- **Local terminal:** a tab with your own computer’s console (zsh/bash, PowerShell on Windows) right next to your servers – button next to “+” or Cmd/Ctrl+Shift+T
+- **All servers at a glance:** one card per server with CPU, memory, disk and failed services, checked in the background; system notification when a server goes down, the disk fills up or a service fails
+- **Notification when a long command finishes:** start a build or update, switch to another app – S3cure tells you when it’s done
 - **Remote desktop (VNC):** the “Desktop” view shows the server’s screen – tunneled through the SSH connection, the VNC port never has to be open to the network. Fit/1:1, full screen, Ctrl+Alt+Del, clipboard both ways, view only, finds running VNC servers on the server and gives setup tips (TigerVNC, x11vnc, Raspberry Pi)
 - Host keys are remembered on first connect and checked from then on (like OpenSSH); if a **key has changed**, you get a clear warning with the old and new fingerprint
 - **Manage known servers:** view, search and remove individual saved host keys (including those from `~/.ssh/known_hosts`)
@@ -297,7 +300,7 @@ Yes – with anything that speaks SSH. For the file view the server needs SFTP, 
 Requirement: [Node.js](https://nodejs.org) 22 or later.
 
 ```bash
-git clone https://github.com/patrickxypfr-source/s3cure-ssh-client.git
+git clone https://github.com/s3cureofficial/s3cure-ssh-client.git
 cd s3cure-ssh-client/app
 npm install
 npm start                # run the app straight from source

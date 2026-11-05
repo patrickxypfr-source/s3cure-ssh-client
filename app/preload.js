@@ -272,3 +272,14 @@ contextBridge.exposeInMainWorld('s3dash', {
   bigDirs: (tabId, dir, useSudo) => ipcRenderer.invoke('dash:bigDirs', tabId, dir, useSudo),
   cancel: tabId => ipcRenderer.invoke('dash:cancel', tabId),
 });
+
+// Alle Server auf einen Blick (app/lib/server-watch.js, Oberfläche: src/server-watch.js)
+// und Mitteilung „Befehl fertig“ (src/cmd-notify.js)
+contextBridge.exposeInMainWorld('s3watch', {
+  list: () => ipcRenderer.invoke('srvwatch:list'),
+  check: names => ipcRenderer.invoke('srvwatch:check', names),
+  onUpdate: cb => ipcRenderer.on('srvwatch:update', (_e, snap) => cb(snap)),
+  onShow: cb => ipcRenderer.on('srvwatch:show', (_e, name) => cb(name)),
+  notify: (title, body, tabId) => ipcRenderer.send('notify:show', { title, body, tabId }),
+  onNotifyClick: cb => ipcRenderer.on('notify:clicked', (_e, tabId) => cb(tabId)),
+});

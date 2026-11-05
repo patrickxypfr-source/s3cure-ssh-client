@@ -89,7 +89,8 @@ function createKnownHosts({ configDir, ask, systemFile = path.join(os.homedir(),
     writeOwn(lines);
   }
 
-  async function verifyHostKey(target, rawKey) {
+  // opts.noPrompt: nichts fragen (Prüfung im Hintergrund) – unbekannte oder geänderte Schlüssel ablehnen
+  async function verifyHostKey(target, rawKey, opts = {}) {
     const name = knownName(target.host, target.port);
     const type = keyType(rawKey);
     const b64 = rawKey.toString('base64');
@@ -97,6 +98,8 @@ function createKnownHosts({ configDir, ask, systemFile = path.join(os.homedir(),
     const fp = fingerprint(rawKey);
 
     if (sameType.some(k => k.b64 === b64)) return { ok: true };
+
+    if (opts.noPrompt) return { ok: false, error: t(sameType.length ? 'knownHosts.changedAbort' : 'knownHosts.untrustedAbort', { name }), hostKey: true };
 
     if (sameType.length) {
       const old = sameType[0];

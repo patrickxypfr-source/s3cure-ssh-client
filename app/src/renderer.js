@@ -200,6 +200,7 @@ function openTab(spec, title, view = 'terminal', opts = {}) {
   window.FileColumns?.attach(tab); // Spalten: sortieren, ein-/ausblenden, Breiten (file-columns.js)
   window.SyncTools?.attach(tab); // Synchronisieren, aktuell halten, extern bearbeiten (sync.js)
   window.WindowTabs?.attach(tab); // Rechtsklick und Ziehen: in ein anderes Fenster (windows.js)
+  window.CmdNotify?.attach(tab); // Mitteilung, wenn ein langer Befehl fertig ist (cmd-notify.js)
   activate(id);
   if (opts.connect !== false) connect(tab);
   return tab;
@@ -211,7 +212,7 @@ async function connect(tab, opts = {}) {
   setState(tab, opts.reconnect ? 'reconnecting' : 'connecting');
   if (!opts.reconnect) {
     tab.term.reset();
-    tab.term.write(TermStyle.line('info', t('app.connectingTo', { name: tab.title })));
+    if (!tab.spec.local) tab.term.write(TermStyle.line('info', t('app.connectingTo', { name: tab.title })));
   }
   try {
     const info = await api.connect(tab.id, tab.spec, tab.term.cols, tab.term.rows);
@@ -241,7 +242,8 @@ function setState(tab, state) {
 
 function updateToolbar() {
   const tab = tabs.get(activeId);
-  const sshTab = window.FtpUi?.isFtpTab(tab) ? null : tab; // FTP: keine Server-Übersicht, keine Tunnel
+  // FTP und lokales Terminal: keine Server-Übersicht, keine Tunnel
+  const sshTab = window.FtpUi?.isFtpTab(tab) || window.LocalTerm?.isLocalTab(tab) ? null : tab;
   Monitor.update(sshTab); // Server-Übersicht (monitor.js)
   $('#toolbar').hidden = !tab;
   window.tunnelUi?.setTab(sshTab || null);
@@ -262,6 +264,7 @@ function updateToolbar() {
   renderFiles(tab);
   renderQuickbar();
   window.FtpUi?.update(tab);
+  window.LocalTerm?.update(tab); // lokales Terminal (local-term.js)
 }
 
 // ---------- Schnellbefehle ----------
@@ -349,6 +352,7 @@ async function runQuick(cmd, confirmText, live = Quickbar.isLive(cmd), label = '
   // (Strg+U leert eine halb getippte Zeile). Die Ausgabe davor bleibt zum Hochscrollen erhalten.
   tab.term.scrollToBottom();
   const kind = live ? 'live' : confirmText ? 'confirm' : 'run';
+  window.CmdNotify?.beforeRun(tab, label || cmd, live); // Eingabezeile merken (cmd-notify.js)
   await new Promise(r => tab.term.write(TermStyle.separator(tab.term.cols, label || cmd, kind), r));
   api.write(tab.id, '\x15' + cmd + '\r');
   tab.term.focus();
