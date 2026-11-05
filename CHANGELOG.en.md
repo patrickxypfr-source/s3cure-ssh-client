@@ -14,6 +14,8 @@ How to write a section (for contributors):
 
 ## [Unreleased]
 
+## 1.6.0 – 2026-11-05
+
 ### New
 - **Local terminal:** a tab with your own computer’s console right next to your servers – button next to “+” in the connections list, Cmd+Shift+T (Mac) or Ctrl+Shift+T, or via the command palette. Mac/Linux: your usual shell (zsh/bash), Windows: PowerShell.
 - **All servers at a glance:** at the bottom of the sidebar under “All servers”: one card per connection with status, CPU, memory, disk, uptime and failed services. The app checks in the background (every 15 min by default) and sends a notification when a server is unreachable, the disk is almost full, memory runs low or a service fails – and when it’s back. It never asks for passwords: servers without a saved sign-in show “Sign-in needed”.
