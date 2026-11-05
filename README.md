@@ -226,6 +226,7 @@ The update window shows **what's new**, and the first time a new version starts,
 - **Agent forwarding** per connection (e.g. `git pull` on the server using the key from your own computer)
 - Import from `~/.ssh/config`
 - **Port forwarding:** local, remote and SOCKS proxy – optionally started automatically on connect
+- **Remote desktop (VNC):** the “Desktop” view shows the server’s screen – tunneled through the SSH connection, the VNC port never has to be open to the network. Fit/1:1, full screen, Ctrl+Alt+Del, clipboard both ways, view only, finds running VNC servers on the server and gives setup tips (TigerVNC, x11vnc, Raspberry Pi)
 - Host keys are remembered on first connect and checked from then on (like OpenSSH); if a **key has changed**, you get a clear warning with the old and new fingerprint
 - **Manage known servers:** view, search and remove individual saved host keys (including those from `~/.ssh/known_hosts`)
 - Optional **App Lock** with password or Touch ID
@@ -255,6 +256,7 @@ The update window shows **what's new**, and the first time a new version starts,
 - The app only talks to your servers – and to GitHub to check for new versions.
 - Updates are only downloaded from this repository and verified before installing.
 - Tunnel ports only listen on `127.0.0.1` and can't be reached from outside.
+- Remote desktop (VNC) always runs through SSH. The internal bridge for noVNC only listens on `127.0.0.1` (random port) and accepts each connection only once, with a random token. VNC passwords are stored encrypted like the other passwords.
 
 ## FAQ
 
@@ -331,11 +333,13 @@ On every push, GitHub Actions runs the tests first (unit tests + integration tes
 | `.github/workflows/` | Automatic builds and releases |
 | `myssh.py` | Small command-line tool (Python) |
 
-**Built with:** [Electron](https://www.electronjs.org) · [ssh2](https://github.com/mscdex/ssh2) · [xterm.js](https://xtermjs.org) · [electron-builder](https://www.electron.build) (installer)
+**Built with:** [Electron](https://www.electronjs.org) · [ssh2](https://github.com/mscdex/ssh2) · [xterm.js](https://xtermjs.org) · [noVNC](https://novnc.com) · [ws](https://github.com/websockets/ws) · [electron-builder](https://www.electron.build) (installer)
 
 ## License
 
 [MIT](LICENSE) – free to use, including for your own projects.
+
+Bundled libraries from other projects and their licenses (including noVNC under MPL-2.0): [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 <div align="center">
 <br>

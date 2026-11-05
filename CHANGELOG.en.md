@@ -18,6 +18,8 @@ How to write a section (for contributors):
 - **Multiple windows:** “New window” with Cmd+N (Mac) or Ctrl+Shift+N (Windows/Linux), from the command palette, or on the Mac from the Dock and File menu.
 - **Move tabs between windows:** right-click a tab → “Move tab to new window” or “Move tab to Window 2” – or simply drag the tab out of the tab bar (new window) or onto another window. The connection stays open and the terminal content comes along – no reconnecting.
 - **Restore session with all windows:** after a restart or update, all windows are back – with their position, size and tabs.
+- **Remote desktop (VNC):** New “Desktop” view next to Terminal, Files and Overview – shows the server’s screen. The connection runs encrypted through SSH, no VNC port has to be opened to the network. Set up per connection (address or display like “:1”, password, picture quality, view only). In the view: fit or 1:1, full screen, Ctrl+Alt+Del, clipboard both ways and keyboard help.
+- **Find VNC servers:** One click checks whether a VNC server runs on the server and suggests the ports. If none is running, the app explains clearly how to set one up (TigerVNC, x11vnc, Raspberry Pi).
 
 ### Improved
 - Each window stands on its own: transfers, tunnels, questions and messages appear in the window of their tab. Closing a window only ends that window’s connections.

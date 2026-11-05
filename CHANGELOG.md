@@ -18,6 +18,8 @@ So wird ein Abschnitt geschrieben (für Mitwirkende):
 - **Mehrere Fenster:** „Neues Fenster“ mit Cmd+N (Mac) bzw. Strg+Umschalt+N (Windows/Linux), über die Befehlspalette oder auf dem Mac über das Dock- und Ablage-Menü.
 - **Tabs zwischen Fenstern verschieben:** Rechtsklick auf einen Tab → „Tab in neues Fenster verschieben“ oder „Tab in Fenster 2 verschieben“ – oder den Tab einfach aus der Tab-Leiste herausziehen (neues Fenster) bzw. auf ein anderes Fenster ziehen. Die Verbindung bleibt dabei bestehen, der Terminal-Inhalt wandert mit – kein Neuverbinden.
 - **Sitzung wiederherstellen mit allen Fenstern:** Nach einem Neustart oder Update sind alle Fenster wieder da – mit Position, Größe und ihren Tabs.
+- **Remote Desktop (VNC):** Neue Ansicht „Desktop“ neben Terminal, Dateien und Übersicht – zeigt den Bildschirm des Servers. Die Verbindung läuft verschlüsselt durch SSH, ein VNC-Port muss nicht ins Netz geöffnet werden. Einstellbar pro Verbindung (Adresse oder Display wie „:1“, Passwort, Bildqualität, „Nur ansehen“). In der Ansicht: Anpassen oder 1:1, Vollbild, Strg+Alt+Entf, Zwischenablage hin und her und eine Tastatur-Hilfe.
+- **VNC-Server finden:** Ein Klick prüft, ob auf dem Server ein VNC-Server läuft, und schlägt die Ports vor. Läuft keiner, sagt die App verständlich, wie man ihn einrichtet (TigerVNC, x11vnc, Raspberry Pi).
 
 ### Verbessert
 - Jedes Fenster ist für sich: Übertragungen, Tunnel, Rückfragen und Meldungen erscheinen im Fenster des jeweiligen Tabs. Wer ein Fenster schließt, beendet nur dessen Verbindungen.
