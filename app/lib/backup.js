@@ -2,7 +2,8 @@
 //
 // Inhalt: Verbindungen (hosts.json inkl. Gruppen/Farben/Tunnel/Sprung-Server), Befehlsknöpfe (snippets.json),
 // Lesezeichen (bookmarks.json, falls vorhanden), Einstellungen (settings.json), bekannte Host-Schlüssel
-// (known_hosts) und – nur auf Wunsch – gespeicherte Passwörter und Passphrasen.
+// (known_hosts), Tresor-Einträge (vault.json: Name, Benutzer, Notiz, Schlüsselpfad – ohne Geheimnisse) und – nur auf
+// Wunsch – gespeicherte Passwörter und Passphrasen sowie die Geheimnisse der Tresor-Einträge (lib/vault.js).
 //
 // Die Datei ist immer mit einem Passwort verschlüsselt, das der Nutzer wählt:
 //   Schlüssel = scrypt(Passwort, Salz)  ->  AES-256-GCM (Kopf als Zusatzdaten mit geprüft)
@@ -18,6 +19,7 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 const { t } = require('./i18n');
+const vaultLib = require('./vault');
 
 const FORMAT = 's3cure-backup';
 const EXT = 's3cure-backup';
@@ -127,7 +129,8 @@ function writeAtomic(file, text, mode = 0o600) {
   fs.renameSync(tmp, file);
 }
 
-// ctx: { configDir, loadHosts, saveHosts, passwords: { names, read, write, remove }, passphrases, settingsStore, snippetStore }
+// ctx: { configDir, loadHosts, saveHosts, passwords: { names, read, write, remove }, passphrases, settingsStore, snippetStore,
+//        vault (optional, lib/vault.js createVault) }
 function createData(ctx) {
   const file = name => path.join(ctx.configDir, name);
   const readJson = name => { try { return JSON.parse(fs.readFileSync(file(name), 'utf8')); } catch { return undefined; } };
@@ -179,6 +182,13 @@ function createData(ctx) {
     readPassword: name => ctx.passwords.read(name),
     writePassword: (name, v) => ctx.passwords.write(name, v),
     removePassword: name => ctx.passwords.remove(name),
+    // Tresor: Einträge (id -> Metadaten) und ihre Geheimnisse ({ password, key, passphrase })
+    vault: () => (ctx.vault ? ctx.vault.entries() : {}),
+    saveVault: entries => { if (ctx.vault) ctx.vault.replaceEntries(entries); },
+    vaultSecrets: () => (ctx.vault ? ctx.vault.exportSecrets() : { values: {}, missing: 0 }),
+    hasVaultSecret: id => !!ctx.vault && ctx.vault.hasAnySecret(id),
+    writeVaultSecrets: (id, v) => !!ctx.vault && ctx.vault.writeSecrets(id, v),
+    removeVaultSecrets: id => { if (ctx.vault) ctx.vault.removeSecrets(id); },
     hasPassphrase: p => ctx.passphrases.has(homeAbs(p)),
     readPassphrase: p => ctx.passphrases.read(homeAbs(p)),
     writePassphrase: (p, v) => ctx.passphrases.write(homeAbs(p), v),
@@ -189,7 +199,7 @@ function createData(ctx) {
       const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
       const dir = path.join(ctx.configDir, 'sicherungen', 'vor-import-' + stamp);
       let n = 0;
-      for (const name of ['hosts.json', 'snippets.json', 'known_hosts', 'settings.json', 'bookmarks.json', 'passwords.json', 'passphrases.json']) {
+      for (const name of ['hosts.json', 'snippets.json', 'known_hosts', 'settings.json', 'bookmarks.json', 'passwords.json', 'passphrases.json', 'vault.json', 'vault-secrets.json']) {
         try { fs.mkdirSync(dir, { recursive: true, mode: 0o700 }); fs.copyFileSync(file(name), path.join(dir, name)); n++; } catch { /* gibt es nicht */ }
       }
       return n ? dir : null;
@@ -205,6 +215,7 @@ function collect(data, { secrets = false } = {}) {
     snippets: { profiles: data.snippets() },
     knownHosts: data.knownHosts(),
     settings: data.settings(),
+    vault: data.vault(),
     secrets: null,
   };
   const bm = data.bookmarks();
@@ -213,8 +224,9 @@ function collect(data, { secrets = false } = {}) {
   if (secrets) {
     const pw = data.passwords();
     const pp = data.passphrases();
-    payload.secrets = { passwords: pw.values, passphrases: pp.values };
-    missing = pw.missing + pp.missing;
+    const vs = data.vaultSecrets();
+    payload.secrets = { passwords: pw.values, passphrases: pp.values, vault: vs.values };
+    missing = pw.missing + pp.missing + vs.missing;
   }
   return { payload, missing };
 }
@@ -232,7 +244,15 @@ function cleanPayload(p) {
     if (isObj(v) && Array.isArray(v.groups)) profiles[k] = { groups: v.groups };
   }
   const strMap = m => Object.fromEntries(Object.entries(isObj(m) ? m : {}).filter(([, v]) => typeof v === 'string'));
-  const secrets = isObj(p.secrets) ? { passwords: strMap(p.secrets.passwords), passphrases: strMap(p.secrets.passphrases) } : null;
+  const vault = vaultLib.cleanEntries(p.vault);
+  const vaultSecrets = {};
+  if (isObj(p.secrets) && isObj(p.secrets.vault)) {
+    for (const [id, v] of Object.entries(p.secrets.vault)) {
+      const c = vaultLib.cleanSecrets(v);
+      if (id in vault && Object.keys(c).length) vaultSecrets[id] = c;
+    }
+  }
+  const secrets = isObj(p.secrets) ? { passwords: strMap(p.secrets.passwords), passphrases: strMap(p.secrets.passphrases), vault: vaultSecrets } : null;
   return {
     created: typeof p.created === 'string' ? p.created : null,
     platform: typeof p.platform === 'string' ? p.platform : null,
@@ -241,6 +261,7 @@ function cleanPayload(p) {
     knownHosts: (Array.isArray(p.knownHosts) ? p.knownHosts : []).filter(l => typeof l === 'string' && /^\S+\s+\S+\s+\S+/.test(l)).map(l => l.trim()),
     settings: Object.fromEntries(Object.entries(isObj(p.settings) ? p.settings : {}).filter(([k]) => /^[\w.-]{1,64}$/.test(k) && !LOCAL_SETTINGS.test(k))),
     bookmarks: 'bookmarks' in p ? p.bookmarks : undefined,
+    vault,
     secrets,
   };
 }
@@ -258,11 +279,19 @@ function diffMap(local, incoming) {
   return { added, changed, removed, unchanged };
 }
 
+// Tresor-Vergleich mit Namen statt Kennungen (für die Anzeige)
+function vaultDiff(local, incoming) {
+  const d = diffMap(local, incoming);
+  const nameOf = id => (incoming[id] || local[id]).name;
+  return { added: d.added.map(nameOf), changed: d.changed.map(nameOf), removed: d.removed.map(nameOf), unchanged: d.unchanged };
+}
+
 function preview(data, b) {
   const kh = new Set(data.knownHosts());
   const localSettings = data.settings();
   const pw = b.secrets ? Object.keys(b.secrets.passwords) : [];
   const pp = b.secrets ? Object.keys(b.secrets.passphrases) : [];
+  const vs = b.secrets ? Object.keys(b.secrets.vault) : [];
   return {
     created: b.created,
     platform: b.platform,
@@ -271,11 +300,14 @@ function preview(data, b) {
     knownHosts: { added: b.knownHosts.filter(l => !kh.has(l)).length, total: b.knownHosts.length },
     settings: { changed: Object.keys(b.settings).filter(k => !same(localSettings[k], b.settings[k])).length },
     bookmarks: b.bookmarks === undefined ? null : { changed: !same(data.bookmarks(), b.bookmarks) },
+    vault: vaultDiff(data.vault(), b.vault),
     secrets: b.secrets ? {
       passwords: pw.length,
       passphrases: pp.length,
+      vault: vs.length,
       // gleichnamige, die schon gespeichert sind (werden nur mit „überschreiben“ ersetzt)
-      existing: pw.filter(n => data.hasPassword(n)).length + pp.filter(p => data.hasPassphrase(p)).length,
+      existing: pw.filter(n => data.hasPassword(n)).length + pp.filter(p => data.hasPassphrase(p)).length
+        + vs.filter(id => data.hasVaultSecret(id)).length,
     } : null,
   };
 }
@@ -324,6 +356,12 @@ function apply(data, b, opts = {}) {
     if (!same(cur, next)) data.saveBookmarks(next);
   }
 
+  // Tresor-Einträge (bei „Ersetzen“ verlieren weggefallene Einträge auch ihre Geheimnisse)
+  const vBefore = data.vault();
+  const vault = take(vBefore, b.vault);
+  if (!same(vBefore, vault)) data.saveVault(vault);
+  result.vault = vaultDiff(vBefore, b.vault);
+
   // Einstellungen: übernimmt die Oberfläche (Settings.set), damit sie sofort wirken
   const ls = data.settings();
   result.settings = Object.fromEntries(Object.entries(b.settings).filter(([k, v]) => (overwrite || !(k in ls)) && !same(ls[k], v)));
@@ -337,6 +375,7 @@ function apply(data, b, opts = {}) {
     };
     for (const [name, v] of Object.entries(b.secrets.passwords)) if (name in hosts) put(data.hasPassword, data.writePassword, name, v);
     for (const [p, v] of Object.entries(b.secrets.passphrases)) put(data.hasPassphrase, data.writePassphrase, p, v);
+    for (const [id, v] of Object.entries(b.secrets.vault || {})) if (id in vault) put(data.hasVaultSecret, data.writeVaultSecrets, id, v);
     if (result.secrets.failed) result.warnings.push(t('backup.secretsFailed', { count: result.secrets.failed }));
   }
   return result;
@@ -366,7 +405,9 @@ function register({ ipcMain, dialog, app, getWin, ...ctx }) {
     return {
       file: target,
       hosts: Object.keys(payload.hosts).length,
-      passwords: payload.secrets ? Object.keys(payload.secrets.passwords).length + Object.keys(payload.secrets.passphrases).length : 0,
+      vault: Object.keys(payload.vault).length,
+      passwords: payload.secrets ? Object.keys(payload.secrets.passwords).length + Object.keys(payload.secrets.passphrases).length
+        + Object.values(payload.secrets.vault).reduce((n, s) => n + Object.keys(s).length, 0) : 0,
       missing,
     };
   });

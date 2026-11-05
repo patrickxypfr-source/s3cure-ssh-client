@@ -2,8 +2,8 @@
 //
 // Im gewählten Ordner liegt „S3cure-Abgleich.s3cure-backup“ – eine ganz normale, verschlüsselte
 // Backup-Datei (lib/backup.js), die zusätzlich pro Eintrag die Änderungszeit kennt (payload.sync.items).
-// Abgeglichen werden Verbindungen, Befehlsknöpfe, Lesezeichen, bekannte Host-Schlüssel und – nur mit
-// Häkchen – gespeicherte Passwörter/Passphrasen. Einstellungen bleiben pro Computer.
+// Abgeglichen werden Verbindungen, Befehlsknöpfe, Lesezeichen, bekannte Host-Schlüssel, Tresor-Einträge und – nur mit
+// Häkchen – gespeicherte Passwörter/Passphrasen und die Geheimnisse der Tresor-Einträge. Einstellungen bleiben pro Computer.
 //
 // Zusammenführen pro Eintrag (z. B. eine Verbindung):
 //   - Jede lokale Änderung bekommt einen Zeitstempel (lokaler Zustand: ~/.myssh/sync-state.json).
@@ -25,7 +25,7 @@ const FILE_NAME = 'S3cure-Abgleich.s3cure-backup';
 const COPY_RE = /^S3cure-Abgleich[ _-]?(\(\d+\)|\d+|.*[Kk]onflikt.*|.*conflict.*)\.s3cure-backup$/;
 const CHECK_EVERY = 60 * 1000;            // Änderungen prüfen (nur Dateizeiten, sehr günstig)
 const TOMBSTONE_DAYS = 180;               // so lange werden Löschungen gemerkt
-const SECRET_KEY = /^p[wp]:/;
+const SECRET_KEY = /^(p[wp]|vs):/;  // vs: Geheimnisse eines Tresor-Eintrags
 
 // Einträge aus den Backup-Daten: Schlüssel -> Wert
 function itemsFromPayload(p) {
@@ -35,9 +35,11 @@ function itemsFromPayload(p) {
   for (const [k, v] of Object.entries(b.profiles)) items['snip:' + k] = v;
   for (const l of b.knownHosts) items['kh:' + l] = true;
   if (b.bookmarks !== undefined) items.bm = b.bookmarks;
+  for (const [id, e] of Object.entries(b.vault)) items['vault:' + id] = e;
   if (b.secrets) {
     for (const [n, v] of Object.entries(b.secrets.passwords)) items['pw:' + n] = v;
     for (const [k, v] of Object.entries(b.secrets.passphrases)) items['pp:' + k] = v;
+    for (const [id, v] of Object.entries(b.secrets.vault)) items['vs:' + id] = v;
   }
   return items;
 }
@@ -46,13 +48,16 @@ function itemsFromPayload(p) {
 function payloadFromItems(items, meta, withSecrets) {
   const p = {
     kind: 's3cure-backup-daten', version: 1, created: new Date().toISOString(), platform: process.platform,
-    hosts: {}, snippets: { profiles: {} }, knownHosts: [], settings: {}, secrets: withSecrets ? { passwords: {}, passphrases: {} } : null,
+    hosts: {}, snippets: { profiles: {} }, knownHosts: [], settings: {}, vault: {},
+    secrets: withSecrets ? { passwords: {}, passphrases: {}, vault: {} } : null,
   };
   for (const [k, v] of Object.entries(items)) {
     if (k.startsWith('host:')) p.hosts[k.slice(5)] = v;
     else if (k.startsWith('snip:')) p.snippets.profiles[k.slice(5)] = v;
     else if (k.startsWith('kh:')) p.knownHosts.push(k.slice(3));
     else if (k === 'bm') p.bookmarks = v;
+    else if (k.startsWith('vault:')) p.vault[k.slice(6)] = v;
+    else if (withSecrets && k.startsWith('vs:')) p.secrets.vault[k.slice(3)] = v;
     else if (withSecrets && k.startsWith('pw:')) p.secrets.passwords[k.slice(3)] = v;
     else if (withSecrets && k.startsWith('pp:')) p.secrets.passphrases[k.slice(3)] = v;
   }
@@ -66,6 +71,7 @@ function label(k) {
   if (k.startsWith('snip:')) return t('cloudSync.labelSnippets', { name: k.slice(5) });
   if (k.startsWith('pw:')) return t('cloudSync.labelPassword', { name: k.slice(3) });
   if (k.startsWith('pp:')) return t('cloudSync.labelPassphrase');
+  if (k.startsWith('vault:') || k.startsWith('vs:')) return t('cloudSync.labelVault');
   if (k === 'bm') return t('cloudSync.labelBookmarks');
   return t('cloudSync.labelHostKey');
 }
@@ -113,7 +119,7 @@ function create({ configDir, data, send = () => {}, platform = process.platform 
 
   // Signatur aus Dateizeiten: hat sich lokal oder in der Cloud etwas geändert?
   function signature() {
-    const files = ['hosts.json', 'snippets.json', 'known_hosts', 'bookmarks.json', 'passwords.json', 'passphrases.json'].map(n => path.join(configDir, n));
+    const files = ['hosts.json', 'snippets.json', 'known_hosts', 'bookmarks.json', 'passwords.json', 'passphrases.json', 'vault.json', 'vault-secrets.json'].map(n => path.join(configDir, n));
     if (cfg.folder) files.push(remoteFile());
     return files.map(f => { try { const s = fs.statSync(f); return `${s.mtimeMs}:${s.size}`; } catch { return '-'; } }).join('|');
   }
@@ -133,9 +139,11 @@ function create({ configDir, data, send = () => {}, platform = process.platform 
     for (const l of data.knownHosts()) items['kh:' + l] = true;
     const bm = data.bookmarks();
     if (bm !== undefined) items.bm = bm;
+    for (const [id, e] of Object.entries(data.vault())) items['vault:' + id] = e;
     if (withSecrets) {
       for (const [n, v] of Object.entries(data.passwords().values)) items['pw:' + n] = v;
       for (const [k, v] of Object.entries(data.passphrases().values)) items['pp:' + k] = v;
+      for (const [id, v] of Object.entries(data.vaultSecrets().values)) items['vs:' + id] = v;
     }
     return items;
   }
@@ -143,7 +151,7 @@ function create({ configDir, data, send = () => {}, platform = process.platform 
   // Lokale Änderungen schreiben (gesammelt pro Datei)
   function applyLocal(changes) {
     if (!changes.length) return;
-    let hosts = null, prof = null, kh = null;
+    let hosts = null, prof = null, kh = null, vault = null;
     for (const { k, v, del } of changes) {
       if (k.startsWith('host:')) { hosts = hosts || data.hosts(); if (del) delete hosts[k.slice(5)]; else hosts[k.slice(5)] = v; }
       else if (k.startsWith('snip:')) { prof = prof || data.snippets(); if (del) delete prof[k.slice(5)]; else prof[k.slice(5)] = v; }
@@ -151,7 +159,10 @@ function create({ configDir, data, send = () => {}, platform = process.platform 
       else if (k === 'bm') { if (!del) data.saveBookmarks(v); }
       else if (k.startsWith('pw:')) { if (del) data.removePassword(k.slice(3)); else data.writePassword(k.slice(3), v); }
       else if (k.startsWith('pp:')) { if (del) data.removePassphrase(k.slice(3)); else data.writePassphrase(k.slice(3), v); }
+      else if (k.startsWith('vault:')) { vault = vault || data.vault(); if (del) delete vault[k.slice(6)]; else vault[k.slice(6)] = v; }
+      else if (k.startsWith('vs:')) { if (del) data.removeVaultSecrets(k.slice(3)); else data.writeVaultSecrets(k.slice(3), v); }
     }
+    if (vault) data.saveVault(vault);
     if (hosts) data.saveHosts(hosts);
     if (prof) data.saveSnippets(prof);
     if (kh) data.saveKnownHosts([...kh]);
@@ -284,6 +295,7 @@ function create({ configDir, data, send = () => {}, platform = process.platform 
       send('backup:changed', {
         hosts: changes.some(c => c.k.startsWith('host:') || c.k.startsWith('pw:')),
         snippets: changes.some(c => c.k.startsWith('snip:')),
+        vault: changes.some(c => c.k.startsWith('vault:') || c.k.startsWith('vs:')),
         source: 'sync',
       });
     }

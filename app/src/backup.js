@@ -67,6 +67,7 @@
         if (!r) { d.busy(false); return; } // Speichern abgebrochen
         d.close();
         const lines = [n('backup.nHosts', r.hosts)];
+        if (r.vault) lines.push(n('backup.nVault', r.vault));
         if (d.$('[name=secrets]').checked) lines.push(n('backup.nSecrets', r.passwords));
         if (r.missing) lines.push(n('backup.missing', r.missing));
         info(t('backup.savedTitle'), t('backup.savedMsg', { list: lines.join(', ') }), r.file);
@@ -125,17 +126,19 @@
     const from = PLATFORMS[p.platform]
       ? t('backup.previewFromPlatform', { when: esc(when), platform: PLATFORMS[p.platform] })
       : t('backup.previewFrom', { when: esc(when) });
-    const removedAll = [...p.hosts.removed, ...p.snippets.removed.filter(n => !p.hosts.removed.includes(n))];
+    const removedAll = [...p.hosts.removed, ...p.snippets.removed.filter(n => !p.hosts.removed.includes(n)),
+      ...(p.vault ? p.vault.removed.map(name => t('backup.vaultItem', { name })) : [])];
     const d = dialog(`
       <h2>${t('backup.previewTitle')}</h2>
       <p class="bk-text">${from}</p>
       <div class="bk-rows">
         ${diffRow(t('backup.hosts'), 'server', p.hosts)}
         ${diffRow(t('backup.snippets'), 'bolt', p.snippets)}
+        ${p.vault && (p.vault.added.length || p.vault.changed.length || p.vault.unchanged) ? diffRow(t('backup.vault'), ICON_PATHS.vault ? 'vault' : 'lock', p.vault) : ''}
         <div class="bk-row">${icon('shieldCheck')}<div><div class="bk-row-t">${t('backup.knownHosts')}: ${p.knownHosts.added ? `<b class="bk-new">${t('backup.nNew', { count: p.knownHosts.added })}</b>` : t('backup.nothingNew')}</div></div></div>
         <div class="bk-row">${icon('sliders')}<div><div class="bk-row-t">${t('backup.settings')}: ${p.settings.changed ? `<b class="bk-chg">${t('backup.nChanged', { count: p.settings.changed })}</b>` : t('backup.same')}</div></div></div>
         ${p.bookmarks ? `<div class="bk-row">${icon('star')}<div><div class="bk-row-t">${t('backup.bookmarks')}: ${p.bookmarks.changed ? `<b class="bk-chg">${t('backup.differs')}</b>` : t('backup.same')}</div></div></div>` : ''}
-        ${p.secrets ? `<div class="bk-row">${icon('lock')}<div><div class="bk-row-t">${t('backup.secretsInBackup', { passwords: n('backup.nPasswords', p.secrets.passwords), passphrases: n('backup.nPassphrases', p.secrets.passphrases) })}</div>
+        ${p.secrets ? `<div class="bk-row">${icon('lock')}<div><div class="bk-row-t">${t('backup.secretsInBackup', { passwords: n('backup.nPasswords', p.secrets.passwords), passphrases: n('backup.nPassphrases', p.secrets.passphrases) })}${p.secrets.vault ? ' · ' + n('backup.nVaultSecrets', p.secrets.vault) : ''}</div>
           ${toggleHtml('secrets', t('backup.takeSecrets'), true)}</div></div>` : ''}
       </div>
       <div class="seg bk-mode">
@@ -187,6 +190,7 @@
         const msg = [];
         const h = r.hosts.added.length + (mode === 'merge' && !d.$('[name=overwrite]').checked ? 0 : r.hosts.changed.length);
         msg.push(n('backup.hostsTaken', h));
+        if (r.vault && r.vault.added.length + r.vault.changed.length) msg.push(n('backup.vaultTaken', r.vault.added.length + r.vault.changed.length));
         if (r.knownHosts) msg.push(n('backup.nKnownHosts', r.knownHosts));
         if (r.secrets.saved) msg.push(n('backup.nPasswords', r.secrets.saved));
         info(t('backup.importDone'), msg.join(', ') + '.', [...r.warnings, r.safetyCopy ? t('backup.safetyCopy', { path: r.safetyCopy }) : ''].filter(Boolean).join('\n\n'));
