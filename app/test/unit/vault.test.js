@@ -7,6 +7,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { utils } = require('ssh2');
+// Electron gibt es hier nicht: safeStorage für lib/secrets.js (Abgleich-Passwort) durch einen Platzhalter ersetzen
+require.cache[require.resolve('electron')] = {
+  exports: { safeStorage: { isEncryptionAvailable: () => true, encryptString: v => Buffer.from('x' + v), decryptString: b => b.toString().slice(1) } },
+};
 const vaultLib = require('../../lib/vault');
 const backup = require('../../lib/backup');
 const { hostExtras } = require('../../lib/hosts-extra');
@@ -314,4 +318,63 @@ test('Abgleich: Tresor-Einträge und (nur mit Häkchen) ihre Geheimnisse als eig
   const plain = sync.payloadFromItems(items, {}, false);
   assert.deepEqual(plain.vault, payload.vault);
   assert.equal(plain.secrets, null);
+});
+
+test('Abgleich zwischen zwei Computern: Eintrag, Verknüpfung und (mit Häkchen) Passwort kommen an, Löschen auch', async () => {
+  const sync = require('../../lib/cloud-sync');
+  const cloud = path.join(dir, 'cloud');
+  fs.mkdirSync(cloud);
+  function machine(name, startHosts) {
+    const d = path.join(dir, name);
+    fs.mkdirSync(d);
+    const m = { hosts: startHosts };
+    const sec = fakeSecrets(path.join(d, 'vault-secrets.json'));
+    m.vault = vaultLib.createVault({ configDir: d, secrets: sec, loadHosts: () => JSON.parse(JSON.stringify(m.hosts)), saveHosts: h => { m.hosts = JSON.parse(JSON.stringify(h)); } });
+    const pw = fakeSecrets(path.join(d, 'passwords.json'));
+    m.data = backup.createData({
+      configDir: d, vault: m.vault, passphrases: fakeSecrets(path.join(d, 'passphrases.json')),
+      loadHosts: () => JSON.parse(JSON.stringify(m.hosts)), saveHosts: h => { m.hosts = JSON.parse(JSON.stringify(h)); },
+      passwords: { names: pw.names, read: k => pw.read(k), write: (k, v) => pw.write(k, v), remove: k => pw.remove(k) },
+    });
+    m.sync = sync.create({ configDir: d, data: m.data });
+    return m;
+  }
+  const a = machine('a', { web: { user: 'x', host: 'web.example', port: 22 } });
+  const b = machine('b', {});
+  try {
+    const e = a.vault.upsert({ name: 'Firma', user: 'admin', password: 'geheim' });
+    a.hosts.web.credential = e.id;
+    let st = await a.sync.enable({ folder: cloud, password: 'abgleich-123', secrets: true });
+    assert.equal(st.lastError, null);
+    st = await b.sync.enable({ folder: cloud, password: 'abgleich-123', secrets: true });
+    assert.equal(st.lastError, null);
+    assert.equal(b.vault.get(e.id).name, 'Firma');
+    assert.equal(b.hosts.web.credential, e.id);
+    assert.equal(b.vault.resolve(b.hosts.web).cred.password(), 'geheim');
+    assert.doesNotMatch(fs.readFileSync(path.join(cloud, sync.FILE_NAME), 'utf8'), /geheim|Firma/);
+
+    // Auf A gelöscht -> auch auf B weg, die Verbindung ist dort gelöst
+    await new Promise(r => setTimeout(r, 5));
+    a.vault.remove(e.id);
+    await a.sync.sync();
+    await b.sync.sync();
+    assert.equal(b.vault.has(e.id), false);
+    assert.equal(b.vault.hasAnySecret(e.id), false);
+    assert.equal(b.hosts.web.credential, undefined);
+  } finally { a.sync.disable(); b.sync.disable(); }
+});
+
+test('Abgleich ohne Häkchen: Eintrag kommt an, Passwort nicht', async () => {
+  const sync = require('../../lib/cloud-sync');
+  const cloud = path.join(dir, 'cloud2');
+  fs.mkdirSync(cloud);
+  const e = vault.upsert({ name: 'Firma', user: 'admin', password: 'geheim' });
+  const data = backupData();
+  const s = sync.create({ configDir: dir, data });
+  try {
+    assert.equal((await s.enable({ folder: cloud, password: 'abgleich-123', secrets: false })).lastError, null);
+    const { payload } = await backup.decrypt(fs.readFileSync(path.join(cloud, sync.FILE_NAME), 'utf8'), 'abgleich-123');
+    assert.equal(payload.vault[e.id].name, 'Firma');
+    assert.equal(payload.secrets, null);
+  } finally { s.disable(); }
 });
