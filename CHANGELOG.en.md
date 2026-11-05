@@ -14,6 +14,9 @@ How to write a section (for contributors):
 
 ## [Unreleased]
 
+### Improved
+- **A look with a bit of depth:** Buttons, switches, input fields and cards now look slightly three-dimensional – buttons gently stand out and press in when clicked, input fields are slightly recessed. In light and dark mode; everything works the same as before.
+
 ## 1.3.0 – 2026-11-05
 
 ### New

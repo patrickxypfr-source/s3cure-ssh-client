@@ -14,6 +14,9 @@ So wird ein Abschnitt geschrieben (für Mitwirkende):
 
 ## [Unveröffentlicht]
 
+### Verbessert
+- **Neues Aussehen mit Tiefe:** Knöpfe, Umschalter, Eingabefelder und Karten wirken jetzt ganz leicht plastisch – Knöpfe heben sich sanft ab und geben beim Klicken nach, Eingabefelder sind leicht eingelassen. Hell und dunkel, die Bedienung bleibt gleich.
+
 ## 1.3.0 – 2026-11-05
 
 ### Neu
