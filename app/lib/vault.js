@@ -361,14 +361,25 @@ function register({ ipcMain, clipboard, app, appLock, vault }) {
     try { return await fn(...args); } catch (err) { throw new Error(err instanceof VaultError ? err.message : String(err && err.message || err)); }
   };
 
-  const clearClipboard = () => {
+  // readText/writeText sind je nach Electron-Version synchron oder liefern ein Promise – await passt für beides
+  async function clearClipboard() {
     clearTimeout(clipTimer);
     clipTimer = null;
-    try { if (clipValue != null && clipboard.readText() === clipValue) clipboard.clear(); } catch {}
+    const ours = clipValue;
     clipValue = null;
-  };
-  // Beim Beenden nichts Geheimes in der Zwischenablage lassen
-  if (app) app.on('will-quit', clearClipboard);
+    if (ours == null) return;
+    try { if (await clipboard.readText() === ours) clipboard.clear(); } catch {}
+  }
+  // Beim Beenden innerhalb der 30 s nichts Geheimes in der Zwischenablage lassen. Hier kann nicht auf ein
+  // Promise gewartet werden: Liefert readText keinen Text sofort, wird sicherheitshalber geleert.
+  if (app) app.on('will-quit', () => {
+    if (clipValue == null) return;
+    try {
+      const cur = clipboard.readText();
+      if (typeof cur !== 'string' || cur === clipValue) clipboard.clear();
+    } catch {}
+    clipValue = null;
+  });
 
   const secretOf = (id, kind) => {
     if (!vault.has(id)) throw new VaultError(t('vault.errGone'));
@@ -397,12 +408,12 @@ function register({ ipcMain, clipboard, app, appLock, vault }) {
   }));
 
   // Kopieren: Zwischenablage nach 30 s leeren (nur, wenn noch derselbe Text drin steht)
-  ipcMain.handle('vault:copy', wrap((_e, id, kind) => {
+  ipcMain.handle('vault:copy', wrap(async (_e, id, kind) => {
     if (kind !== 'publicKey' && needsUnlock()) return gate();
     const value = secretOf(id, kind);
     if (value == null) throw new VaultError(t('vault.errNotReadable'));
-    clearClipboard();
-    clipboard.writeText(value);
+    await clearClipboard();
+    await clipboard.writeText(value);
     if (kind === 'publicKey') return { ok: true };
     clipValue = value;
     clipTimer = setTimeout(clearClipboard, CLIPBOARD_CLEAR_MS);

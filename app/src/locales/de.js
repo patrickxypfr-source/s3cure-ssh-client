@@ -1667,7 +1667,7 @@
     'vault.deleteUnused': 'Keine Verbindung nutzt diesen Eintrag.',
     'vault.requireUnlock': 'Tresor nur nach Entsperren',
     'vault.requireUnlockHint': 'Vor dem Anzeigen oder Kopieren nach App-Passwort bzw. Touch ID fragen (danach eine Minute lang nicht erneut). Verbinden geht weiterhin ohne Nachfrage.',
-    'vault.requireUnlockOff': 'Dafür zuerst die App-Sperre einschalten (Schloss-Symbol unten in der Seitenleiste).',
+    'vault.requireUnlockOff': 'Dafür zuerst die App-Sperre einschalten („App-Sperre“ unten in der Seitenleiste).',
     'vault.unlockTitle': 'Tresor entsperren',
     'vault.unlockMsg': 'Bitte gib dein App-Passwort ein, um das Geheimnis anzuzeigen oder zu kopieren.',
     'vault.unlockWrong': 'Das App-Passwort stimmt nicht. Bitte noch einmal:',

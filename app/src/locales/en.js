@@ -1667,7 +1667,7 @@
     'vault.deleteUnused': 'No connection uses this entry.',
     'vault.requireUnlock': 'Vault only after unlocking',
     'vault.requireUnlockHint': 'Ask for the app password or Touch ID before showing or copying (then not again for one minute). Connecting still works without asking.',
-    'vault.requireUnlockOff': 'Turn on the app lock first (lock icon at the bottom of the sidebar).',
+    'vault.requireUnlockOff': 'Turn on the app lock first (“App Lock” at the bottom of the sidebar).',
     'vault.unlockTitle': 'Unlock vault',
     'vault.unlockMsg': 'Please enter your app password to show or copy the secret.',
     'vault.unlockWrong': 'The app password is wrong. Please try again:',
