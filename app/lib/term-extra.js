@@ -9,11 +9,14 @@ const path = require('path');
 const { AnsiStripper } = require('./ansi-strip');
 const i18n = require('./i18n');
 
-function register({ app, ipcMain, dialog, shell, sessions, getWin, platform }) {
+// sendTab(tabId, channel, ...args): nur an das Fenster des Tabs (app/lib/windows.js)
+function register({ app, ipcMain, dialog, shell, sessions, getWin, sendTab, platform }) {
   const splits = new Map(); // Split-ID -> { tabId, stream }
-  const logs = new Map();   // Terminal-ID (Tab oder Split) -> { file, out, strip, detach }
+  const logs = new Map();   // Terminal-ID (Tab oder Split) -> { file, out, strip, detach, tabId }
 
-  const send = (...args) => { const win = getWin(); if (win && !win.isDestroyed()) win.webContents.send(...args); };
+  // Tab zu einer Terminal-ID (Tab selbst oder geteilte Ansicht)
+  const tabOf = id => splits.get(id)?.tabId || logs.get(id)?.tabId || id;
+  const send = (channel, id, ...args) => sendTab(tabOf(id), channel, id, ...args);
   const streamFor = id => splits.get(id)?.stream || sessions.get(id)?.stream || null;
 
   // ---------- Geteilte Ansicht ----------
@@ -29,7 +32,7 @@ function register({ app, ipcMain, dialog, shell, sessions, getWin, platform }) {
         stream.stderr.on('data', d => send('split:data', splitId, d));
         stream.on('close', () => {
           splits.delete(splitId);
-          send('split:closed', splitId);
+          sendTab(tabId, 'split:closed', splitId);
         });
         resolve(true);
       });
@@ -55,7 +58,7 @@ function register({ app, ipcMain, dialog, shell, sessions, getWin, platform }) {
     if (rest) log.out.write(rest);
     const when = new Date().toLocaleString(i18n.locale());
     log.out.end('\n' + (reason ? i18n.t('termExtra.logEndedReason', { when, reason }) : i18n.t('termExtra.logEnded', { when })) + '\n');
-    send('log:stopped', id, log.file);
+    sendTab(log.tabId, 'log:stopped', id, log.file);
     return log.file;
   }
 
@@ -88,7 +91,7 @@ function register({ app, ipcMain, dialog, shell, sessions, getWin, platform }) {
     out.on('error', err => { send('log:error', id, err.message); stopLog(id); });
     out.write(i18n.t('termExtra.logHeader', { title: title || '', when: new Date().toLocaleString(i18n.locale()) }) + '\n\n');
     logs.set(id, {
-      file: r.filePath, out, strip,
+      file: r.filePath, out, strip, tabId: tabOf(id),
       detach: () => { live.off('data', onData); live.stderr.off('data', onData); live.off('close', onClose); },
     });
     return r.filePath;

@@ -54,15 +54,17 @@ function applyAppearance(nativeTheme, values) {
   if (nativeTheme.themeSource !== mode) nativeTheme.themeSource = mode;
 }
 
-function register({ app, ipcMain, nativeTheme, configDir }) {
+// sendOthers(sender, channel, ...args): geänderte Einstellungen an die anderen Fenster (app/lib/windows.js)
+function register({ app, ipcMain, nativeTheme, configDir, sendOthers = () => {} }) {
   const store = create(configDir);
   i18n.setPreference(store.load().language); // Sprache: system/de/en (lib/i18n.js)
   app.whenReady().then(() => applyAppearance(nativeTheme, store.load()));
   ipcMain.handle('settings:get', () => store.load());
-  ipcMain.handle('settings:set', (_e, patch) => {
+  ipcMain.handle('settings:set', (e, patch) => {
     const values = store.set(patch);
     applyAppearance(nativeTheme, values);
     i18n.setPreference(values.language);
+    sendOthers(e && e.sender, 'settings:changed', values);
     return values;
   });
   return store;

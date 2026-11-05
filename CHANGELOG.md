@@ -14,6 +14,16 @@ So wird ein Abschnitt geschrieben (für Mitwirkende):
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Mehrere Fenster:** „Neues Fenster“ mit Cmd+N (Mac) bzw. Strg+Umschalt+N (Windows/Linux), über die Befehlspalette oder auf dem Mac über das Dock- und Ablage-Menü.
+- **Tabs zwischen Fenstern verschieben:** Rechtsklick auf einen Tab → „Tab in neues Fenster verschieben“ oder „Tab in Fenster 2 verschieben“ – oder den Tab einfach aus der Tab-Leiste herausziehen (neues Fenster) bzw. auf ein anderes Fenster ziehen. Die Verbindung bleibt dabei bestehen, der Terminal-Inhalt wandert mit – kein Neuverbinden.
+- **Sitzung wiederherstellen mit allen Fenstern:** Nach einem Neustart oder Update sind alle Fenster wieder da – mit Position, Größe und ihren Tabs.
+
+### Verbessert
+- Jedes Fenster ist für sich: Übertragungen, Tunnel, Rückfragen und Meldungen erscheinen im Fenster des jeweiligen Tabs. Wer ein Fenster schließt, beendet nur dessen Verbindungen.
+- Neue Verbindungen und geänderte Einstellungen erscheinen sofort in allen offenen Fenstern.
+- Mac: Nach dem Schließen des letzten Fensters bleibt die App wie üblich im Dock. Ein Klick aufs Dock-Symbol öffnet das Fenster mit seinen Tabs wieder.
+
 ## 1.4.0 – 2026-11-05
 
 ### Verbessert

@@ -7,6 +7,7 @@ Desktop-SSH/SFTP-Client (Electron) für macOS, Windows und Linux (AppImage). Obe
 - `app/preload.js` – Brücke (contextIsolation), stellt `window.api` bereit.
 - `app/src/index.html`, `renderer.js`, `style.css`, `icons.js` – Oberfläche (kein Framework, kein Bundler). xterm.js 6 + addon-fit.
 - FTP/FTPS (nur Dateien): `app/lib/ftp.js` (basic-ftp, bildet die SFTP-Schnittstelle von ssh2 nach), `app/lib/files-adapter.js` (`getSftp(tabId)` liefert SFTP oder FTP), Oberfläche `app/src/ftp-ui.js`. Felder in `hosts.json`: `protocol` (`ftp`/`ftps`/`ftps-implicit`, fehlt = SFTP), `ftpPassive`, `ftpInsecure`; gemerkte Zertifikate in `ftp_certs.json`.
+- Mehrere Fenster: `app/lib/windows.js` (welcher Tab gehört zu welchem Fenster; Ereignisse eines Tabs mit `windows.sendTab(tabId, …)`, allgemeine mit `sendAll`, Dialoge an `windows.current()` – nie ein festes `win`), `app/lib/window-tabs.js` (Tab verschieben), Oberfläche `app/src/windows.js`. Verbindungen gehören dem Hauptprozess, ein Fenster zeigt sie nur an.
 - `app/tools/win-finish.mjs` – Icon/Infos in die Windows-exe (nutzt macOS-Werkzeuge `sips`/`ditto`).
 - `myssh.py` – älteres Python-CLI. `server/s3` – Verwaltungsskript für den Server des Nutzers.
 - Konfiguration: `~/.myssh/hosts.json`, `known_hosts`, `passwords.json` (verschlüsselt). Testhaken: `S3CURE_CONFIG_DIR`, `S3CURE_PLATFORM` (`darwin`/`win32`/`linux`).

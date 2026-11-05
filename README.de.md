@@ -188,7 +188,8 @@ Das Update-Fenster zeigt dabei, **was neu** ist, und nach dem ersten Start einer
 - **Übersicht-Ansicht:** Dienste (systemd) und Docker-Container sehen, starten, stoppen, Logs ansehen
 - **Befehlspalette** mit Cmd/Strg+K – Verbindungen, Tabs, Befehle und Aktionen per Tastatur
 - Bis zu **vier Terminals** in einem Tab, Befehlsknöpfe für alle Server
-- **Sitzung wiederherstellen:** nach Neustart oder Update sind die Tabs wieder da
+- **Sitzung wiederherstellen:** nach Neustart oder Update sind Fenster und Tabs wieder da
+- **Mehrere Fenster:** Cmd+N (Mac) bzw. Strg+Umschalt+N (Windows/Linux); Tab per Rechtsklick oder durch Herausziehen aus der Tab-Leiste in ein anderes Fenster verschieben – die Verbindung bleibt bestehen
 - **Ansicht „Übersicht“:** Dienste (systemd) mit Status, Start/Stop/Neustart und Logs, Docker-Container, große Systemwerte, Laufwerke, Prozesse und die größten Ordner – ohne etwas ins Terminal zu tippen
 
 </details>

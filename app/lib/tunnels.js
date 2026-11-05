@@ -78,13 +78,15 @@ function friendlyForwardError(err, host, port) {
   return i18n.t('tunnels.errUnreachable', { host, port, error: msg });
 }
 
-function createTunnelManager({ ipcMain, shell, getWin, getSession, loadHosts, saveHosts }) {
+// sendTab(tabId, channel, ...args): nur an das Fenster dieses Tabs (app/lib/windows.js)
+function createTunnelManager({ ipcMain, shell, getWin, sendTab, getSession, loadHosts, saveHosts }) {
   // Tab-ID -> { hostName, client, running: Map(tunnelId -> Lauf), onTcp }
   const tabs = new Map();
 
-  const send = (channel, ...args) => {
+  const send = (channel, tabId, ...args) => {
+    if (sendTab) { sendTab(tabId, channel, tabId, ...args); return; }
     const win = getWin();
-    if (win && !win.isDestroyed()) win.webContents.send(channel, ...args);
+    if (win && !win.isDestroyed()) win.webContents.send(channel, tabId, ...args);
   };
 
   function tabState(tabId) {

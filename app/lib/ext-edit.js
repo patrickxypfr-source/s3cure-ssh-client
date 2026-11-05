@@ -74,7 +74,8 @@ function knownEditors(platform) {
 
 const appName = file => path.basename(file).replace(/\.(app|exe)$/i, '');
 
-function register({ app, ipcMain, shell, dialog, getSftp, sftpError, transfers, getWin, configDir, platform }) {
+// ui: Fenster-Verwaltung (app/lib/windows.js) – Listen und Rückfragen nur an das Fenster des Tabs
+function register({ app, ipcMain, shell, dialog, getSftp, sftpError, transfers, getWin, ui, configDir, platform }) {
   const IS_MAC = platform === 'darwin';
   const IS_WIN = platform === 'win32';
   const BASE = path.join(app.getPath('temp'), 's3cure-edit');
@@ -82,7 +83,6 @@ function register({ app, ipcMain, shell, dialog, getSftp, sftpError, transfers, 
   const files = new Map(); // id -> Eintrag
   const pendingAsks = new Map();
 
-  const send = (channel, ...args) => { const w = getWin(); if (w && !w.isDestroyed()) w.webContents.send(channel, ...args); };
   const clean = err => (err instanceof Error && typeof err.code !== 'number' ? err : sftpError(err));
 
   // Reste früherer Sitzungen (Absturz) aufräumen
@@ -158,7 +158,8 @@ function register({ app, ipcMain, shell, dialog, getSftp, sftpError, transfers, 
     id: f.id, tabId: f.tabId, remote: f.remote, name: f.name, label: f.label, app: f.appName,
     opened: f.opened, lastUpload: f.lastUpload, uploads: f.uploads, state: f.state, error: f.error,
   });
-  const publish = () => send('extedit:status', [...files.values()].map(publicFile));
+  const publish = () => ui.sendList('extedit:status', [...files.values()].map(publicFile));
+  ui.onMove(() => publish()); // Tab in ein anderes Fenster verschoben
 
   // opts: { app: Pfad | null, label: Anzeigename der Verbindung }
   ipcMain.handle('extedit:open', async (_e, tabId, remote, opts = {}) => {
@@ -227,11 +228,13 @@ function register({ app, ipcMain, shell, dialog, getSftp, sftpError, transfers, 
     if (f.dirty && Date.now() - f.changedAt >= SETTLE) await upload(f);
   }
 
-  function ask(req) {
+  // Rückfrage im Fenster des Tabs; ist es zu, gilt das als „Nein“
+  function ask(tabId, req) {
     return new Promise(resolve => {
+      if (!ui.ownerWc(tabId)) { resolve(null); return; }
       const reqId = crypto.randomUUID();
       pendingAsks.set(reqId, resolve);
-      send('extedit:ask', { reqId, ...req });
+      ui.sendTab(tabId, 'extedit:ask', { reqId, ...req });
     });
   }
   ipcMain.on('extedit:answer', (_e, reqId, value) => {
@@ -254,7 +257,7 @@ function register({ app, ipcMain, shell, dialog, getSftp, sftpError, transfers, 
       const now = await p(cb => sftp.stat(f.remote, cb)).catch(() => null);
       if (now && !force && (now.mtime !== f.base.mtime || now.size !== f.base.size)) {
         const fmt = (s, m) => `${i18n.fmtDateTime(m * 1000)} · ${t('extEdit.bytes', { size: i18n.fmtNumber(s) })}`;
-        const ok = await ask({
+        const ok = await ask(f.tabId, {
           kind: 'confirm', title: T.conflictTitle, message: T.conflictMsg(f.name),
           detail: T.conflictDetail(fmt(now.size, now.mtime), fmt(f.seen.size, Math.floor(f.seen.mtime / 1000))),
           okLabel: T.conflictOk, danger: true,

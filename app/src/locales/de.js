@@ -1604,6 +1604,14 @@
     'tunnels.errGone': 'Diesen Tunnel gibt es nicht mehr.',
     'tunnels.errNoHost': 'Keine Verbindung namens „{name}“ gespeichert.',
     'tunnels.errNotRunning': 'Der Tunnel läuft nicht.',
+    // ---------- Mehrere Fenster (src/windows.js, lib/window-tabs.js) ----------
+    'windows.newWindow': 'Neues Fenster',
+    'windows.moveToNew': 'Tab in neues Fenster verschieben',
+    'windows.moveTo': 'Tab in {window} verschieben',
+    'windows.windowNo': 'Fenster {no}',
+    'windows.windowNamed': 'Fenster {no} („{title}“)',
+    'windows.waitConnecting': 'Dieser Tab verbindet sich gerade. Bitte warte, bis die Verbindung steht, und verschiebe ihn dann.',
+    'windows.moveFailed': 'Der Tab konnte nicht verschoben werden.',
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = dict;
   else (root.S3_LOCALES = root.S3_LOCALES || {}).de = dict;
