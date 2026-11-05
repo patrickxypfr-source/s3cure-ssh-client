@@ -478,7 +478,11 @@ function formatSize(n) {
 }
 
 function formatDate(ms) {
-  return new Date(ms).toLocaleString(I18N.locale, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  // Englisch: kurzes Jahr („11/5/26, 9:41 AM“), damit es mit AM/PM in die Spalte passt
+  const opts = I18N.lang === 'en'
+    ? { day: 'numeric', month: 'numeric', year: '2-digit', hour: 'numeric', minute: '2-digit' }
+    : { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+  return new Date(ms).toLocaleString(I18N.locale, opts);
 }
 
 function buildFilesView(tab) {
