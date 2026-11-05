@@ -14,6 +14,8 @@ So wird ein Abschnitt geschrieben (für Mitwirkende):
 
 ## [Unveröffentlicht]
 
+## 1.5.0 – 2026-11-05
+
 ### Neu
 - **Mehrere Fenster:** „Neues Fenster“ mit Cmd+N (Mac) bzw. Strg+Umschalt+N (Windows/Linux), über die Befehlspalette oder auf dem Mac über das Dock- und Ablage-Menü.
 - **Tabs zwischen Fenstern verschieben:** Rechtsklick auf einen Tab → „Tab in neues Fenster verschieben“ oder „Tab in Fenster 2 verschieben“ – oder den Tab einfach aus der Tab-Leiste herausziehen (neues Fenster) bzw. auf ein anderes Fenster ziehen. Die Verbindung bleibt dabei bestehen, der Terminal-Inhalt wandert mit – kein Neuverbinden.

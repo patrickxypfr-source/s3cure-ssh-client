@@ -14,6 +14,8 @@ How to write a section (for contributors):
 
 ## [Unreleased]
 
+## 1.5.0 – 2026-11-05
+
 ### New
 - **Multiple windows:** “New window” with Cmd+N (Mac) or Ctrl+Shift+N (Windows/Linux), from the command palette, or on the Mac from the Dock and File menu.
 - **Move tabs between windows:** right-click a tab → “Move tab to new window” or “Move tab to Window 2” – or simply drag the tab out of the tab bar (new window) or onto another window. The connection stays open and the terminal content comes along – no reconnecting.
