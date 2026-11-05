@@ -23,7 +23,7 @@ function create(configDir) {
 
   function save(values) {
     const text = JSON.stringify(values, null, 2) + '\n';
-    if (Buffer.byteLength(text) > MAX_BYTES) throw new Error('Einstellungen sind zu groß.');
+    if (Buffer.byteLength(text) > MAX_BYTES) throw new Error(i18n.t('settings.tooLarge'));
     fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
     // Erst in eine Hilfsdatei schreiben, dann umbenennen – so geht bei einem Absturz nichts kaputt
     const tmp = file + '.tmp';
@@ -34,10 +34,10 @@ function create(configDir) {
 
   // patch: { schlüssel: wert } – null/undefined löscht den Schlüssel (= Standardwert)
   function set(patch) {
-    if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new Error('Ungültige Einstellungen.');
+    if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new Error(i18n.t('settings.invalid'));
     const next = { ...load() };
     for (const [key, value] of Object.entries(patch)) {
-      if (!/^[\w.-]{1,64}$/.test(key)) throw new Error(`Ungültiger Name: ${key}`);
+      if (!/^[\w.-]{1,64}$/.test(key)) throw new Error(i18n.t('settings.invalidName', { key }));
       if (value === null || value === undefined) delete next[key];
       else next[key] = JSON.parse(JSON.stringify(value));
     }

@@ -71,17 +71,17 @@
   modal.innerHTML = `
     <div class="dialog settings-dialog" role="dialog" aria-labelledby="settings-title">
       <div class="settings-head">
-        <h2 id="settings-title">Einstellungen</h2>
-        <button class="mini-btn" data-close title="Schließen (Esc)">${icon('close')}</button>
+        <h2 id="settings-title">${t('settings.title')}</h2>
+        <button class="mini-btn" data-close title="${t('settings.closeEsc')}">${icon('close')}</button>
       </div>
       <div class="settings-body">
         <nav class="settings-nav"></nav>
         <div class="settings-content"></div>
       </div>
       <div class="actions">
-        <button type="button" class="btn" data-reset>Auf Standard zurücksetzen</button>
+        <button type="button" class="btn" data-reset>${t('settings.resetDefaults')}</button>
         <div class="spacer"></div>
-        <button type="button" class="btn primary" data-close>Fertig</button>
+        <button type="button" class="btn primary" data-close>${t('common.done')}</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
@@ -217,7 +217,7 @@
   modal.querySelector('[data-reset]').addEventListener('click', async () => {
     const s = sections.find(x => x.id === current);
     if (!s) return;
-    const ok = await askLocal({ kind: 'confirm', title: 'Zurücksetzen?', message: `Alle Einstellungen unter „${s.title}“ auf den Standard zurücksetzen?`, okLabel: 'Zurücksetzen', danger: true });
+    const ok = await askLocal({ kind: 'confirm', title: t('settings.resetQ'), message: t('settings.resetMsg', { section: s.title }), okLabel: t('common.reset'), danger: true });
     if (!ok) return;
     await set(Object.fromEntries(Object.keys(s.defaults || {}).map(k => [k, null])));
     show(s.id);
@@ -242,21 +242,45 @@
   const gear = document.createElement('button');
   gear.id = 'open-settings';
   gear.className = 'foot-btn';
-  gear.title = `Einstellungen (${api.platform === 'darwin' ? 'Cmd' : 'Strg'}+,)`;
+  gear.title = t('settings.titleShortcut', { key: api.platform === 'darwin' ? 'Cmd' : t('settings.keyCtrl') });
   gear.innerHTML = icon('gear');
-  gear.append('Einstellungen');
+  gear.append(t('settings.title'));
   gear.addEventListener('click', () => open());
   foot.appendChild(gear);
 
   // ---------- Allgemein ----------
 
+  // Sprache: gilt nach dem Neuladen des Fensters (src/i18n.js liest sie beim Laden, lib/i18n.js im Hauptprozess sofort)
+  const langNotice = document.createElement('div');
+  langNotice.className = 'settings-lang-notice';
+  langNotice.innerHTML = `<span>${t('settings.languageReloadHint')}</span>`;
+  const reloadBtn = document.createElement('button');
+  reloadBtn.type = 'button';
+  reloadBtn.className = 'btn primary';
+  reloadBtn.textContent = t('settings.languageReloadNow');
+  reloadBtn.addEventListener('click', async () => {
+    if (typeof tabs !== 'undefined' && tabs.size) {
+      const ok = await askLocal({ kind: 'confirm', title: t('settings.languageReloadQ'), message: t('settings.languageReloadMsg'), okLabel: t('settings.languageReloadNow') });
+      if (!ok) return;
+    }
+    try { window.SessionRestore?.save?.(); } catch {}
+    api.reloadForLanguage();
+  });
+  langNotice.appendChild(reloadBtn);
+  const updateLangNotice = () => { langNotice.hidden = (get('language') || 'system') === (I18N.pref || 'system'); };
+  listeners.push((_v, changed) => { if (changed.includes('language')) updateLangNotice(); });
+
   registerSettingsSection({
-    id: 'general', title: 'Allgemein', icon: 'sun', order: 0,
-    defaults: { appearance: 'system' },
+    id: 'general', title: t('settings.general'), icon: 'sun', order: 0,
+    defaults: { appearance: 'system', language: 'system' },
     fields: [
-      { key: 'appearance', type: 'segment', label: 'Erscheinungsbild', hint: 'System folgt der Einstellung von macOS bzw. Windows.',
-        options: [['system', 'System'], ['light', 'Hell'], ['dark', 'Dunkel']] },
+      { key: 'appearance', type: 'segment', label: t('settings.appearance'), hint: t('settings.appearanceHint'),
+        options: [['system', t('settings.system')], ['light', t('settings.light')], ['dark', t('settings.dark')]] },
+      { key: 'language', type: 'segment', label: t('settings.language'), hint: t('settings.languageHint'),
+        // Sprachnamen immer in der eigenen Sprache
+        options: [['system', t('settings.system')], ['de', 'Deutsch'], ['en', 'English']] },
     ],
+    render(box) { updateLangNotice(); box.appendChild(langNotice); },
   });
 
   window.Settings = { ready, get, all, set, onChange: cb => listeners.push(cb), open, close, isOpen: () => !modal.hidden };

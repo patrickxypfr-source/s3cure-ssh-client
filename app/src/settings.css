@@ -47,3 +47,12 @@
 .settings-num input[type=range] { width: 150px; height: auto; padding: 0; border: none; box-shadow: none; background: transparent; accent-color: var(--accent); }
 .settings-num .unit { min-width: 40px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .settings-dialog > .actions { margin: 0; padding: 14px 18px; border-top: 1px solid var(--border); }
+
+/* Hinweis nach dem Sprachwechsel (src/settings.js) */
+.settings-lang-notice {
+  display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 10px 12px;
+  border-radius: 8px; background: var(--accent-soft); color: var(--text);
+}
+.settings-lang-notice[hidden] { display: none; }
+.settings-lang-notice span { flex: 1; }
+.settings-lang-notice .btn { flex-shrink: 0; }
