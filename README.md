@@ -182,12 +182,16 @@ Das Update-Fenster zeigt dabei, **was neu** ist, und nach dem ersten Start einer
 - **Eigene Befehlsknöpfe** pro Server – mit Icons, Rückfrage vor gefährlichen Befehlen, Eingabefeldern (`{name}` im Befehl), Ausklappmenüs, Export/Import als JSON – dazu Knöpfe **„Für alle Server“**, die bei jeder Verbindung erscheinen
 - Hilfsleiste für `nano` (Speichern & schließen per Klick)
 - Server-Übersicht in der Leiste: CPU, RAM, Platte, Laufzeit
+- **Übersicht-Ansicht:** Dienste (systemd) und Docker-Container sehen, starten, stoppen, Logs ansehen
+- **Befehlspalette** mit Cmd/Strg+K – Verbindungen, Tabs, Befehle und Aktionen per Tastatur
+- Bis zu **vier Terminals** in einem Tab, Befehlsknöpfe für alle Server
+- **Sitzung wiederherstellen:** nach Neustart oder Update sind die Tabs wieder da
 - **Ansicht „Übersicht“:** Dienste (systemd) mit Status, Start/Stop/Neustart und Logs, Docker-Container, große Systemwerte, Laufwerke, Prozesse und die größten Ordner – ohne etwas ins Terminal zu tippen
 
 </details>
 
 <details open>
-<summary><b>Dateien (SFTP)</b></summary>
+<summary><b>Dateien (SFTP, FTP, FTPS)</b></summary>
 
 - Dateibrowser mit Hochladen, Herunterladen, Umbenennen, Neuer Ordner, Löschen (mit Rückfrage)
 - **„Mein Computer“:** eigene Dateien links, Server rechts – Dateien und ganze Ordner per Ziehen & Ablegen kopieren, mit Rückfrage vor dem Überschreiben
@@ -196,7 +200,12 @@ Das Update-Fenster zeigt dabei, **was neu** ist, und nach dem ersten Start einer
 - Vorschau für Bilder und Text (Leertaste)
 - Rechte ändern (chmod), ZIP packen und entpacken
 - Live-Suche im Ordner oder über den ganzen Server
-- Übertragungsliste mit Fortschritt und Abbrechen
+- Übertragungsliste: **pausieren, fortsetzen**, abgebrochene Übertragungen weitermachen, mehrere gleichzeitig, Geschwindigkeitslimit
+- **Ordner synchronisieren** (Vorschau, Richtung wählbar, Ausschlüsse) und **„Server-Ordner aktuell halten“**
+- **Im eigenen Editor bearbeiten** (z. B. VS Code) – Speichern lädt automatisch hoch
+- **Dateien vergleichen** – Unterschiede farbig nebeneinander
+- **Lesezeichen**, Zurück/Vor, Spalten für Rechte, Besitzer und Gruppe
+- **FTP und FTPS** für Webhosting ohne SSH
 - „Terminal hier öffnen“
 
 </details>
@@ -216,6 +225,9 @@ Das Update-Fenster zeigt dabei, **was neu** ist, und nach dem ersten Start einer
 - Host-Schlüssel werden beim ersten Verbinden gemerkt und danach geprüft (wie bei OpenSSH); bei einem **geänderten Schlüssel** klare Warnung mit altem und neuem Fingerprint
 - **Bekannte Server verwalten:** alle gespeicherten Host-Schlüssel (auch aus `~/.ssh/known_hosts`) ansehen, durchsuchen und einzeln entfernen
 - Optionale **App-Sperre** mit Passwort oder Touch ID
+- **Schlüssel & Server:** bekannte Server und eigene SSH-Schlüssel verwalten, Warnung bei geändertem Server-Schlüssel
+- **Agent-Weiterleitung** und Verbindung über **Proxy** (SOCKS5/HTTP)
+- **Backup & Umzug:** alles verschlüsselt exportieren/importieren, optional Abgleich über iCloud/OneDrive
 
 </details>
 
