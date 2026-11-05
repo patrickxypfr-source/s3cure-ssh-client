@@ -227,7 +227,6 @@ The update window shows **what's new**, and the first time a new version starts,
 - **Agent forwarding** per connection (e.g. `git pull` on the server using the key from your own computer)
 - Import from `~/.ssh/config`
 - **Port forwarding:** local, remote and SOCKS proxy – optionally started automatically on connect
-- **📱 iPhone app (S3cure Agent):** see your servers on the go – status, services, Docker, logs (live), restart services or the whole server (with a fresh 2FA code), push notifications when something breaks. A small agent on your server, HTTPS + password + 2FA, no App Store needed → [agent/README.md](agent/README.md)
 - **Database view (PostgreSQL):** browse, sort and search tables, change cells and delete rows (only via primary key, always confirmed), run SQL, export CSV – through the SSH tunnel, the database never has to be open to the network. Reads the credentials from your server’s `.env` with one click
 - **Security check:** grade A–F per server – root login, password login, firewall, fail2ban, updates, auto-updates, open ports (e.g. a public database), certificates, clock. “Fix” shows the exact command and runs it visibly in the terminal after you confirm
 - **.env manager:** finds all `.env` files on the server, values hidden by default, compare with `.env.example` (missing keys with one click), save with automatic backup on the server, restore backups

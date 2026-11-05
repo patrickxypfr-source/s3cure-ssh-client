@@ -14,9 +14,6 @@ So wird ein Abschnitt geschrieben (für Mitwirkende):
 
 ## [Unveröffentlicht]
 
-### Neu
-- **iPhone-App (S3cure Agent):** Ein kleiner Agent auf dem Server bringt eine App fürs iPhone – über Safari „Zum Home-Bildschirm“, kein App Store nötig. Status mit Verlauf (24 Std./7 Tage), alle Dienste und Docker-Container mit Starten, Stoppen, Neu starten und Logs (auch live), Server neu starten (nur mit frischem 2FA-Code), Mitteilungen, wenn ein Dienst ausfällt, die Platte voll wird oder ein Server nicht erreichbar ist. Anmeldung mit Passwort und 2FA, mehrere Benutzer (Admin oder „nur ansehen“), Protokoll aller Aktionen, mehrere Server in einer App. Einrichten: `s3cure-agent.tar.gz` aus dem Release, `install.sh --domain …` – Anleitung in agent/README.md.
-
 ## 1.7.0 – 2026-11-05
 
 ### Neu
