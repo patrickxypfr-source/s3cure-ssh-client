@@ -1,16 +1,21 @@
 /* =========================================================
-   S3cure SSH Client – cleanes, flaches Design (hell & dunkel)
+   S3cure SSH Client – cleanes Design mit einem Hauch Neumorphism (hell & dunkel)
    ========================================================= */
 
+/* Neumorphism-Bausteine (--neu-*):
+   Stärke an EINER Stelle einstellen: --neu-strength (0 = flach, 1 = Standard, 1.5 = deutlicher).
+   Sie skaliert die Deckkraft aller weichen Schatten und Lichtkanten. Farben der Schatten:
+   --neu-shade (dunkler Schatten, unten rechts) und --neu-light (Licht, oben links), je als „r, g, b“. */
+
 :root {
-  --bg: #f7f7f8;          /* Fensterfläche */
-  --sidebar: #f1f1f3;
+  --bg: #f3f4f6;          /* Fensterfläche (etwas dunkler als die Karten, damit das Licht oben links sichtbar wird) */
+  --sidebar: #eef0f3;
   --surface: #ffffff;     /* Karten, Terminal, Eingaben */
-  --hover: #ececef;
-  --border: #e4e4e8;
-  --border-strong: #d4d4da;
+  --hover: #e9eaef;
+  --border: #e2e3e9;
+  --border-strong: #d3d5dc;
   --text: #18181b;
-  --muted: #6b6b75;
+  --muted: #62626c;       /* auf --sidebar noch > 5:1 (WCAG AA) */
   --faint: #a1a1aa;
   --accent: #e11d2a;
   --accent-hover: #c5121e;
@@ -19,7 +24,43 @@
   --ok: #16a34a;
   --warn: #d97706;
   --shadow-sm: 0 1px 2px rgba(16, 16, 20, .06);
-  --shadow-lg: 0 24px 60px rgba(16, 16, 20, .18), 0 2px 8px rgba(16, 16, 20, .06);
+  --shadow-lg: 0 24px 60px rgba(16, 16, 20, .18), 0 2px 8px rgba(16, 16, 20, .06), var(--neu-highlight);
+
+  /* ---- Neumorphism (hell): weiches Licht oben links, kühler Schatten unten rechts ---- */
+  --neu-strength: 1;
+  --neu-shade: 24, 28, 48;
+  --neu-light: 255, 255, 255;
+  --neu-edge: var(--border);                  /* Rand erhabener Flächen: weicher als --border-strong */
+  --neu-well-bg: #eceef2;                     /* Mulde (Umschalter, Schalter-Spur) */
+  --neu-highlight: inset 0 1px 0 rgba(var(--neu-light), calc(.7 * var(--neu-strength)));
+  --neu-raised:
+    -2px -2px 5px rgba(var(--neu-light), calc(.9 * var(--neu-strength))),
+    2px 2px 5px rgba(var(--neu-shade), calc(.08 * var(--neu-strength))),
+    var(--neu-highlight);
+  --neu-raised-hover:
+    -3px -3px 7px rgba(var(--neu-light), calc(.95 * var(--neu-strength))),
+    3px 3px 8px rgba(var(--neu-shade), calc(.11 * var(--neu-strength))),
+    var(--neu-highlight);
+  --neu-raised-sm:
+    -1px -1px 3px rgba(var(--neu-light), calc(.8 * var(--neu-strength))),
+    1px 1px 3px rgba(var(--neu-shade), calc(.09 * var(--neu-strength)));
+  --neu-pressed:
+    inset 2px 2px 4px rgba(var(--neu-shade), calc(.1 * var(--neu-strength))),
+    inset -2px -2px 4px rgba(var(--neu-light), calc(.75 * var(--neu-strength)));
+  --neu-inset:
+    inset 1px 1px 3px rgba(var(--neu-shade), calc(.07 * var(--neu-strength))),
+    inset -1px -1px 2px rgba(var(--neu-light), calc(.6 * var(--neu-strength)));
+  --neu-well:
+    inset 1px 1px 3px rgba(var(--neu-shade), calc(.09 * var(--neu-strength))),
+    inset -1px -1px 3px rgba(var(--neu-light), calc(.85 * var(--neu-strength)));
+  --neu-card:
+    -4px -4px 12px rgba(var(--neu-light), calc(.75 * var(--neu-strength))),
+    4px 4px 14px rgba(var(--neu-shade), calc(.07 * var(--neu-strength)));
+  /* Roter Akzent: bleibt kräftig, nur ein dezenter farbiger Schein */
+  --neu-accent-glow:
+    0 2px 8px color-mix(in srgb, var(--accent) calc(28% * var(--neu-strength)), transparent),
+    inset 0 1px 0 rgba(255, 255, 255, calc(.2 * var(--neu-strength)));
+  --neu-accent-pressed: inset 0 2px 4px rgba(0, 0, 0, calc(.2 * var(--neu-strength)));
   --mono: "SF Mono", ui-monospace, Menlo, "Cascadia Mono", Consolas, monospace;
 }
 
@@ -40,7 +81,41 @@
     --accent-ring: rgba(240, 53, 63, .3);
     --ok: #22c55e;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
-    --shadow-lg: 0 24px 60px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .04);
+    --shadow-lg: 0 24px 60px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .04), var(--neu-highlight);
+
+    /* ---- Neumorphism (dunkel): feine helle Oberkante + tiefer weicher Schatten, kaum Licht von außen ---- */
+    --neu-shade: 0, 0, 0;
+    --neu-edge: rgba(255, 255, 255, calc(.055 * var(--neu-strength)));
+    --neu-well-bg: #0b0b0d;
+    --neu-highlight: inset 0 1px 0 rgba(var(--neu-light), calc(.06 * var(--neu-strength)));
+    --neu-raised:
+      -1px -1px 2px rgba(var(--neu-light), calc(.025 * var(--neu-strength))),
+      2px 3px 6px rgba(var(--neu-shade), calc(.45 * var(--neu-strength))),
+      var(--neu-highlight);
+    --neu-raised-hover:
+      -1px -1px 3px rgba(var(--neu-light), calc(.035 * var(--neu-strength))),
+      3px 4px 10px rgba(var(--neu-shade), calc(.55 * var(--neu-strength))),
+      inset 0 1px 0 rgba(var(--neu-light), calc(.085 * var(--neu-strength)));
+    --neu-raised-sm:
+      1px 2px 4px rgba(var(--neu-shade), calc(.4 * var(--neu-strength))),
+      inset 0 1px 0 rgba(var(--neu-light), calc(.05 * var(--neu-strength)));
+    --neu-pressed:
+      inset 2px 2px 5px rgba(var(--neu-shade), calc(.5 * var(--neu-strength))),
+      inset -1px -1px 2px rgba(var(--neu-light), calc(.035 * var(--neu-strength)));
+    --neu-inset:
+      inset 1px 2px 4px rgba(var(--neu-shade), calc(.38 * var(--neu-strength))),
+      inset 0 -1px 0 rgba(var(--neu-light), calc(.03 * var(--neu-strength)));
+    --neu-well:
+      inset 1px 2px 4px rgba(var(--neu-shade), calc(.45 * var(--neu-strength))),
+      inset 0 -1px 0 rgba(var(--neu-light), calc(.04 * var(--neu-strength)));
+    --neu-card:
+      -2px -2px 8px rgba(var(--neu-light), calc(.022 * var(--neu-strength))),
+      5px 6px 18px rgba(var(--neu-shade), calc(.45 * var(--neu-strength))),
+      inset 0 1px 0 rgba(var(--neu-light), calc(.045 * var(--neu-strength)));
+    --neu-accent-glow:
+      0 2px 10px color-mix(in srgb, var(--accent) calc(30% * var(--neu-strength)), transparent),
+      inset 0 1px 0 rgba(255, 255, 255, calc(.18 * var(--neu-strength)));
+    --neu-accent-pressed: inset 0 2px 5px rgba(0, 0, 0, calc(.35 * var(--neu-strength)));
   }
 }
 
@@ -68,35 +143,37 @@ svg.ic { width: 16px; height: 16px; flex-shrink: 0; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   height: 32px; padding: 0 12px;
-  border: 1px solid var(--border-strong); border-radius: 8px;
+  border: 1px solid var(--neu-edge); border-radius: 8px;
   background: var(--surface); color: var(--text);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--neu-raised);
   font: 500 13px/1 inherit; font-family: inherit;
   cursor: pointer; white-space: nowrap;
-  transition: background .12s, border-color .12s, color .12s;
+  transition: background .12s, border-color .12s, color .12s, box-shadow .15s;
 }
 .btn svg.ic { width: 15px; height: 15px; }
-.btn:hover { background: var(--hover); }
-.btn:active { transform: translateY(.5px); }
-.btn:disabled { opacity: .45; cursor: default; background: var(--surface); transform: none; }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
-.btn.danger { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn.danger:hover { background: var(--accent-hover); }
-.btn:focus-visible, .round-btn:focus-visible, .seg button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-ring); }
+.btn:hover { background: var(--surface); box-shadow: var(--neu-raised-hover); }
+.btn:active { transform: translateY(.5px); background: var(--hover); box-shadow: var(--neu-pressed); }
+.btn:disabled { opacity: .45; cursor: default; background: var(--surface); transform: none; box-shadow: var(--neu-raised-sm); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: var(--neu-accent-glow); }
+.btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); box-shadow: var(--neu-accent-glow); }
+.btn.danger { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: var(--neu-accent-glow); }
+.btn.danger:hover { background: var(--accent-hover); box-shadow: var(--neu-accent-glow); }
+.btn.primary:active, .btn.danger:active { background: var(--accent-hover); box-shadow: var(--neu-accent-pressed); }
+.btn.primary:disabled, .btn.danger:disabled { background: var(--accent); box-shadow: none; }
 
 /* Quadratische Icon-Knöpfe */
 .round-btn {
   width: 32px; height: 32px; flex-shrink: 0;
   display: inline-flex; align-items: center; justify-content: center;
-  border: 1px solid var(--border-strong); border-radius: 8px;
+  border: 1px solid var(--neu-edge); border-radius: 8px;
   background: var(--surface); color: var(--muted);
-  box-shadow: var(--shadow-sm);
-  cursor: pointer; transition: background .12s, color .12s;
+  box-shadow: var(--neu-raised);
+  cursor: pointer; transition: background .12s, color .12s, box-shadow .15s;
 }
-.round-btn:hover { background: var(--hover); color: var(--text); }
+.round-btn:hover { background: var(--surface); color: var(--text); box-shadow: var(--neu-raised-hover); }
+.round-btn:active { background: var(--hover); box-shadow: var(--neu-pressed); }
 .round-btn.danger:hover { color: var(--accent); }
-.round-btn:disabled { opacity: .45; cursor: default; background: var(--surface); color: var(--muted); }
+.round-btn:disabled { opacity: .45; cursor: default; background: var(--surface); color: var(--muted); box-shadow: var(--neu-raised-sm); }
 
 .field { position: relative; display: flex; align-items: center; }
 .field-icon { position: absolute; left: 11px; display: flex; color: var(--faint); pointer-events: none; }
@@ -107,11 +184,12 @@ input:not([type=checkbox]) {
   width: 100%; height: 34px; padding: 0 11px;
   border: 1px solid var(--border-strong); border-radius: 8px;
   background: var(--surface); color: var(--text);
+  box-shadow: var(--neu-inset);
   font: inherit; outline: none;
   transition: border-color .12s, box-shadow .12s;
 }
 input::placeholder { color: var(--faint); }
-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+input:focus { border-color: var(--accent); box-shadow: var(--neu-inset), 0 0 0 3px var(--accent-ring); }
 input:disabled { color: var(--faint); background: var(--bg); }
 
 /* ---------- Seitenleiste ---------- */
@@ -151,12 +229,13 @@ input:disabled { color: var(--faint); background: var(--bg); }
   cursor: default; position: relative;
   transition: background .1s;
 }
-#host-list li:hover { background: var(--hover); }
+#host-list li:hover { background: var(--hover); box-shadow: var(--neu-raised-sm); }
 .host-avatar {
   position: relative; width: 30px; height: 30px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  border-radius: 7px; border: 1px solid var(--border);
+  border-radius: 7px; border: 1px solid var(--neu-edge);
   background: var(--surface); color: var(--muted);
+  box-shadow: var(--neu-raised-sm);
 }
 .host-avatar svg.ic { width: 15px; height: 15px; }
 li.connected .host-avatar { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
@@ -184,7 +263,8 @@ li.connected .host-avatar { color: var(--accent); border-color: color-mix(in srg
   background: transparent; color: var(--muted); cursor: pointer;
 }
 .mini-btn svg.ic { width: 14px; height: 14px; }
-.mini-btn:hover { background: var(--border); color: var(--text); }
+.mini-btn:hover { background: var(--surface); color: var(--text); box-shadow: var(--neu-raised-sm); }
+.mini-btn:active { background: var(--hover); box-shadow: var(--neu-pressed); }
 .mini-btn.danger:hover { color: var(--accent); }
 .hint { color: var(--muted); padding: 6px; font-size: 12px; line-height: 1.6; }
 
@@ -211,7 +291,7 @@ li.connected .host-avatar { color: var(--accent); border-color: color-mix(in srg
   white-space: nowrap; max-width: 220px; cursor: default;
 }
 .tab:hover { color: var(--text); background: var(--hover); }
-.tab.active { background: var(--bg); color: var(--text); border-color: var(--border); }
+.tab.active { background: var(--bg); color: var(--text); border-color: var(--border); box-shadow: var(--neu-highlight); }
 .tab.active::after { content: ''; }
 .tab .title { overflow: hidden; text-overflow: ellipsis; }
 .tab .close {
@@ -242,7 +322,8 @@ li.connected .host-avatar { color: var(--accent); border-color: color-mix(in srg
 /* Umschalter Terminal / Dateien */
 .seg {
   display: flex; gap: 2px; padding: 2px;
-  border-radius: 9px; background: var(--hover); border: 1px solid var(--border);
+  border-radius: 9px; background: var(--neu-well-bg); border: 1px solid var(--neu-edge);
+  box-shadow: var(--neu-well);
 }
 .seg button {
   display: inline-flex; align-items: center; gap: 6px;
@@ -253,7 +334,8 @@ li.connected .host-avatar { color: var(--accent); border-color: color-mix(in srg
 }
 .seg button svg.ic { width: 14px; height: 14px; }
 .seg button:hover { color: var(--text); }
-.seg button.on { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm), 0 0 0 1px var(--border); }
+.seg button { transition: background .12s, color .12s, box-shadow .15s; }
+.seg button.on { background: var(--surface); color: var(--text); box-shadow: var(--neu-raised-sm), var(--neu-highlight), 0 0 0 1px var(--neu-edge); }
 .seg button.on svg.ic { color: var(--accent); }
 
 /* Arbeitsfläche */
@@ -261,7 +343,8 @@ li.connected .host-avatar { color: var(--accent); border-color: color-mix(in srg
 #terminals {
   flex: 1; position: relative; min-height: 0;
   background: var(--surface);
-  border: 1px solid var(--border); border-radius: 12px;
+  border: 1px solid var(--neu-edge); border-radius: 12px;
+  box-shadow: var(--neu-card);
   overflow: hidden;
 }
 /* Abstand über die Position statt padding – sonst rechnet das Terminal eine Zeile zu viel */
@@ -280,7 +363,7 @@ code { font-family: var(--mono); font-size: 12px; padding: 1px 6px; border-radiu
 
 /* Fortschritt */
 #progress { display: flex; align-items: center; gap: 12px; padding: 0 16px 14px; margin-top: -4px; font-size: 12px; color: var(--muted); }
-#progress .bar { flex: 1; max-width: 280px; height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
+#progress .bar { flex: 1; max-width: 280px; height: 4px; border-radius: 2px; background: var(--border); box-shadow: var(--neu-inset); overflow: hidden; }
 #progress-fill { height: 100%; width: 0; background: var(--accent); transition: width .15s; }
 
 /* ---------- Dateibrowser ---------- */
@@ -294,12 +377,13 @@ code { font-family: var(--mono); font-size: 12px; padding: 1px 6px; border-radiu
 /* Schalter */
 .toggle { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12.5px; cursor: pointer; }
 .toggle input { display: none; }
-.toggle .track { width: 32px; height: 18px; border-radius: 9px; background: var(--border-strong); position: relative; transition: background .15s; }
+.toggle .track { width: 32px; height: 18px; border-radius: 9px; background: var(--border-strong); box-shadow: var(--neu-well); position: relative; transition: background .15s; }
 .toggle .knob {
   position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
-  background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s ease;
+  background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25), 1px 1px 3px rgba(var(--neu-shade), calc(.12 * var(--neu-strength))); transition: transform .15s ease;
 }
-.toggle input:checked + .track { background: var(--accent); }
+.toggle input:checked + .track { background: var(--accent); box-shadow: var(--neu-accent-pressed); }
+.toggle input:focus-visible + .track { box-shadow: var(--neu-well), 0 0 0 3px var(--accent-ring); }
 .toggle input:checked + .track .knob { transform: translateX(14px); }
 
 .files-list { flex: 1; overflow: auto; position: relative; outline: none; }
@@ -343,7 +427,7 @@ code { font-family: var(--mono); font-size: 12px; padding: 1px 6px; border-radiu
 }
 .dialog {
   width: 420px; max-width: calc(100vw - 32px);
-  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  background: var(--surface); border: 1px solid var(--neu-edge); border-radius: 14px;
   padding: 22px;
   box-shadow: var(--shadow-lg);
   user-select: text;
@@ -362,7 +446,7 @@ code { font-family: var(--mono); font-size: 12px; padding: 1px 6px; border-radiu
 #ask-message { margin: 0 0 14px; white-space: pre-wrap; line-height: 1.55; color: var(--muted); }
 #ask-detail {
   margin: 0 0 4px; padding: 10px 12px; border-radius: 8px;
-  background: var(--bg); border: 1px solid var(--border);
+  background: var(--bg); border: 1px solid var(--border); box-shadow: var(--neu-inset);
   font: 12px/1.6 var(--mono); white-space: pre-wrap; word-break: break-all; color: var(--text);
 }
 .dialog label.toggle { display: inline-flex; margin: 14px 0 0; font-weight: 400; color: var(--muted); }
@@ -464,24 +548,27 @@ body.win #tabbar { padding-right: 150px; }
 .qbtn {
   display: inline-flex; align-items: center; gap: 4px;
   height: 28px; padding: 0 10px;
-  border: 1px solid var(--border-strong); border-radius: 7px;
+  border: 1px solid var(--neu-edge); border-radius: 7px;
   background: var(--surface); color: var(--text);
+  box-shadow: var(--neu-raised);
   font: 500 12.5px/1 inherit; font-family: inherit;
   cursor: pointer; white-space: nowrap;
-  transition: background .12s, border-color .12s, color .12s;
+  transition: background .12s, border-color .12s, color .12s, box-shadow .15s;
 }
 .qbtn svg.ic { width: 13px; height: 13px; color: var(--muted); margin-right: -3px; }
-.qbtn:hover { background: var(--hover); border-color: var(--faint); }
-.qbtn:active { transform: translateY(.5px); }
+.qbtn:hover { background: var(--surface); box-shadow: var(--neu-raised-hover); }
+.qbtn:active { transform: translateY(.5px); background: var(--hover); box-shadow: var(--neu-pressed); }
 .qbtn.danger:hover { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
-.qbtn:disabled { opacity: .45; cursor: default; background: var(--surface); transform: none; }
+.qbtn:disabled { opacity: .45; cursor: default; background: var(--surface); transform: none; box-shadow: var(--neu-raised-sm); }
+.qbtn:focus-visible { outline: none; box-shadow: var(--neu-raised), 0 0 0 3px var(--accent-ring); }
 .qsep { width: 1px; height: 18px; background: var(--border); margin: 0 4px; }
 
 /* Editor-Leiste (nano) */
 .qlabel { font-weight: 600; font-size: 12.5px; margin-right: 6px; display: inline-flex; align-items: center; gap: 6px; }
 .qlabel::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--warn); }
-.qbtn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.qbtn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.qbtn.primary { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: var(--neu-accent-glow); }
+.qbtn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); box-shadow: var(--neu-accent-glow); }
+.qbtn.primary:active { box-shadow: var(--neu-accent-pressed); }
 .qhint { margin-left: auto; font-size: 11.5px; color: var(--muted); }
 
 /* ---------- Tunnel (src/tunnels.js) ---------- */
@@ -495,7 +582,7 @@ body.win #tabbar { padding-right: 150px; }
 #tunnel-panel {
   position: fixed; z-index: 9; width: 440px; max-width: calc(100vw - 24px); max-height: calc(100vh - 120px);
   display: flex; flex-direction: column;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--neu-edge); border-radius: 12px;
   box-shadow: var(--shadow-lg); animation: pop .1s ease;
 }
 .tp-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 10px 16px; border-bottom: 1px solid var(--border); }
@@ -527,8 +614,9 @@ body.win #tabbar { padding-right: 150px; }
   display: block; width: 100%; margin-top: 6px; height: 34px; padding: 0 8px;
   border: 1px solid var(--border-strong); border-radius: 8px;
   background: var(--surface); color: var(--text); font: inherit; outline: none;
+  box-shadow: var(--neu-inset);
 }
-.tunnel-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+.tunnel-select:focus { border-color: var(--accent); box-shadow: var(--neu-inset), 0 0 0 3px var(--accent-ring); }
 
 /* ---------- Update-Hinweis (src/update-notice.js) ---------- */
 
@@ -551,8 +639,10 @@ body.win #tabbar { padding-right: 150px; }
 #update-notice .un-get {
   width: 100%; height: 28px; border: none; border-radius: 7px; cursor: pointer;
   background: var(--accent); color: #fff; font: 600 12px/1 inherit; font-family: inherit;
+  box-shadow: var(--neu-accent-glow);
 }
 #update-notice .un-get:hover { filter: brightness(1.08); }
+#update-notice .un-get:active { box-shadow: var(--neu-accent-pressed); }
 
 /* ---------- Rahmen-Auswahl (src/lasso.js) ---------- */
 .lasso-box {
@@ -561,6 +651,11 @@ body.win #tabbar { padding-right: 150px; }
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 body.lasso-active, body.lasso-active * { user-select: none !important; cursor: default; }
+
+/* ---------- Tastatur-Fokus: Ring bleibt klar sichtbar (über den weichen Schatten) ---------- */
+.btn:focus-visible, .round-btn:focus-visible, .mini-btn:focus-visible { outline: none; box-shadow: var(--neu-raised), 0 0 0 3px var(--accent-ring); }
+.seg button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-ring); }
+.btn.primary:focus-visible, .btn.danger:focus-visible { box-shadow: var(--neu-accent-glow), 0 0 0 3px var(--accent-ring); }
 
 /* Beim Ziehen von Dateien: Übertragungsliste lässt das Ablegen durch (src/transfers.js) */
 body.dnd-active #transfers { pointer-events: none; opacity: .35; transition: opacity .15s; }
