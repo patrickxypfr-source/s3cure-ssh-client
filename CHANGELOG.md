@@ -13,6 +13,9 @@ So wird ein Abschnitt geschrieben (für Mitwirkende):
 
 ## [Unveröffentlicht]
 
+### Behoben
+- **Einstellungen → Terminal:** Die Auswahlfelder „Schriftart“ und „Verlauf“ sind wieder normal breit – kein seitliches Scrollen und keine zerquetschten Beschriftungen mehr.
+
 ## 1.2.0 – 2026-11-05
 
 ### Neu
