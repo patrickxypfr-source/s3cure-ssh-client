@@ -12,15 +12,15 @@
       <div class="dialog wn-dialog" role="dialog" aria-modal="true" aria-labelledby="wn-title">
         <div class="wn-head">
           <img class="wn-logo" src="logo.png" alt="">
-          <div><h2 id="wn-title"></h2><div class="wn-sub">Das Update ist installiert.</div></div>
+          <div><h2 id="wn-title"></h2><div class="wn-sub">${t('whatsNew.installed')}</div></div>
         </div>
         <div class="wn-body release-notes"></div>
         <div class="actions">
-          <button type="button" class="btn" data-github>Auf GitHub ansehen</button>
-          <button type="button" class="btn primary" data-close>Alles klar</button>
+          <button type="button" class="btn" data-github>${t('whatsNew.github')}</button>
+          <button type="button" class="btn primary" data-close>${t('whatsNew.gotIt')}</button>
         </div>
       </div>`;
-    modal.querySelector('h2').textContent = `Was ist neu in ${info.version}`;
+    modal.querySelector('h2').textContent = t('whatsNew.title', { version: info.version });
     window.renderReleaseNotes(modal.querySelector('.wn-body'), info.notes);
     const close = () => {
       modal.hidden = true;

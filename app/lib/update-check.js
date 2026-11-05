@@ -9,7 +9,10 @@
 const fs = require('fs');
 const path = require('path');
 const { net } = require('electron');
-const { parseNotes } = require('./release-notes');
+const { parseNotes, notesForLang } = require('./release-notes');
+const i18n = require('./i18n');
+// Release-Text in der Sprache der Oberfläche: deutscher oder englischer Teil (lib/release-notes.js)
+const notesBlocks = md => parseNotes(notesForLang(md, i18n.lang()));
 
 const REPO = process.env.S3CURE_UPDATE_REPO || 'patrickxypfr-source/s3cure-ssh-client';
 // S3CURE_UPDATE_URL nur für Tests (lokaler Server statt GitHub)
@@ -109,7 +112,7 @@ function setupUpdateCheck({ ipcMain, shell, app, configDir }) {
       const latest = load().latest;
       rel = latest && latest.version === current ? latest : null;
     }
-    const notes = rel ? parseNotes(rel.notes) : [];
+    const notes = rel ? notesBlocks(rel.notes) : [];
     if (!notes.length) return null;
     return { version: current, notes, url: rel.url };
   }
@@ -123,7 +126,7 @@ function setupUpdateCheck({ ipcMain, shell, app, configDir }) {
   // Für das Update-Fenster: Bausteine zum Release-Text einer Version (falls bekannt)
   function notesFor(version) {
     const latest = load().latest;
-    return latest && latest.version === version ? parseNotes(latest.notes) : [];
+    return latest && latest.version === version ? notesBlocks(latest.notes) : [];
   }
 
   ipcMain.handle('update:whatsnew', () => whatsNew().catch(() => null));

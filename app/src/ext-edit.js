@@ -10,16 +10,16 @@ Object.assign(ICON_PATHS, {
 const ExtEdit = (() => {
   const S = window.s3sync;
   const T = {
-    editDefault: 'Mit Standardprogramm bearbeiten',
-    editWith: 'Bearbeiten mit …',
-    editWithApp: name => `Mit ${name} bearbeiten`,
-    otherApp: 'Anderes Programm wählen …',
-    opened: (name, app) => `„${name}“ ${app ? `in ${app} ` : ''}geöffnet – jedes Speichern wird hochgeladen`,
-    uploaded: (name, time) => `„${name}“ hochgeladen · ${time}`,
-    closed: name => `„${name}“ beendet`,
+    editDefault: t('extEdit.editDefault'),
+    editWith: t('extEdit.editWith'),
+    editWithApp: name => t('extEdit.editWithApp', { name }),
+    otherApp: t('extEdit.otherApp'),
+    opened: (name, app) => (app ? t('extEdit.openedIn', { name, app }) : t('extEdit.opened', { name })),
+    uploaded: (name, time) => t('extEdit.uploaded', { name, time }),
+    closed: name => t('extEdit.closed', { name }),
   };
   const cleanMsg = err => String(err?.message || err).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
-  const time = ms => new Date(ms).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  const time = ms => new Date(ms).toLocaleTimeString(I18N.locale, { hour: '2-digit', minute: '2-digit' });
 
   let list = [];
   const listeners = new Set();

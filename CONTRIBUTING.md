@@ -1,7 +1,7 @@
 # Mitmachen
 
 Danke fürs Mithelfen! Diese Seite erklärt kurz, wie man S3cure startet, testet und was beim Ändern zu beachten ist.
-Die Oberfläche und alle Texte sind **deutsch** und einfach formuliert – Nutzer sind keine Entwickler.
+Die Oberfläche gibt es auf **Deutsch und Englisch**, einfach formuliert – Nutzer sind keine Entwickler. Wie Texte übersetzt werden, steht unten unter „Texte und Übersetzungen“.
 
 ## Starten
 
@@ -67,11 +67,23 @@ Bei jedem Push und Pull Request läuft `.github/workflows/build.yml`:
 2. erst wenn alles grün ist: **Bauen** für Mac (Apple-Chip, Intel), Windows und Linux, jeweils mit kurzem Startversuch
 3. bei einem Tag `v1.2.3`: **Release** mit allen Installern
 
-## Was ist neu? (CHANGELOG.md)
+## Texte und Übersetzungen
 
-Jede für Nutzer sichtbare Änderung bekommt eine Zeile in [`CHANGELOG.md`](CHANGELOG.md) unter **„Unveröffentlicht“** – kurz, deutsch, aus Sicht der Nutzer („Dateien lassen sich jetzt …“), nicht aus Sicht des Codes.
+Kein Text steht direkt im Code, sondern als Schlüssel in den Wörterbüchern `app/src/locales/de.js` und `app/src/locales/en.js`:
 
-Beim Release wird die Überschrift „Unveröffentlicht“ in `## 1.2.3 – JJJJ-MM-TT` umbenannt. Der Release-Job nimmt genau diesen Abschnitt als Release-Text, und die App zeigt ihn im Update-Fenster und nach dem Update als „Was ist neu in 1.2.3“. Nur einfache Überschriften (`### Neu`, `### Verbessert`, `### Behoben`) und Listen verwenden – HTML wird nicht dargestellt.
+- Oberfläche: `t('bereich.name', { platzhalter })` (global, aus `app/src/i18n.js`), Datum/Zahlen mit `I18N.locale` bzw. `I18N.fmtNumber()`/`I18N.fmtDateTime()`.
+- Statisches HTML: `data-i18n="schlüssel"`, `data-i18n-html`, `data-i18n-title`, `data-i18n-placeholder`, `data-i18n-aria-label` (der deutsche Text bleibt als Lesehilfe im HTML stehen).
+- Hauptprozess: `const { t } = require('./i18n')` (`app/lib/i18n.js`) – `t()` erst beim Gebrauch aufrufen, nicht beim Laden des Moduls.
+- Werte: Text mit `{platzhalter}`, Plural als `{ one: '{count} Datei', other: '{count} Dateien' }`, oder notfalls eine Funktion.
+- Jeder Schlüssel muss in **beiden** Dateien stehen. `npm test` prüft das (über `app/tools/i18n-check.mjs`) und meldet auch übersehene deutsche Texte im Code. Muss eine Zeichenkette absichtlich deutsch bleiben (z. B. ein regulärer Ausdruck für Server-Ausgaben), bekommt die Zeile den Kommentar `// i18n-ignore`.
+- Direkt prüfen: `node app/tools/i18n-check.mjs`
+- Sprache: Einstellungen → Allgemein (System/Deutsch/English). Zum Testen erzwingt `S3CURE_LANG=de` bzw. `en` die Sprache.
+
+## Was ist neu? (CHANGELOG.md, CHANGELOG.en.md)
+
+Jede für Nutzer sichtbare Änderung bekommt eine Zeile in [`CHANGELOG.md`](CHANGELOG.md) unter **„Unveröffentlicht“** und dieselbe Zeile auf Englisch in [`CHANGELOG.en.md`](CHANGELOG.en.md) unter **„Unreleased“** (Überschriften `### New`, `### Improved`, `### Fixed`) – kurz, deutsch, aus Sicht der Nutzer („Dateien lassen sich jetzt …“), nicht aus Sicht des Codes.
+
+Beim Release wird die Überschrift „Unveröffentlicht“ bzw. „Unreleased“ in beiden Dateien in `## 1.2.3 – JJJJ-MM-TT` umbenannt. Der Release-Text enthält dann zuerst den deutschen Abschnitt, danach (nach der Zeile `<!-- lang:en -->`) den englischen; die App zeigt den Teil in ihrer Sprache (ohne englischen Teil: Deutsch). Die Markierungszeile nicht selbst ins CHANGELOG schreiben. Der Release-Job nimmt genau diesen Abschnitt als Release-Text, und die App zeigt ihn im Update-Fenster und nach dem Update als „Was ist neu in 1.2.3“. Nur einfache Überschriften (`### Neu`, `### Verbessert`, `### Behoben`) und Listen verwenden – HTML wird nicht dargestellt.
 
 Vorschau des Release-Texts:
 

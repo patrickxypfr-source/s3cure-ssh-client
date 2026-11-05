@@ -3,6 +3,7 @@
 const fsp = require('fs').promises;
 const path = require('path');
 const { checkPath, friendly } = require('./localfs');
+const { t } = require('./i18n');
 
 const LIMIT = 2 * 1024 * 1024;
 
@@ -24,7 +25,7 @@ function register({ ipcMain, dialog, getWin }) {
     const abs = checkPath(file);
     let st;
     try { st = await fsp.stat(abs); } catch (err) { throw friendly(err, path.basename(abs)); }
-    if (st.isDirectory()) throw new Error('Das ist ein Ordner, keine Datei.');
+    if (st.isDirectory()) throw new Error(t('compare.isDir'));
     if (st.size > LIMIT) return { tooBig: true, size: st.size };
     const buf = await fsp.readFile(abs).catch(err => { throw friendly(err, path.basename(abs)); });
     if (looksBinary(buf)) return { binary: true };
@@ -33,7 +34,7 @@ function register({ ipcMain, dialog, getWin }) {
 
   ipcMain.handle('compare:pickLocal', async (_e, defaultPath) => {
     const r = await dialog.showOpenDialog(getWin(), {
-      title: 'Lokale Datei zum Vergleichen wählen', buttonLabel: 'Vergleichen',
+      title: t('compare.pickTitle'), buttonLabel: t('compare.pickBtn'),
       defaultPath: typeof defaultPath === 'string' && defaultPath ? defaultPath : undefined,
       properties: ['openFile'],
     });

@@ -9,6 +9,8 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
+const i18n = require('./i18n');
+const { t } = i18n;
 
 const posix = path.posix;
 const p = fn => new Promise((res, rej) => fn((e, r) => e ? rej(e) : res(r)));
@@ -19,20 +21,21 @@ const MAX_SIZE = 200 * 1024 * 1024;
 const MAX_OPEN = 50;
 const STALE_MS = 3 * 24 * 3600 * 1000; // alte Reste von früheren Sitzungen
 
+// Texte erst beim Gebrauch übersetzen (die Sprache kann sich zur Laufzeit ändern)
 const T = {
-  tooBig: 'Die Datei ist zu groß zum Bearbeiten (über 200 MB).',
-  isDir: 'Das ist ein Ordner, keine Datei.',
-  tooMany: `Es sind schon ${MAX_OPEN} Dateien extern geöffnet. Bitte zuerst welche beenden.`,
-  noApp: 'Das Programm wurde nicht gefunden.',
-  openFail: msg => 'Konnte nicht geöffnet werden: ' + msg,
-  conflictTitle: 'Server-Datei wurde geändert',
-  conflictMsg: name => `„${name}“ wurde auf dem Server geändert, seit du sie geöffnet hast (von jemand anderem oder einem Programm). Deine Änderung hochladen und die Server-Version überschreiben?`,
-  conflictDetail: (srv, mine) => `Server:  ${srv}\nDeine:   ${mine}`,
-  conflictOk: 'Trotzdem hochladen',
-  offline: 'Keine Verbindung – wird hochgeladen, sobald der Server wieder da ist.',
-  skipped: 'Nicht hochgeladen (Server-Version behalten).',
-  chooseApp: 'Programm zum Bearbeiten wählen',
-  chooseBtn: 'Auswählen',
+  get tooBig() { return t('extEdit.tooBig'); },
+  get isDir() { return t('extEdit.isDir'); },
+  get tooMany() { return t('extEdit.tooMany', { max: MAX_OPEN }); },
+  get noApp() { return t('extEdit.noApp'); },
+  openFail: msg => t('extEdit.openFail', { msg }),
+  get conflictTitle() { return t('extEdit.conflictTitle'); },
+  conflictMsg: name => t('extEdit.conflictMsg', { name }),
+  conflictDetail: (srv, mine) => t('extEdit.conflictDetail', { srv, mine }),
+  get conflictOk() { return t('extEdit.conflictOk'); },
+  get offline() { return t('extEdit.offline'); },
+  get skipped() { return t('extEdit.skipped'); },
+  get chooseApp() { return t('extEdit.chooseApp'); },
+  get chooseBtn() { return t('extEdit.chooseBtn'); },
 };
 
 // Bekannte Editoren, falls installiert
@@ -59,7 +62,7 @@ function knownEditors(platform) {
       ['Notepad++', path.join(pf, 'Notepad++', 'notepad++.exe')],
       ['Notepad++', path.join(pf86, 'Notepad++', 'notepad++.exe')],
       ['Sublime Text', path.join(pf, 'Sublime Text', 'sublime_text.exe')],
-      ['Editor (Notepad)', path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'notepad.exe')],
+      [t('extEdit.notepad'), path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'notepad.exe')],
     ];
   }
   return [
@@ -126,7 +129,7 @@ function register({ app, ipcMain, shell, dialog, getSftp, sftpError, transfers, 
       title: T.chooseApp, buttonLabel: T.chooseBtn,
       defaultPath: IS_MAC ? '/Applications' : IS_WIN ? (process.env.ProgramFiles || 'C:\\Program Files') : '/usr/bin',
       properties: ['openFile'],
-      filters: IS_MAC ? [{ name: 'Programme', extensions: ['app'] }] : IS_WIN ? [{ name: 'Programme', extensions: ['exe'] }] : [],
+      filters: IS_MAC ? [{ name: t('extEdit.filterApps'), extensions: ['app'] }] : IS_WIN ? [{ name: t('extEdit.filterApps'), extensions: ['exe'] }] : [],
     });
     if (r.canceled || !r.filePaths[0]) return null;
     rememberEditor(r.filePaths[0]);
@@ -159,7 +162,7 @@ function register({ app, ipcMain, shell, dialog, getSftp, sftpError, transfers, 
 
   // opts: { app: Pfad | null, label: Anzeigename der Verbindung }
   ipcMain.handle('extedit:open', async (_e, tabId, remote, opts = {}) => {
-    if (typeof remote !== 'string' || !remote.startsWith('/') || remote.includes('\0')) throw new Error('Ungültiger Pfad auf dem Server.');
+    if (typeof remote !== 'string' || !remote.startsWith('/') || remote.includes('\0')) throw new Error(t('extEdit.badPath'));
     const appPath = typeof opts.app === 'string' && opts.app ? opts.app : null;
     // schon offen? Dann nur wieder anzeigen
     for (const f of files.values()) {
@@ -250,7 +253,7 @@ function register({ app, ipcMain, shell, dialog, getSftp, sftpError, transfers, 
       // Konflikt: Server-Datei seit dem letzten Laden geändert?
       const now = await p(cb => sftp.stat(f.remote, cb)).catch(() => null);
       if (now && !force && (now.mtime !== f.base.mtime || now.size !== f.base.size)) {
-        const fmt = (s, m) => `${new Date(m * 1000).toLocaleString('de-DE')} · ${s.toLocaleString('de-DE')} Bytes`;
+        const fmt = (s, m) => `${i18n.fmtDateTime(m * 1000)} · ${t('extEdit.bytes', { size: i18n.fmtNumber(s) })}`;
         const ok = await ask({
           kind: 'confirm', title: T.conflictTitle, message: T.conflictMsg(f.name),
           detail: T.conflictDetail(fmt(now.size, now.mtime), fmt(f.seen.size, Math.floor(f.seen.mtime / 1000))),

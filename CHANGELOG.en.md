@@ -1,0 +1,74 @@
+# What’s New?
+
+Here you’ll find what changed in each version – short and easy to understand.
+The app shows the section for the new version in the update window and after the first start.
+
+<!--
+How to write a section (for contributors):
+- This is the English version of CHANGELOG.md – every entry belongs in both files, with the same version headings.
+- Collect new entries under “Unreleased” first.
+- On release, rename the heading to “## x.y.z – YYYY-MM-DD” (matching the tag vX.Y.Z).
+- Write for users: what you can do now, not how it’s programmed.
+- Only simple lists and headings (### New, ### Improved, ### Fixed).
+-->
+
+## [Unreleased]
+
+### New
+- **English:** The app is now available in English too. Choose the language in Settings → General – by default it follows your system language.
+
+## 1.2.0 – 2026-11-05
+
+### New
+- **Sync folders:** Compare a folder on your computer with one on the server and match them with one click – in one or both directions, with a preview and exclusions (e.g. `node_modules`).
+- **Keep a server folder up to date:** Every file you save on your computer is uploaded automatically.
+- **Edit in your own editor:** Open server files in e.g. VS Code – every save uploads them again automatically.
+- **Compare files:** See the differences between two files side by side, in color.
+- **Pause and resume transfers**, continue interrupted transfers, run several at once and set a speed limit.
+- **Bookmarks** for folders, Back/Forward and columns for permissions, owner and group.
+- **Restore session:** After a restart or update, your tabs are back.
+- **Backup & move:** Export all connections encrypted and import them on another computer – optionally synced automatically via iCloud or OneDrive.
+- **FTP and FTPS** for web hosting plans without SSH.
+- **Command palette** with Cmd/Ctrl+K: connections, tabs, commands and actions from the keyboard.
+- **Up to four terminals** in one tab, and command buttons that work for all servers.
+- **Overview:** See the server’s services and Docker containers, start and stop them and view their logs.
+- **Keys & servers:** Manage known servers and your own SSH keys, a clear warning when a server key has changed, agent forwarding and connecting through a proxy.
+- **Linux version** as an AppImage (64-bit), also with automatic updates.
+- **“What’s new?”**: After an update, the app briefly shows what has changed.
+
+### Improved
+- Every new version is tested automatically before it’s released.
+- The transfer list collapses by itself when it’s done and no longer gets in the way when you drag files.
+
+## 1.1.0 – 2026-11-04
+
+### Terminal
+- Multiple servers in tabs, light and dark design, collapsible sidebar
+- Reconnects automatically after a Wi-Fi change, sleep or a dropped connection
+- Search in the terminal, clickable links, font size from the keyboard
+- Split view: two terminals side by side on the same server
+- Record a session as a text file
+- “Send to all”: type into several servers at once
+- Your own command buttons per server – with icons, confirmation before dangerous commands, input fields, drop-down menus and export/import
+- Helper bar for nano (save & close with one click)
+- Server overview: CPU, RAM, disk and uptime
+
+### Files
+- File browser with upload, download, rename, new folder and delete (with confirmation)
+- “My Computer”: your own files on the left, the server on the right – simply drag files and folders back and forth
+- Multiple selection by dragging a frame, Cmd/Ctrl-click and Shift-click
+- Built-in editor with line numbers and search – edit configuration files right on the server
+- Preview for images and text, change permissions, create and extract ZIP files
+- Live search in the folder or across the whole server, transfer list with progress
+
+### Connections & Security
+- Saved connections with groups, colors and search
+- Log in with password, SSH key or SSH agent; jump servers; import from ~/.ssh/config
+- Create SSH keys and copy them to the server with one click
+- Port forwarding (tunnels): local, remote and as a SOCKS proxy
+- Passwords stored encrypted, host keys are verified
+- Optional app lock with password or Touch ID
+
+### Updates
+- The app shows new versions by itself and installs them with one click on “Update”
+- Proper installers for Mac (DMG) and Windows (Setup)

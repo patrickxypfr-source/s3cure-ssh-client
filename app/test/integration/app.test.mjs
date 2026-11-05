@@ -63,7 +63,7 @@ before(async () => {
 
   const pagePort = await freePort();
   const mainPort = await freePort();
-  const env = { ...process.env, HOME: home, S3CURE_CONFIG_DIR: config, S3CURE_UPDATE_URL: `http://127.0.0.1:${apiPort}/latest` };
+  const env = { ...process.env, HOME: home, S3CURE_CONFIG_DIR: config, S3CURE_UPDATE_URL: `http://127.0.0.1:${apiPort}/latest`, S3CURE_LANG: 'de' }; // prüft deutsche Texte
   delete env.SSH_AUTH_SOCK;
   ctx.app = spawn(ELECTRON, [`--remote-debugging-port=${pagePort}`, `--inspect=${mainPort}`, '--no-sandbox', '--disable-gpu', APP_DIR], { env, stdio: ['ignore', 'pipe', 'pipe'] });
   ctx.log = '';

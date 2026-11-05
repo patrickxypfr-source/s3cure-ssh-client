@@ -9,9 +9,13 @@ So wird ein Abschnitt geschrieben (für Mitwirkende):
 - Beim Release die Überschrift in „## x.y.z – JJJJ-MM-TT“ umbenennen (passend zum Tag vX.Y.Z).
 - Für Nutzer formulieren: was man jetzt tun kann, nicht wie es programmiert ist.
 - Nur einfache Listen und Überschriften (### Neu, ### Verbessert, ### Behoben).
+- Jeden Eintrag auch auf Englisch in CHANGELOG.en.md schreiben (gleiche Überschriften, ### New / ### Improved / ### Fixed).
 -->
 
 ## [Unveröffentlicht]
+
+### Neu
+- **Englisch:** Die App gibt es jetzt auch auf Englisch. Die Sprache stellst du unter Einstellungen → Allgemein ein – ab Werk richtet sie sich nach der Sprache deines Systems.
 
 ## 1.2.0 – 2026-11-05
 

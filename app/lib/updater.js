@@ -18,7 +18,9 @@ const os = require('os');
 const path = require('path');
 const { spawn, execFile } = require('child_process');
 const { net, BrowserWindow } = require('electron');
-const { parseNotes } = require('./release-notes');
+const { parseNotes, notesForLang } = require('./release-notes');
+const i18n = require('./i18n');
+const { t } = i18n;
 
 const NAME = 'S3cure SSH Client';
 const APPIMAGE = 'S3cure-SSH-Client-Linux-x64.AppImage';
@@ -117,7 +119,7 @@ function setupUpdater({ ipcMain, app, getMainWin, latestRelease, preload, platfo
 
   async function download(url, file, total, signal) {
     const res = await net.fetch(url, { signal, headers: { 'User-Agent': 'S3cure-SSH-Client' } });
-    if (!res.ok || !res.body) throw new Error(`Download fehlgeschlagen (HTTP ${res.status}).`);
+    if (!res.ok || !res.body) throw new Error(t('updater.httpFail', { status: res.status }));
     const size = Number(res.headers.get('content-length')) || total || 0;
     const out = fs.createWriteStream(file);
     const reader = res.body.getReader();
@@ -139,7 +141,7 @@ function setupUpdater({ ipcMain, app, getMainWin, latestRelease, preload, platfo
     } finally {
       await new Promise(r => out.end(r));
     }
-    if (size && received !== size) throw new Error('Download unvollständig – bitte nochmal versuchen.');
+    if (size && received !== size) throw new Error(t('updater.incomplete'));
     send({ phase: 'download', received, total: size || received, speed });
   }
 
@@ -158,22 +160,22 @@ function setupUpdater({ ipcMain, app, getMainWin, latestRelease, preload, platfo
       fs.mkdirSync(mnt);
       await run('hdiutil', ['attach', '-nobrowse', '-readonly', '-noautoopen', '-mountpoint', mnt, file]);
       try {
-        if (!fs.existsSync(path.join(mnt, `${NAME}.app`))) throw new Error('Das Update-Paket ist unvollständig.');
+        if (!fs.existsSync(path.join(mnt, `${NAME}.app`))) throw new Error(t('updater.pkgIncomplete'));
         await run('ditto', [path.join(mnt, `${NAME}.app`), path.join(x, `${NAME}.app`)]);
       } finally {
         await run('hdiutil', ['detach', mnt, '-force']).catch(() => {});
       }
     }
     const app2 = path.join(x, `${NAME}.app`);
-    if (!fs.existsSync(app2)) throw new Error('Das Update-Paket ist unvollständig.');
-    await run('codesign', ['--verify', '--deep', '--strict', app2]).catch(() => { throw new Error('Das Update-Paket ist beschädigt (Signatur ungültig).'); });
+    if (!fs.existsSync(app2)) throw new Error(t('updater.pkgIncomplete'));
+    await run('codesign', ['--verify', '--deep', '--strict', app2]).catch(() => { throw new Error(t('updater.badSignature')); });
     const v = await run('/usr/libexec/PlistBuddy', ['-c', 'Print CFBundleShortVersionString', path.join(app2, 'Contents', 'Info.plist')]);
-    if (v !== version) throw new Error(`Das Update-Paket hat die falsche Version (${v} statt ${version}).`);
+    if (v !== version) throw new Error(t('updater.wrongVersion', { found: v, expected: version }));
     try { fs.accessSync(path.dirname(kind.bundle), fs.constants.W_OK); } catch {
-      const e = new Error('Keine Schreibrechte im Programme-Ordner'); e.handoff = true; throw e;
+      const e = new Error(t('updater.noWriteAccess')); e.handoff = true; throw e;
     }
     const script = path.join(dir, 'install.sh');
-    fs.writeFileSync(script, `#!/bin/sh
+    fs.writeFileSync(script, /* i18n-ignore: Shell-Skript */ `#!/bin/sh
 # Wartet, bis die alte App beendet ist, tauscht sie aus und startet die neue
 while kill -0 ${process.pid} 2>/dev/null; do sleep 0.2; done
 OLD="$1"; NEW="$2"; TMP="$3"
@@ -219,10 +221,10 @@ rm -rf "$TMP"
   // Nach dem Beenden wird sie an die Stelle der alten geschoben und gestartet.
   function installAppImage(kind, file, dir) {
     send({ phase: 'verify' });
-    if (!isAppImage(file)) throw new Error('Das Update-Paket ist beschädigt (kein AppImage).');
+    if (!isAppImage(file)) throw new Error(t('updater.notAppImage'));
     fs.chmodSync(file, 0o755);
     const script = path.join(dir, 'install.sh');
-    fs.writeFileSync(script, `#!/bin/sh
+    fs.writeFileSync(script, /* i18n-ignore: Shell-Skript */ `#!/bin/sh
 # Wartet, bis die alte App beendet ist, ersetzt das AppImage und startet die neue Version
 while kill -0 ${process.pid} 2>/dev/null; do sleep 0.2; done
 NEW="$1"; OLD="$2"; TMP="$3"
@@ -250,7 +252,7 @@ rm -rf "$TMP"
   // Notlösung: Installer herunterladen und öffnen (Mac: Installationsfenster der DMG, Windows: Setup)
   async function handoff(rel, names, dir, signal) {
     const asset = pickAsset(rel, names);
-    if (!asset) throw new Error('Im neuesten Release wurde kein passender Installer gefunden.');
+    if (!asset) throw new Error(t('updater.noInstaller'));
     const target = path.join(platform === 'win32' ? dir : app.getPath('downloads'), asset.name);
     const already = path.join(dir, asset.name); // schon für das Update geladen? Dann nicht nochmal
     if (fs.existsSync(already) && fs.statSync(already).size === asset.size) {
@@ -289,13 +291,14 @@ rm -rf "$TMP"
     let dir = null, rel = null, staged = null;
     try {
       send({ phase: 'check' });
-      if (kind.kind === 'dev') throw new Error('Im Entwicklungsmodus (npm start) gibt es keine automatischen Updates.');
-      if (kind.kind === 'unknown') throw new Error('Dieses System wird für automatische Updates nicht unterstützt.');
+      if (kind.kind === 'dev') throw new Error(t('updater.dev'));
+      if (kind.kind === 'unknown') throw new Error(t('updater.unsupported'));
       // Release-Infos holen (bei Netzproblemen kurz nochmal versuchen)
       for (let i = 0; i < 3 && !rel; i++) { rel = await latestRelease(); if (!rel) await new Promise(r => setTimeout(r, 1500)); }
-      if (!rel) throw new Error('GitHub ist gerade nicht erreichbar. Bitte später nochmal versuchen.');
+      if (!rel) throw new Error(t('updater.offline'));
       job.version = rel.version;
-      const notes = parseNotes(rel.notes);
+      // Release-Text in der Sprache der Oberfläche (deutsch/englisch, siehe lib/release-notes.js)
+      const notes = parseNotes(notesForLang(rel.notes, i18n.lang()));
       if (notes.length) job.notes = notes;
       dir = fs.mkdtempSync(path.join(os.tmpdir(), 's3cure-update-'));
 
@@ -312,7 +315,7 @@ rm -rf "$TMP"
       }
       send({ phase: 'download', received: 0, total: asset.size, speed: 0 });
       await downloadRetry(asset, file, ctrl.signal);
-      if (ctrl.signal.aborted) throw new Error('abgebrochen');
+      if (ctrl.signal.aborted) throw new Error(t('updater.cancelled'));
 
       let launch;
       try {

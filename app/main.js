@@ -147,12 +147,12 @@ const verifyHostKey = knownHosts.verifyHostKey;
 
 function friendlyError(err, target) {
   const msg = String(err && err.message || err);
-  if (/ENOTFOUND|EAI_AGAIN/.test(msg)) return `Server „${target.host}“ nicht gefunden. Stimmt die Adresse?`;
-  if (/ECONNREFUSED/.test(msg)) return `${target.host} lehnt die Verbindung ab. Läuft dort ein SSH-Server auf Port ${target.port}?`;
-  if (/ETIMEDOUT|Timed out/.test(msg)) return `${target.host} antwortet nicht (Zeitüberschreitung). Ist das Gerät eingeschaltet und im selben Netz?`;
-  if (/EHOSTUNREACH|ENETUNREACH/.test(msg)) return `${target.host} ist nicht erreichbar.`;
-  if (/authentication methods failed/i.test(msg)) return 'Anmeldung fehlgeschlagen (falsches Passwort oder Schlüssel nicht akzeptiert).';
-  return 'Verbindung fehlgeschlagen: ' + msg;
+  if (/ENOTFOUND|EAI_AGAIN/.test(msg)) return t('main.errNotFound', { host: target.host });
+  if (/ECONNREFUSED/.test(msg)) return t('main.errRefused', { host: target.host, port: target.port });
+  if (/ETIMEDOUT|Timed out/.test(msg)) return t('main.errTimeout', { host: target.host });
+  if (/EHOSTUNREACH|ENETUNREACH/.test(msg)) return t('main.errUnreachable', { host: target.host });
+  if (/authentication methods failed/i.test(msg)) return t('main.errAuth');
+  return t('main.errConnect', { msg });
 }
 
 // Verbindungsaufbau, Sprung-Server, Wachhalten: app/lib/connection.js
@@ -198,10 +198,10 @@ const p = fn => new Promise((res, rej) => fn((e, r) => e ? rej(e) : res(r)));
 
 function sshSftp(tabId) {
   const s = sessions.get(tabId);
-  if (!s) return Promise.reject(new Error('Keine aktive Verbindung in diesem Tab.'));
+  if (!s) return Promise.reject(new Error(t('main.noSession')));
   if (!s.sftp) {
     s.sftp = new Promise((resolve, reject) => s.client.sftp((err, sftp) => {
-      if (err) { s.sftp = null; return reject(new Error('SFTP ist auf diesem Server nicht verfügbar: ' + err.message)); }
+      if (err) { s.sftp = null; return reject(new Error(t('main.noSftp', { msg: err.message }))); }
       sftp.on('close', () => { s.sftp = null; });
       resolve(sftp);
     }));
@@ -218,9 +218,9 @@ const getSftp = tabId => files.get(tabId);
 
 function sftpError(err, target) {
   const where = target ? ` (${target})` : '';
-  if (err && err.code === 2) return new Error('Datei oder Ordner gibt es nicht' + where + '.');
-  if (err && err.code === 3) return new Error('Keine Berechtigung' + where + '.');
-  if (err && err.code === 4) return new Error('Vorgang fehlgeschlagen' + where + '. Ist der Ordner vielleicht nicht leer, oder gibt es den Namen schon?');
+  if (err && err.code === 2) return new Error(t('main.sftpNoEntry', { where }));
+  if (err && err.code === 3) return new Error(t('main.sftpDenied', { where }));
+  if (err && err.code === 4) return new Error(t('main.sftpFailure', { where }));
   return err instanceof Error ? err : new Error(String(err));
 }
 
@@ -247,7 +247,7 @@ ipcMain.handle('sftp:list', async (_e, tabId, dir) => {
       if (isLink) { try { isDir = (await p(cb => sftp.stat(posix.join(abs, item.filename), cb))).isDirectory(); } catch {} }
       return { name: item.filename, isDir, isLink, size: a.size, mtime: a.mtime * 1000, mode: modeString(a.mode, isDir, isLink), uid: a.uid, gid: a.gid, longname: item.longname };
     }));
-    entries.sort((x, y) => (y.isDir - x.isDir) || x.name.localeCompare(y.name, 'de', { sensitivity: 'base' }));
+    entries.sort((x, y) => (y.isDir - x.isDir) || x.name.localeCompare(y.name, i18n.locale(), { sensitivity: 'base' }));
     await owners.annotate(sessions.get(tabId), entries); // Besitzer/Gruppe als Namen (app/lib/owners.js)
     return { path: abs, entries };
   } catch (err) { throw sftpError(err, abs || dir); }
@@ -285,7 +285,7 @@ ipcMain.handle('sftp:delete', async (_e, tabId, remotes) => {
 ipcMain.handle('pick-upload', async (_e, kind) => {
   const properties = IS_MAC ? ['openFile', 'openDirectory', 'multiSelections', 'createDirectory']
     : kind === 'folders' ? ['openDirectory', 'multiSelections'] : ['openFile', 'multiSelections'];
-  const r = await dialog.showOpenDialog(win, { title: 'Hochladen', buttonLabel: 'Hochladen', properties });
+  const r = await dialog.showOpenDialog(win, { title: t('main.upload'), buttonLabel: t('main.upload'), properties });
   return r.canceled ? null : r.filePaths;
 });
 
@@ -305,7 +305,7 @@ async function uploadPath(job, sftp, local, remoteDir) {
 
 ipcMain.handle('sftp:upload', async (_e, tabId, remoteDir, localPaths) => {
   const sftp = await getSftp(tabId);
-  const job = transfers.start(tabId, 'upload', localPaths.length === 1 ? path.basename(localPaths[0]) : `${localPaths.length} Elemente`, { remoteDir });
+  const job = transfers.start(tabId, 'upload', localPaths.length === 1 ? path.basename(localPaths[0]) : t('main.items', { count: localPaths.length }), { remoteDir });
   job.setTotal(transfers.localSize(localPaths));
   for (const local of localPaths) {
     try { await uploadPath(job, sftp, local, remoteDir); } catch (err) { job.finish(err); throw sftpError(err, path.basename(local)); }
@@ -333,19 +333,19 @@ ipcMain.handle('sftp:download', async (_e, tabId, items) => {
   let targets;
   if (items.length === 1 && !items[0].isDir) {
     const r = await dialog.showSaveDialog(win, {
-      title: 'Speichern unter', defaultPath: path.join(app.getPath('downloads'), posix.basename(items[0].path)),
+      title: t('main.saveAs'), defaultPath: path.join(app.getPath('downloads'), posix.basename(items[0].path)),
     });
     if (r.canceled) return null;
     targets = [r.filePath];
   } else {
     const r = await dialog.showOpenDialog(win, {
-      title: 'Zielordner wählen', buttonLabel: 'Hier speichern', defaultPath: app.getPath('downloads'),
+      title: t('main.chooseTargetFolder'), buttonLabel: t('main.saveHere'), defaultPath: app.getPath('downloads'),
       properties: ['openDirectory', 'createDirectory'],
     });
     if (r.canceled) return null;
     targets = items.map(it => path.join(r.filePaths[0], posix.basename(it.path)));
   }
-  const job = transfers.start(tabId, 'download', items.length === 1 ? posix.basename(items[0].path) : `${items.length} Elemente`, { localDir: path.dirname(targets[0]) });
+  const job = transfers.start(tabId, 'download', items.length === 1 ? posix.basename(items[0].path) : t('main.items', { count: items.length }), { localDir: path.dirname(targets[0]) });
   job.setTotal(await transfers.remoteSize(sftp, items.map(it => it.path)));
   for (let i = 0; i < items.length; i++) {
     try { await downloadPath(job, sftp, items[i].path, targets[i]); } catch (err) { job.finish(err); throw sftpError(err, posix.basename(items[i].path)); }
@@ -361,9 +361,9 @@ transfers.register(ipcMain); // Abbrechen, Pause, Reihenfolge, Erneut versuchen,
 sftpExtra.register({
   ipcMain, getSftp, sftpError,
   getClient: tabId => {
-    if (files.isFtp(tabId)) throw new Error('Das geht nur mit SSH-Verbindungen, nicht mit FTP.');
+    if (files.isFtp(tabId)) throw new Error(t('main.sshOnly'));
     const s = sessions.get(tabId);
-    if (!s) throw new Error('Keine aktive Verbindung in diesem Tab.');
+    if (!s) throw new Error(t('main.noSession'));
     return s.client;
   },
 });
@@ -376,7 +376,7 @@ require('./lib/pane-transfer').register({ ipcMain, getSftp, sftpError, transfers
 // (app/lib/sync.js, app/lib/ext-edit.js, app/lib/compare.js)
 const getClient = tabId => {
   const s = sessions.get(tabId);
-  if (!s) throw new Error('Keine aktive Verbindung in diesem Tab.');
+  if (!s) throw new Error(t('main.noSession'));
   return s.client;
 };
 require('./lib/sync').register({ ipcMain, shell, getSftp, getClient, sftpError, transfers, getWin: () => win });
@@ -467,7 +467,7 @@ async function searchWithSftp(tabId, root, query, state, add) {
 ipcMain.handle('search:start', (_e, tabId, root, query, searchId) => {
   const s = sessions.get(tabId);
   const isFtp = files.isFtp(tabId); // FTP: keine Befehle auf dem Server -> nur Ordner für Ordner
-  if (!s && !isFtp) throw new Error('Keine aktive Verbindung in diesem Tab.');
+  if (!s && !isFtp) throw new Error(t('main.noSession'));
   stopSearch(tabId);
   const state = { cancelled: false, limited: false, count: 0, stop: null, error: null };
   searches.set(tabId, state);
@@ -514,7 +514,7 @@ ipcMain.handle('hosts:save', (_e, name, host, oldName) => {
   if (host.forgetPassword) removePassword(name);
   if (host.proxyPassword && hosts[name].proxy && typeof hosts[name].proxy === 'object') proxies.setPassword(hosts[name].proxy, host.proxyPassword);
   if (host.password) {
-    if (!writePassword(name, host.password)) throw new Error('Passwort konnte nicht verschlüsselt gespeichert werden (Schlüsselbund nicht verfügbar).');
+    if (!writePassword(name, host.password)) throw new Error(t('main.passwordNotSaved'));
   }
   return hostsForUi();
 });
@@ -536,7 +536,7 @@ require('./lib/keyring').register(ipcMain, {
 });
 ipcMain.handle('pick-key', async () => {
   const r = await dialog.showOpenDialog(win, {
-    title: 'Privaten Schlüssel wählen', defaultPath: path.join(os.homedir(), '.ssh'),
+    title: t('main.pickKey'), defaultPath: path.join(os.homedir(), '.ssh'),
     properties: ['openFile', 'showHiddenFiles'],
   });
   return r.canceled ? null : r.filePaths[0].replace(os.homedir(), '~');
@@ -626,12 +626,11 @@ async function offerMoveToApplications() {
   if (st.dontAskMove) return false;
   const r = await dialog.showMessageBox({
     type: 'question',
-    message: 'S3cure SSH Client installieren?',
-    detail: 'Die App liegt noch nicht im Ordner „Programme“. Soll sie dorthin verschoben werden? '
-      + 'Dann findest du sie im Launchpad und in Spotlight, und Updates funktionieren automatisch.',
-    buttons: ['In „Programme“ installieren', 'Nicht jetzt'],
+    message: t('main.moveTitle'),
+    detail: t('main.moveDetail'),
+    buttons: [t('main.moveOk'), t('main.moveLater')],
     defaultId: 0, cancelId: 1,
-    checkboxLabel: 'Nicht mehr fragen',
+    checkboxLabel: t('main.dontAskAgain'),
   });
   if (r.response !== 0) {
     if (r.checkboxChecked) { try { fs.mkdirSync(CONFIG_DIR, { recursive: true }); fs.writeFileSync(flag, JSON.stringify({ ...st, dontAskMove: true })); } catch {} }
@@ -641,11 +640,11 @@ async function offerMoveToApplications() {
     // Verschiebt die App, beendet sie und startet sie aus „Programme“ neu
     return app.moveToApplicationsFolder({
       conflictHandler: type => type === 'exists' || type === 'existsAndRunning'
-        ? dialog.showMessageBoxSync({ type: 'question', message: 'In „Programme“ gibt es schon eine S3cure-App.', detail: 'Durch diese Version ersetzen?', buttons: ['Ersetzen', 'Abbrechen'], defaultId: 0, cancelId: 1 }) === 0
+        ? dialog.showMessageBoxSync({ type: 'question', message: t('main.moveExists'), detail: t('main.moveReplaceQ'), buttons: [t('main.replace'), t('common.cancel')], defaultId: 0, cancelId: 1 }) === 0
         : true,
     });
   } catch (err) {
-    dialog.showErrorBox('Installieren nicht möglich', String(err.message || err));
+    dialog.showErrorBox(t('main.installFailed'), String(err.message || err));
     return false;
   }
 }

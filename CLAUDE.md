@@ -1,6 +1,6 @@
 # S3cure SSH Client
 
-Desktop-SSH/SFTP-Client (Electron) für macOS, Windows und Linux (AppImage). Oberfläche und Texte auf **Deutsch**, einfach formuliert (Nutzer ist kein Entwickler).
+Desktop-SSH/SFTP-Client (Electron) für macOS, Windows und Linux (AppImage). Oberfläche **Deutsch und Englisch** (Texte als Schlüssel in `app/src/locales/de.js`/`en.js`, `t()` aus `src/i18n.js` bzw. `lib/i18n.js`, Prüfung `app/tools/i18n-check.mjs`), einfach formuliert (Nutzer ist kein Entwickler).
 
 ## Aufbau
 - `app/main.js` – Hauptprozess: ssh2-Verbindungen, SFTP, Suche, Host-Liste, Passwörter (safeStorage), IPC (`ipcMain.handle('bereich:aktion')`).
@@ -11,7 +11,7 @@ Desktop-SSH/SFTP-Client (Electron) für macOS, Windows und Linux (AppImage). Obe
 - `myssh.py` – älteres Python-CLI. `server/s3` – Verwaltungsskript für den Server des Nutzers.
 - Konfiguration: `~/.myssh/hosts.json`, `known_hosts`, `passwords.json` (verschlüsselt). Testhaken: `S3CURE_CONFIG_DIR`, `S3CURE_PLATFORM` (`darwin`/`win32`/`linux`).
 - Tests: `app/test/unit/*.test.js` (`npm test`), `app/test/integration/` (`xvfb-run -a npm run test:integration`, Electron + lokaler sshd). Anleitung: `CONTRIBUTING.md`.
-- `CHANGELOG.md`: Nutzer-sichtbare Änderungen unter „Unveröffentlicht“ eintragen (deutsch) – wird Release-Text und „Was ist neu?“ in der App.
+- `CHANGELOG.md` + `CHANGELOG.en.md`: Nutzer-sichtbare Änderungen unter „Unveröffentlicht“ / „Unreleased“ eintragen (deutsch + englisch) – wird Release-Text und „Was ist neu?“ in der App.
 
 ## Regeln
 - Neue Features möglichst in **eigene Dateien** (`app/src/<feature>.js`, `app/lib/<feature>.js` für den Hauptprozess) und nur kleine Einhängepunkte in `main.js`/`renderer.js`/`preload.js` – mehrere Leute arbeiten parallel.

@@ -13,19 +13,23 @@ const Compare = (() => {
   const ROW_H = 20;          // px pro Zeile (fest, damit nur sichtbare Zeilen gezeichnet werden müssen)
   const OVERSCAN = 30;
   const T = {
-    title: 'Dateien vergleichen',
-    loading: 'Lade und vergleiche …',
-    same: 'Die Dateien sind gleich.',
-    sameSpace: 'Die Dateien sind gleich (bis auf Leerzeichen).',
-    diffs: n => `${n} Unterschied${n === 1 ? '' : 'e'}`,
-    stats: (a, d) => `+${a} / −${d} Zeilen`,
-    approx: 'Sehr viele Unterschiede – grob verglichen.',
-    ignoreSpace: 'Leerzeichen ignorieren',
-    prev: 'Vorheriger Unterschied (Umschalt+F7 oder ↑ mit Alt)',
-    next: 'Nächster Unterschied (F7 oder ↓ mit Alt)',
-    close: 'Schließen (Esc)',
-    binary: name => `„${name}“ ist keine Textdatei und kann nicht verglichen werden.`,
-    tooBig: name => `„${name}“ ist zu groß zum Vergleichen (höchstens 2 MB).`,
+    title: t('compare.title'),
+    loading: t('compare.loading'),
+    same: t('compare.same'),
+    sameSpace: t('compare.sameSpace'),
+    diffs: n => t('compare.diffs', { count: n }),
+    stats: (a, d) => t('compare.stats', { added: I18N.fmtNumber(a), removed: I18N.fmtNumber(d) }),
+    approx: t('compare.approx'),
+    ignoreSpace: t('compare.ignoreSpace'),
+    prev: t('compare.prev'),
+    next: t('compare.next'),
+    close: t('compare.close'),
+    binary: name => t('compare.binary', { name }),
+    tooBig: name => t('compare.tooBig', { name }),
+    map: t('compare.map'),
+    pos: (n, total) => t('compare.pos', { n, total }),
+    thisComputer: t('compare.thisComputer'),
+    server: t('compare.server'),
   };
   const cleanMsg = err => String(err?.message || err).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
 
@@ -74,7 +78,7 @@ const Compare = (() => {
         <div class="cmp-body">
           <div class="cmp-pane" data-side="l"><div class="cmp-sizer"></div></div>
           <div class="cmp-pane" data-side="r"><div class="cmp-sizer"></div></div>
-          <div class="cmp-map" title="Übersicht – klicken zum Springen"></div>
+          <div class="cmp-map" title="${T.map}"></div>
           <div class="cmp-msg"></div>
         </div>
       </div>`;
@@ -262,7 +266,7 @@ const Compare = (() => {
     if (!c.hunks.length) return;
     c.hunk = c.hunk < 0 ? (dir > 0 ? 0 : c.hunks.length - 1) : (c.hunk + dir + c.hunks.length) % c.hunks.length;
     scrollToRow(c, c.hunks[c.hunk].start);
-    c.modal.querySelector('.cmp-pos').textContent = `${c.hunk + 1} von ${c.hunks.length}`;
+    c.modal.querySelector('.cmp-pos').textContent = T.pos(c.hunk + 1, c.hunks.length);
   }
 
   // ---------- Bequeme Aufrufe ----------
@@ -271,22 +275,22 @@ const Compare = (() => {
 
   function localVsRemote(tab, localPath, remotePath) {
     return open({
-      left: { label: 'Dieser Computer', name: baseName(localPath), title: localPath, load: () => loadLocal(localPath) },
-      right: { label: 'Server', name: baseName(remotePath), title: remotePath, load: () => loadRemote(tab, remotePath) },
+      left: { label: T.thisComputer, name: baseName(localPath), title: localPath, load: () => loadLocal(localPath) },
+      right: { label: T.server, name: baseName(remotePath), title: remotePath, load: () => loadRemote(tab, remotePath) },
     });
   }
 
   function remoteVsRemote(tab, a, b) {
     return open({
-      left: { label: 'Server', name: baseName(a), title: a, load: () => loadRemote(tab, a) },
-      right: { label: 'Server', name: baseName(b), title: b, load: () => loadRemote(tab, b) },
+      left: { label: T.server, name: baseName(a), title: a, load: () => loadRemote(tab, a) },
+      right: { label: T.server, name: baseName(b), title: b, load: () => loadRemote(tab, b) },
     });
   }
 
   function localVsLocal(a, b) {
     return open({
-      left: { label: 'Dieser Computer', name: baseName(a), title: a, load: () => loadLocal(a) },
-      right: { label: 'Dieser Computer', name: baseName(b), title: b, load: () => loadLocal(b) },
+      left: { label: T.thisComputer, name: baseName(a), title: a, load: () => loadLocal(a) },
+      right: { label: T.thisComputer, name: baseName(b), title: b, load: () => loadLocal(b) },
     });
   }
 

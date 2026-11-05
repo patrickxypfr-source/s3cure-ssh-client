@@ -3,7 +3,7 @@
 #   grün sind, wird gebaut.
 # - Push auf main, Pull Requests gegen main und manuell: Installer als Artefakte
 # - Tag v* (z. B. v1.2.0): zusätzlich ein GitHub-Release mit den Installern; die Version kommt aus dem Tag,
-#   der Release-Text aus dem passenden Abschnitt in CHANGELOG.md
+#   der Release-Text aus dem passenden Abschnitt in CHANGELOG.md (darunter der englische aus CHANGELOG.en.md)
 # Ohne Code-Signierung (macOS: Rechtsklick > Öffnen; Windows: „Trotzdem ausführen“).
 name: Build
 
@@ -62,7 +62,9 @@ jobs:
 
       - name: Release-Text vorhanden? (nur bei Tags)
         if: startsWith(github.ref, 'refs/tags/v')
-        run: node tools/release-notes.mjs "$GITHUB_REF_NAME" >/dev/null || echo "::warning::CHANGELOG.md hat keinen Abschnitt für $GITHUB_REF_NAME – das Release bekommt automatische Notizen."
+        run: |
+          node tools/release-notes.mjs "$GITHUB_REF_NAME" >/dev/null || echo "::warning::CHANGELOG.md hat keinen Abschnitt für $GITHUB_REF_NAME – das Release bekommt automatische Notizen."
+          grep -qE "^## \[?v?${GITHUB_REF_NAME#v}\]?( |$)" ../CHANGELOG.en.md 2>/dev/null || echo "::warning::CHANGELOG.en.md hat keinen Abschnitt für $GITHUB_REF_NAME – der Release-Text ist nur deutsch."
 
   build:
     name: ${{ matrix.name }}
@@ -154,7 +156,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      # Nur für CHANGELOG.md und das Skript, das den Release-Text daraus holt
+      # Nur für CHANGELOG.md, CHANGELOG.en.md und das Skript, das den Release-Text daraus holt
       - uses: actions/checkout@v4
 
       - uses: actions/download-artifact@v4
@@ -168,7 +170,8 @@ jobs:
         run: |
           ls -la dist
           FILES=(dist/*.dmg dist/*.exe dist/*.AppImage)
-          # Release-Text: Abschnitt der Version aus CHANGELOG.md (die App zeigt ihn als „Was ist neu?“)
+          # Release-Text: Abschnitt der Version aus CHANGELOG.md, darunter (nach „<!-- lang:en -->“) der aus
+          # CHANGELOG.en.md – die App zeigt davon den Teil in ihrer Sprache als „Was ist neu?“ (app/lib/release-notes.js)
           if node app/tools/release-notes.mjs "$GITHUB_REF_NAME" > release-notes.md; then
             NOTES=(--notes-file release-notes.md)
           else
