@@ -170,7 +170,7 @@ window.Desktop = (() => {
     st.viewOnlyB.classList.toggle('on', currentViewOnly(st));
     st.viewOnlyB.setAttribute('aria-pressed', String(currentViewOnly(st)));
     for (const b of [st.cadB, st.clipB, st.fsB]) b.disabled = !connected;
-    st.cadB.disabled = !connected || currentViewOnly(st);
+    st.cadB.disabled = st.clipB.disabled = !connected || currentViewOnly(st); // „Nur ansehen“: noVNC sendet nichts
     st.connB.disabled = !sshOpen && !st.rfb;
     st.connB.querySelector('.vnc-btn-text').textContent = st.rfb ? t('vnc.disconnect') : t('vnc.connect');
     st.connB.classList.toggle('primary', !st.rfb);
