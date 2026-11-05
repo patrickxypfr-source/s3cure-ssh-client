@@ -14,6 +14,9 @@ So wird ein Abschnitt geschrieben (für Mitwirkende):
 
 ## [Unveröffentlicht]
 
+### Verbessert
+- **Modernere Scrollleisten:** Im Terminal und in allen Listen sind die Scrollleisten jetzt schmale, abgerundete Pillen mit etwas Abstand zum Rand. Beim Drüberfahren werden sie etwas breiter und deutlicher.
+
 ## 1.5.0 – 2026-11-05
 
 ### Neu

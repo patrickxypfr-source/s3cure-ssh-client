@@ -14,6 +14,9 @@ How to write a section (for contributors):
 
 ## [Unreleased]
 
+### Improved
+- **More modern scrollbars:** In the terminal and in all lists, scrollbars are now slim, rounded pills with a little space to the edge. They get slightly wider and clearer when you hover over them.
+
 ## 1.5.0 – 2026-11-05
 
 ### New
