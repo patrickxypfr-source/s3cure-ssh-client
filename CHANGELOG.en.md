@@ -15,6 +15,7 @@ How to write a section (for contributors):
 ## [Unreleased]
 
 ### Improved
+- **Command buttons no longer clear the terminal:** instead of wiping everything, each button (Status, Check, Logs …) adds a grey divider with its name and the time. Earlier output stays – just scroll up.
 - **More modern scrollbars:** In the terminal and in all lists, scrollbars are now slim, rounded pills with a little space to the edge. They get slightly wider and clearer when you hover over them.
 
 ## 1.5.0 – 2026-11-05

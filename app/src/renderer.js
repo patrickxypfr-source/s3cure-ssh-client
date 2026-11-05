@@ -324,8 +324,17 @@ function renderEditorBar(tab, bar) {
   bar.appendChild(hint);
 }
 
+// Graue Trennlinie „── Status · 15:42 ─────“ über die ganze Breite; die leere Eingabezeile davor wird ersetzt
+function quickSeparator(cols, label) {
+  const name = String(label).replace(/[\x00-\x1f\x7f]/g, ' ').trim();
+  const short = name.length > 60 ? name.slice(0, 59) + '…' : name;
+  const time = I18N.fmtTime(Date.now(), { hour: '2-digit', minute: '2-digit' });
+  const rest = Math.max(3, cols - short.length - time.length - 8);
+  return '\r\x1b[2K\r\n\x1b[90m── \x1b[0;1m' + short + '\x1b[0;90m · ' + time + ' ' + '─'.repeat(rest) + '\x1b[0m\r\n';
+}
+
 // live: Befehl läuft endlos (Live-Log o. Ä.) und wird vor dem nächsten Knopf mit Strg+C beendet
-async function runQuick(cmd, confirmText, live = Quickbar.isLive(cmd)) {
+async function runQuick(cmd, confirmText, live = Quickbar.isLive(cmd), label = '') {
   const tab = tabs.get(activeId);
   if (!tab || tab.state !== 'open') return;
   if (confirmText) {
@@ -345,8 +354,10 @@ async function runQuick(cmd, confirmText, live = Quickbar.isLive(cmd)) {
   }
   tab.lastQuick = cmd;
   tab.lastQuickLive = !!live;
-  // Aufgeräumt: Terminal leeren, dann Befehl ausführen (Strg+U leert eine halb getippte Zeile)
-  tab.term.clear();
+  // Übersichtlich, ohne etwas zu löschen: Trennlinie mit Name und Uhrzeit, dann Befehl ausführen
+  // (Strg+U leert eine halb getippte Zeile). Die Ausgabe davor bleibt zum Hochscrollen erhalten.
+  tab.term.scrollToBottom();
+  await new Promise(r => tab.term.write(quickSeparator(tab.term.cols, label || cmd), r));
   api.write(tab.id, '\x15' + cmd + '\r');
   tab.term.focus();
 }

@@ -267,7 +267,7 @@ const Quickbar = (() => {
     if (!cmd) return;
     const confirm = item.confirm || parent?.confirm;
     const confirmText = confirm ? (typeof confirm === 'string' ? confirm : t('quickbar.confirmRun', { title })) : null;
-    runQuick(cmd, confirmText, item.live || isLive(cmd));
+    runQuick(cmd, confirmText, item.live || isLive(cmd), title);
   }
 
   // ---------- Leiste anzeigen ----------
