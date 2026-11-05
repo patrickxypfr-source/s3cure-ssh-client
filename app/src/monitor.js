@@ -57,21 +57,21 @@ const Monitor = (() => {
 
   const pct = (used, total) => (total ? Math.max(0, Math.min(100, (100 * used) / total)) : 0);
   const level = p => (p >= 90 ? 'crit' : p >= 75 ? 'warn' : '');
-  const fmtPct = p => `${Math.round(p)} %`;
+  const fmtPct = p => t('monitor.pct', { value: Math.round(p) });
   const cpuOf = s => (s.cpu != null ? s.cpu : s.cpuApprox);
 
   function uptimeText(sec, long = false) {
     const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60);
     if (long) {
       const parts = [];
-      if (d) parts.push(`${d} ${d === 1 ? 'Tag' : 'Tage'}`);
-      if (h || d) parts.push(`${h} Std.`);
-      parts.push(`${m} Min.`);
+      if (d) parts.push(t('monitor.days', { count: d }));
+      if (h || d) parts.push(t('monitor.hoursLong', { h }));
+      parts.push(t('monitor.minutesLong', { m }));
       return parts.join(', ');
     }
-    if (d) return `${d} T ${h} Std`;
-    if (h) return `${h} Std ${m} Min`;
-    return `${m} Min`;
+    if (d) return t('monitor.upDays', { d, h });
+    if (h) return t('monitor.upHours', { h, m });
+    return t('monitor.upMinutes', { m });
   }
 
   function item(label, p, text, cls = '') {
@@ -90,8 +90,8 @@ const Monitor = (() => {
     const cpu = cpuOf(s);
     if (cpu != null) parts.push(item('CPU', cpu, (s.cpu == null ? '~' : '') + fmtPct(cpu)));
     if (s.mem) { const p = pct(s.mem.used, s.mem.total); parts.push(item('RAM', p, fmtPct(p))); }
-    if (s.disk) { const p = pct(s.disk.used, s.disk.used + s.disk.free); parts.push(item('Platte', p, fmtPct(p))); }
-    if (s.uptime != null) parts.push(item('Läuft', null, uptimeText(s.uptime), 'mon-up'));
+    if (s.disk) { const p = pct(s.disk.used, s.disk.used + s.disk.free); parts.push(item(t('monitor.disk'), p, fmtPct(p))); }
+    if (s.uptime != null) parts.push(item(t('monitor.up'), null, uptimeText(s.uptime), 'mon-up'));
     if (!parts.length) { b.hidden = true; return; }
     b.innerHTML = parts.join('');
     b.hidden = false;
@@ -105,8 +105,8 @@ const Monitor = (() => {
       (p == null ? '' : `<div class="mon-rbar ${level(p)}"><i style="width:${p.toFixed(1)}%"></i></div>`);
   }
 
-  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const num = (n, d = 2) => n.toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const num = (n, d = 2) => n.toLocaleString(I18N.locale, { minimumFractionDigits: d, maximumFractionDigits: d });
 
   function renderPop(tab) {
     const s = tab && tab.monitorStats;
@@ -115,25 +115,25 @@ const Monitor = (() => {
     if (s.system) html += `<div class="mon-sub">${esc(s.system)}</div>`;
     const cpu = cpuOf(s);
     if (cpu != null) {
-      const cores = s.cpus ? ` · ${s.cpus} ${s.cpus === 1 ? 'Kern' : 'Kerne'}` : '';
-      html += row('CPU-Auslastung', `${s.cpu == null ? 'ca. ' : ''}${fmtPct(cpu)}${cores}`, cpu);
+      const cores = s.cpus ? ` · ${t('monitor.cores', { count: s.cpus })}` : '';
+      html += row(t('monitor.cpuUsage'), `${s.cpu == null ? t('monitor.approx', { value: fmtPct(cpu) }) : fmtPct(cpu)}${cores}`, cpu);
     }
-    if (s.load) html += row('Last (1 / 5 / 15 Min.)', s.load.map(x => (x == null ? '–' : num(x))).join(' / '));
+    if (s.load) html += row(t('monitor.load'), s.load.map(x => (x == null ? '–' : num(x))).join(' / '));
     if (s.mem) {
       const p = pct(s.mem.used, s.mem.total);
-      html += row('Arbeitsspeicher', `${formatSize(s.mem.used)} von ${formatSize(s.mem.total)} · ${fmtPct(p)}`, p);
+      html += row(t('monitor.memory'), `${t('monitor.usedOf', { used: formatSize(s.mem.used), total: formatSize(s.mem.total) })} · ${fmtPct(p)}`, p);
     }
     if (s.swap) {
       const p = pct(s.swap.used, s.swap.total);
-      html += row('Auslagerung (Swap)', `${formatSize(s.swap.used)} von ${formatSize(s.swap.total)}`, p);
+      html += row(t('monitor.swap'), t('monitor.usedOf', { used: formatSize(s.swap.used), total: formatSize(s.swap.total) }), p);
     }
     if (s.disk) {
       const p = pct(s.disk.used, s.disk.used + s.disk.free);
-      html += row(`Platte (${esc(s.disk.mount || '/')})`, `${formatSize(s.disk.used)} von ${formatSize(s.disk.total)} · ${formatSize(s.disk.free)} frei`, p);
+      html += row(t('monitor.diskMount', { mount: esc(s.disk.mount || '/') }), t('monitor.diskValue', { used: formatSize(s.disk.used), total: formatSize(s.disk.total), free: formatSize(s.disk.free) }), p);
     }
-    if (s.uptime != null) html += row('Läuft seit', uptimeText(s.uptime, true));
-    const at = new Date(s.at || Date.now()).toLocaleTimeString('de-DE');
-    html += `<div class="mon-foot">Aktualisiert alle 5 Sekunden · zuletzt ${at}</div>`;
+    if (s.uptime != null) html += row(t('monitor.uptime'), uptimeText(s.uptime, true));
+    const at = I18N.fmtTime(s.at || Date.now());
+    html += `<div class="mon-foot">${t('monitor.footer', { time: at })}</div>`;
     pop.innerHTML = html;
   }
 

@@ -1,5 +1,7 @@
 // Server-Übersicht: CPU, RAM, Platte und Laufzeit über einen eigenen exec-Kanal
 // (nichts wird in die Shell des Terminals getippt). Funktioniert auf Linux (/proc).
+const { t } = require('./i18n');
+
 const TIMEOUT = 8000;
 
 // Ein Befehl, Abschnitte durch Markierungen getrennt. Fehlt etwas, bleibt der Abschnitt leer.
@@ -86,7 +88,7 @@ function run(client, cmd) {
     client.exec(cmd, (err, stream) => {
       if (err) return reject(err);
       let out = '';
-      const timer = setTimeout(() => { try { stream.close(); } catch {} reject(new Error('Zeitüberschreitung')); }, TIMEOUT);
+      const timer = setTimeout(() => { try { stream.close(); } catch {} reject(new Error(t('monitor.timeout'))); }, TIMEOUT);
       stream.on('data', d => { if (out.length < 200000) out += d.toString('utf8'); });
       stream.stderr.on('data', () => {});
       stream.on('close', () => { clearTimeout(timer); resolve(out); });

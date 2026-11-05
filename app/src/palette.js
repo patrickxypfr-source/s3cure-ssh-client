@@ -8,12 +8,12 @@
   const RECENT_KEY = 's3cure.palette.recent';
   const MAX_RECENT = 8;
   const MAX_RESULTS = 60;
-  const SHORTCUT = IS_MAC ? '⌘K' : 'Strg+K';
+  const SHORTCUT = IS_MAC ? '⌘K' : t('palette.shortcutCtrl');
 
   // ---------- Einträge ----------
   // { key, section, label, detail, icon, keywords, run, alt?, altHint? }
 
-  const SECTIONS = { recent: 'Zuletzt verwendet', tabs: 'Offene Tabs', cmds: 'Befehle', hosts: 'Verbindungen', actions: 'Aktionen' };
+  const SECTIONS = { recent: t('palette.secRecent'), tabs: t('palette.secTabs'), cmds: t('palette.secCmds'), hosts: t('palette.secHosts'), actions: t('palette.secActions') };
   const providers = [];
 
   const activeTab = () => tabs.get(activeId) || null;
@@ -21,27 +21,27 @@
   const tool = sel => () => Layout.clickTool(document.querySelector(sel));
 
   function hostItems() {
-    return Object.keys(hosts).sort((a, b) => a.localeCompare(b)).map(name => {
+    return Object.keys(hosts).sort((a, b) => a.localeCompare(b, I18N.locale)).map(name => {
       const h = hosts[name];
       const open = [...tabs.values()].some(t => t.spec.name === name && t.state === 'open');
       return {
         key: 'host:' + name, section: 'hosts', icon: 'server', label: name,
-        detail: `${h.user}@${h.host}${h.port !== 22 ? ':' + h.port : ''}${h.group ? ' · ' + h.group : ''}${open ? ' · verbunden' : ''}`,
-        keywords: `verbinden ssh ${h.host} ${h.user} ${h.group || ''}`,
+        detail: `${h.user}@${h.host}${h.port !== 22 ? ':' + h.port : ''}${h.group ? ' · ' + h.group : ''}${open ? t('palette.connectedSuffix') : ''}`,
+        keywords: `verbinden connect ssh ${h.host} ${h.user} ${h.group || ''}`,
         run: () => openTab({ name }, name),
-        alt: () => openTab({ name }, name, 'files'), altHint: 'Dateien öffnen',
+        alt: () => openTab({ name }, name, 'files'), altHint: t('palette.openFiles'),
       };
     });
   }
 
   function tabItems() {
-    const state = { open: 'verbunden', connecting: 'verbindet …', reconnecting: 'verbindet neu …', closed: 'nicht verbunden' };
-    const views = { terminal: 'Terminal', files: 'Dateien', dash: 'Übersicht' };
-    return [...tabs.values()].map(t => ({
-      key: 'tab:' + t.id, section: 'tabs', icon: t.view === 'files' ? 'folder' : 'terminal', label: t.title,
-      detail: `${state[t.state] || ''}${t.id === activeId ? ' · aktueller Tab' : ''} · ${views[t.view] || ''}`,
-      keywords: 'tab wechseln', noRecent: true,
-      run: () => activate(t.id),
+    const state = { open: t('palette.stateOpen'), connecting: t('palette.stateConnecting'), reconnecting: t('palette.stateReconnecting'), closed: t('palette.stateClosed') };
+    const views = { terminal: t('palette.viewTerminal'), files: t('palette.viewFiles'), dash: t('palette.viewDash') };
+    return [...tabs.values()].map(tb => ({
+      key: 'tab:' + tb.id, section: 'tabs', icon: tb.view === 'files' ? 'folder' : 'terminal', label: tb.title,
+      detail: `${state[tb.state] || ''}${tb.id === activeId ? t('palette.currentTab') : ''} · ${views[tb.view] || ''}`,
+      keywords: 'tab wechseln switch', noRecent: true, // i18n-ignore
+      run: () => activate(tb.id),
     }));
   }
 
@@ -50,8 +50,8 @@
     if (!tab || typeof Quickbar === 'undefined' || !Quickbar.entries) return [];
     return Quickbar.entries(tab).map(({ item, parent, global, label }) => ({
       key: 'cmd:' + item.id, section: 'cmds', icon: hasIcon(item.icon) ? item.icon : hasIcon(parent?.icon) ? parent.icon : 'bolt',
-      label, detail: (global ? 'Alle Server · ' : '') + String(item.cmd).split('\n')[0],
-      keywords: `befehl knopf ${item.tip || ''} ${item.cmd}`, danger: !!(item.danger || parent?.danger),
+      label, detail: (global ? t('palette.allServers') : '') + String(item.cmd).split('\n')[0],
+      keywords: `befehl knopf command button ${item.tip || ''} ${item.cmd}`, danger: !!(item.danger || parent?.danger),
       run: () => Quickbar.run(item, parent),
     }));
   }
@@ -63,29 +63,29 @@
     const open = tab && tab.state === 'open';
     const A = (id, label, icon, run, extra = {}) => ({ key: 'act:' + id, section: 'actions', icon, label, run, ...extra });
     const list = [
-      A('new-host', 'Neue Verbindung anlegen', 'plus', () => editHost(), { keywords: 'host server hinzufügen erstellen' }),
-      A('quick', 'Schnell verbinden (user@host)', 'bolt', () => { if (Layout.isSidebarCollapsed()) Layout.setSidebarCollapsed(false); setTimeout(() => $('#quick-input').focus(), 220); }, { keywords: 'adresse eingeben' }),
-      A('import', 'Verbindungen aus ~/.ssh/config übernehmen', 'download', () => $('#import-hosts').click(), { keywords: 'import ssh config' }),
-      A('sidebar', Layout.isSidebarCollapsed() ? 'Seitenleiste ausklappen' : 'Seitenleiste einklappen', 'sidebar', () => Layout.setSidebarCollapsed(!Layout.isSidebarCollapsed()), { keywords: 'leiste links verbindungsliste' }),
-      A('settings', 'Einstellungen', 'gear', () => Settings.open(), { keywords: 'optionen schrift terminal farben' }),
-      A('lock', 'App-Sperre einstellen', 'lock', () => $('#app-lock-btn').click(), { keywords: 'passwort touch id schutz' }),
+      A('new-host', t('palette.actNewHost'), 'plus', () => editHost(), { keywords: 'host server hinzufügen erstellen add create new' }), // i18n-ignore
+      A('quick', t('palette.actQuick'), 'bolt', () => { if (Layout.isSidebarCollapsed()) Layout.setSidebarCollapsed(false); setTimeout(() => $('#quick-input').focus(), 220); }, { keywords: 'adresse eingeben address enter' }),
+      A('import', t('palette.actImport'), 'download', () => $('#import-hosts').click(), { keywords: 'import ssh config' }),
+      A('sidebar', Layout.isSidebarCollapsed() ? t('palette.actSidebarOpen') : t('palette.actSidebarClose'), 'sidebar', () => Layout.setSidebarCollapsed(!Layout.isSidebarCollapsed()), { keywords: 'leiste links verbindungsliste sidebar left connection list' }),
+      A('settings', t('palette.actSettings'), 'gear', () => Settings.open(), { keywords: 'optionen schrift terminal farben options preferences font colors language sprache' }),
+      A('lock', t('palette.actLock'), 'lock', () => $('#app-lock-btn').click(), { keywords: 'passwort touch id schutz password protection' }),
     ];
     if (tab) {
       list.push(
-        A('view-terminal', 'Terminal anzeigen', 'terminal', () => setView('terminal'), { keywords: 'ansicht konsole shell' }),
-        A('view-files', 'Dateien anzeigen', 'folder', () => setView('files'), { keywords: 'ansicht sftp dateibrowser' }),
-        A('close-tab', 'Tab schließen', 'close', () => closeTab(activeId), { keywords: 'beenden trennen' }),
-        A('quickbar', 'Befehlsleiste ein- oder ausblenden', 'bolt', () => $('#btn-quick').click(), { keywords: 'knöpfe schnellbefehle' }),
+        A('view-terminal', t('palette.actViewTerminal'), 'terminal', () => setView('terminal'), { keywords: 'ansicht konsole shell view console' }),
+        A('view-files', t('palette.actViewFiles'), 'folder', () => setView('files'), { keywords: 'ansicht sftp dateibrowser view file browser' }),
+        A('close-tab', t('palette.actCloseTab'), 'close', () => closeTab(activeId), { keywords: 'beenden trennen quit disconnect' }),
+        A('quickbar', t('palette.actQuickbar'), 'bolt', () => $('#btn-quick').click(), { keywords: 'knöpfe schnellbefehle buttons quick commands' }), // i18n-ignore
       );
-      if (tab.state === 'closed' || tab.state === 'reconnecting') list.push(A('reconnect', 'Neu verbinden', 'refresh', () => reconnectNow(tab), { keywords: 'verbindung wiederherstellen' }));
+      if (tab.state === 'closed' || tab.state === 'reconnecting') list.push(A('reconnect', t('palette.actReconnect'), 'refresh', () => reconnectNow(tab), { keywords: 'verbindung wiederherstellen restore connection' }));
     }
     if (open) {
       list.push(
-        A('tunnels', 'Tunnel (Port-Weiterleitungen)', 'tunnel', tool('#btn-tunnels'), { keywords: 'port forward socks weiterleitung' }),
-        A('split', 'Terminal teilen (weiteres Terminal)', 'split', () => TermExtra.addPane(), { keywords: 'split nebeneinander raster zweites' }),
-        A('log', 'Mitschnitt starten oder stoppen', 'record', tool('#term-tools [data-t=log]'), { keywords: 'aufzeichnen protokoll log' }),
-        A('broadcast', 'An alle senden ein- oder ausschalten', 'broadcast', () => TermExtra.toggleBroadcast(), { keywords: 'broadcast alle terminals gleichzeitig' }),
-        A('term-search', 'Im Terminal suchen', 'search', () => { setView('terminal'); TermExtra.openSearch(); }, { keywords: 'finden text' }),
+        A('tunnels', t('palette.actTunnels'), 'tunnel', tool('#btn-tunnels'), { keywords: 'port forward socks weiterleitung forwarding' }),
+        A('split', t('palette.actSplit'), 'split', () => TermExtra.addPane(), { keywords: 'split nebeneinander raster zweites side by side grid second' }),
+        A('log', t('palette.actLog'), 'record', tool('#term-tools [data-t=log]'), { keywords: 'aufzeichnen protokoll log record session' }),
+        A('broadcast', t('palette.actBroadcast'), 'broadcast', () => TermExtra.toggleBroadcast(), { keywords: 'broadcast alle terminals gleichzeitig all at once' }), // i18n-ignore
+        A('term-search', t('palette.actTermSearch'), 'search', () => { setView('terminal'); TermExtra.openSearch(); }, { keywords: 'finden text find search' }),
       );
     }
     return list;
@@ -170,19 +170,19 @@
   overlay.id = 'palette';
   overlay.hidden = true;
   overlay.innerHTML = `
-    <div class="pal" role="dialog" aria-label="Befehlspalette">
+    <div class="pal" role="dialog" aria-label="${t('palette.ariaLabel')}">
       <div class="pal-head">
         <span class="pal-ic">${icon('search')}</span>
-        <input class="pal-input" placeholder="Verbindung, Tab, Befehl oder Aktion suchen …" spellcheck="false" autocomplete="off" aria-autocomplete="list" aria-controls="pal-list">
+        <input class="pal-input" placeholder="${t('palette.placeholder')}" spellcheck="false" autocomplete="off" aria-autocomplete="list" aria-controls="pal-list">
         <kbd class="pal-kbd">Esc</kbd>
       </div>
       <div class="pal-list" id="pal-list" role="listbox"></div>
       <div class="pal-foot">
-        <span><kbd>↑</kbd><kbd>↓</kbd> auswählen</span>
-        <span><kbd>Enter</kbd> ausführen</span>
-        <span class="pal-alt-hint" hidden><kbd>${IS_MAC ? '⇧' : 'Umschalt'}</kbd><kbd>Enter</kbd> <span></span></span>
+        <span><kbd>↑</kbd><kbd>↓</kbd> ${t('palette.footSelect')}</span>
+        <span><kbd>Enter</kbd> ${t('palette.footRun')}</span>
+        <span class="pal-alt-hint" hidden><kbd>${IS_MAC ? '⇧' : t('palette.shift')}</kbd><kbd>Enter</kbd> <span></span></span>
         <span class="spacer"></span>
-        <span>${SHORTCUT} öffnet und schließt</span>
+        <span>${t('palette.footToggle', { shortcut: SHORTCUT })}</span>
       </div>
     </div>`;
   document.body.appendChild(overlay);
@@ -238,7 +238,7 @@
     if (!results.length) {
       const empty = document.createElement('div');
       empty.className = 'pal-empty';
-      empty.textContent = 'Nichts gefunden.';
+      empty.textContent = t('palette.nothingFound');
       listEl.appendChild(empty);
     }
     markSel(true);
@@ -253,7 +253,7 @@
     }
     const it = results[sel]?.it;
     altHint.hidden = !it?.alt;
-    if (it?.alt) altHint.lastElementChild.textContent = it.altHint || 'Alternative';
+    if (it?.alt) altHint.lastElementChild.textContent = it.altHint || t('palette.alternative');
   }
 
   function open() {
@@ -315,7 +315,7 @@
   btn.id = 'pal-btn';
   btn.type = 'button';
   btn.className = 'mini-btn';
-  btn.title = `Befehlspalette – alles suchen und starten (${SHORTCUT})`;
+  btn.title = t('palette.buttonTip', { shortcut: SHORTCUT });
   btn.innerHTML = icon('search');
   btn.addEventListener('click', () => open());
   $('#tabbar').appendChild(btn);

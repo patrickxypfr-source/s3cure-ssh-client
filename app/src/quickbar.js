@@ -10,21 +10,21 @@ const Quickbar = (() => {
   // Eingabe-Arten für Platzhalter wie {commit}
   const INPUT_KINDS = {
     ref: {
-      label: 'Wort (Name, Commit, Pfad)', placeholder: 'z. B. main oder a1b2c3d',
+      label: t('quickbar.kindRefLabel'), placeholder: t('quickbar.kindRefPlaceholder'),
       test: v => /^[\p{L}\p{N}_~^.\/:@+=,-]+$/u.test(v) && !v.startsWith('-'),
-      rule: 'Erlaubt sind Buchstaben, Zahlen sowie ~ ^ . / - _ : @ + = , (keine Leerzeichen, nicht mit - am Anfang).',
+      rule: t('quickbar.kindRefRule'),
       insert: v => v,
     },
     number: {
-      label: 'Zahl', placeholder: 'z. B. 5',
+      label: t('quickbar.kindNumberLabel'), placeholder: t('quickbar.kindNumberPlaceholder'),
       test: v => /^\d{1,12}$/.test(v),
-      rule: 'Bitte nur eine ganze Zahl eingeben (z. B. 5).',
+      rule: t('quickbar.kindNumberRule'),
       insert: v => v,
     },
     text: {
-      label: 'Beliebiger Text', placeholder: '',
+      label: t('quickbar.kindTextLabel'), placeholder: '',
       test: v => !/[\x00-\x1f\x7f]/.test(v),
-      rule: 'Der Text darf keine Zeilenumbrüche oder Steuerzeichen enthalten.',
+      rule: t('quickbar.kindTextRule'),
       // Sicher in einfache Anführungszeichen; steht der Platzhalter schon in "…" oder '…',
       // wird das kurz geschlossen und danach wieder geöffnet
       insert: (v, quote) => {
@@ -43,36 +43,36 @@ const Quickbar = (() => {
       name: 's3cure',
       groups: () => [
         { items: [
-          B('Status', 's3 status', 'Dienste, Stand, Backup-Timer', { icon: 'pulse' }),
-          B('Check', 's3 check', 'Gesundheitscheck: Dienste, Ports, Firewall, RAM, Platte', { icon: 'checkCircle' }),
+          B('Status', 's3 status', t('quickbar.tplStatusTip'), { icon: 'pulse' }),
+          B('Check', 's3 check', t('quickbar.tplCheckTip'), { icon: 'checkCircle' }),
         ] },
         { items: [
-          B('Update', 's3 update', 'Code holen, nur Nötiges bauen und neu starten', { icon: 'sync' }),
-          B('Update all', 's3 update-all', 'Alles: pull, install, Panel-Build, beide neu starten',
-            { icon: 'layers', confirm: 'Alles neu installieren, das Panel neu bauen und Bot und Panel neu starten?' }),
+          B('Update', 's3 update', t('quickbar.tplUpdateTip'), { icon: 'sync' }),
+          B('Update all', 's3 update-all', t('quickbar.tplUpdateAllTip'),
+            { icon: 'layers', confirm: t('quickbar.tplUpdateAllConfirm') }),
         ] },
         { items: [
-          M('Restart', 'Dienste neu starten', [B('Alles', 's3 restart all'), B('Bot', 's3 restart bot'), B('Panel', 's3 restart panel')], { icon: 'restart' }),
-          M('Start', 'Dienst starten', [B('Bot', 's3 start bot'), B('Panel', 's3 start panel')], { icon: 'play' }),
-          M('Stop', 'Dienst stoppen', [B('Bot', 's3 stop bot'), B('Panel', 's3 stop panel')],
-            { icon: 'stop', danger: true, confirm: 'Den Dienst wirklich stoppen? Er ist dann offline, bis du ihn wieder startest.' }),
+          M('Restart', t('quickbar.tplRestartTip'), [B(t('quickbar.tplAll'), 's3 restart all'), B('Bot', 's3 restart bot'), B('Panel', 's3 restart panel')], { icon: 'restart' }),
+          M('Start', t('quickbar.tplStartTip'), [B('Bot', 's3 start bot'), B('Panel', 's3 start panel')], { icon: 'play' }),
+          M('Stop', t('quickbar.tplStopTip'), [B('Bot', 's3 stop bot'), B('Panel', 's3 stop panel')],
+            { icon: 'stop', danger: true, confirm: t('quickbar.tplStopConfirm') }),
         ] },
         { items: [
-          M('Logs', 'Letzte 60 Zeilen', [B('Bot', 's3 logs bot'), B('Panel', 's3 logs panel'), B('Caddy', 's3 logs caddy')], { icon: 'logs' }),
-          M('Live-Log', 'Log live mitlesen – endet mit Strg+C oder beim nächsten Knopf',
+          M('Logs', t('quickbar.tplLogsTip'), [B('Bot', 's3 logs bot'), B('Panel', 's3 logs panel'), B('Caddy', 's3 logs caddy')], { icon: 'logs' }),
+          M(t('quickbar.tplLiveLog'), t('quickbar.tplLiveLogTip'),
             [B('Bot', 's3 live bot', '', { live: true }), B('Panel', 's3 live panel', '', { live: true })], { icon: 'radio' }),
-          B('Commits', 's3 log', 'Letzte 8 Commits', { icon: 'gitBranch' }),
+          B('Commits', 's3 log', t('quickbar.tplCommitsTip'), { icon: 'gitBranch' }),
         ] },
         { items: [
-          B('Build', 's3 build', 'Panel neu bauen und neu starten', { icon: 'hammer' }),
-          B('Backup', 's3 backup', 'DB-Sicherung und Drive-Kopie jetzt ausführen', { icon: 'archive' }),
-          M('Rollback', 'Auf einen alten Stand zurück', [
-            B('Ein Commit zurück', 's3 rollback', '', { icon: 'undo' }),
-            B('Bestimmter Commit …', 's3 rollback {commit}', '', { icon: 'gitCommit',
-              inputs: { commit: { prompt: 'Auf welchen Commit zurück? (Hash aus „Commits“ oder z. B. HEAD~2)', kind: 'ref', value: '' } },
+          B('Build', 's3 build', t('quickbar.tplBuildTip'), { icon: 'hammer' }),
+          B('Backup', 's3 backup', t('quickbar.tplBackupTip'), { icon: 'archive' }),
+          M('Rollback', t('quickbar.tplRollbackTip'), [
+            B(t('quickbar.tplRollbackOne'), 's3 rollback', '', { icon: 'undo' }),
+            B(t('quickbar.tplRollbackPick'), 's3 rollback {commit}', '', { icon: 'gitCommit',
+              inputs: { commit: { prompt: t('quickbar.tplRollbackPrompt'), kind: 'ref', value: '' } },
             }),
-          ], { icon: 'undo', danger: true, confirm: 'Wirklich auf einen alten Stand zurückgehen? Der Bot wird dabei neu gestartet.' }),
-          B('.env', 's3 env', '.env im Editor nano öffnen – speichern: Strg+O, Enter · beenden: Strg+X', { icon: 'key' }),
+          ], { icon: 'undo', danger: true, confirm: t('quickbar.tplRollbackConfirm') }),
+          B('.env', 's3 env', t('quickbar.tplEnvTip'), { icon: 'key' }),
         ] },
       ],
     },
@@ -83,26 +83,49 @@ const Quickbar = (() => {
   // Suchwörter (deutsch) für die Icon-Auswahl; das erste Wort ist der Name im Tooltip.
   // Reihenfolge = Reihenfolge im Raster. Nur diese Icons stehen zur Auswahl.
   const ICON_WORDS = {
-    pulse: 'Status Puls Aktivität', checkCircle: 'Check Prüfen Gesundheit OK', check: 'Häkchen Prüfen OK',
-    sync: 'Update Aktualisieren Synchronisieren', layers: 'Alles Ebenen Stapel', refresh: 'Neu laden Aktualisieren',
-    restart: 'Neustart Restart Neu starten', play: 'Start Starten Abspielen', stop: 'Stop Stoppen Anhalten',
-    pause: 'Pause Anhalten', power: 'Ein/Aus Power Strom',
-    logs: 'Logs Protokoll Datei Text', list: 'Liste Logs Zeilen', radio: 'Live Mitlesen Wellen Stream',
-    gitBranch: 'Commits Git Zweig Branch', gitCommit: 'Commit Git Version',
-    hammer: 'Build Bauen Werkzeug', rocket: 'Deploy Rakete Veröffentlichen', archive: 'Backup Archiv Sicherung',
-    undo: 'Rollback Zurück Rückgängig', gear: 'Einstellungen Zahnrad Konfiguration', sliders: 'Regler Einstellungen Optionen',
-    key: 'Schlüssel .env Zugang Passwort', lock: 'Schloss Sperren Sicherheit', unlock: 'Entsperren Offen',
-    shield: 'Firewall Schutz Sicherheit', shieldCheck: 'Zertifikat SSL Sicherheit geprüft',
-    database: 'Datenbank DB SQL', container: 'Docker Container Paket', server: 'Server Dienst',
-    terminal: 'Terminal Konsole Befehl Shell', code: 'Code Programm Skript',
-    globe: 'Web Internet Domain', network: 'Netzwerk Verbindungen', wifi: 'WLAN Verbindung Signal', cloud: 'Cloud Wolke Drive',
-    hardDrive: 'Festplatte Speicherplatz Disk', memory: 'Arbeitsspeicher RAM', cpu: 'Prozessor CPU Last', gauge: 'Auslastung Monitor Tacho',
-    clock: 'Zeit Uhr Cron Timer', user: 'Benutzer Nutzer User', users: 'Gruppe Benutzer Team',
-    trash: 'Papierkorb Löschen Aufräumen', download: 'Download Herunterladen', upload: 'Upload Hochladen',
-    search: 'Suche Suchen Finden', alert: 'Warnung Achtung Fehler', info: 'Info Information Hinweis', help: 'Hilfe Frage',
-    bell: 'Glocke Benachrichtigung Alarm', star: 'Stern Favorit', bolt: 'Blitz Schnell Aktion',
-    file: 'Datei Dokument', folder: 'Ordner Verzeichnis', link: 'Link Verknüpfung URL', home: 'Home Haus Start', edit: 'Stift Bearbeiten Editor',
-    save: 'Speichern Diskette', copy: 'Kopieren', eye: 'Ansehen Auge Anzeigen', zip: 'ZIP Packen Komprimieren', tunnel: 'Tunnel Weiterleitung Port',
+    pulse: 'Status Puls Aktivität', checkCircle: 'Check Prüfen Gesundheit OK', check: 'Häkchen Prüfen OK', // i18n-ignore
+    sync: 'Update Aktualisieren Synchronisieren', layers: 'Alles Ebenen Stapel', refresh: 'Neu laden Aktualisieren', // i18n-ignore
+    restart: 'Neustart Restart Neu starten', play: 'Start Starten Abspielen', stop: 'Stop Stoppen Anhalten', // i18n-ignore
+    pause: 'Pause Anhalten', power: 'Ein/Aus Power Strom', // i18n-ignore
+    logs: 'Logs Protokoll Datei Text', list: 'Liste Logs Zeilen', radio: 'Live Mitlesen Wellen Stream', // i18n-ignore
+    gitBranch: 'Commits Git Zweig Branch', gitCommit: 'Commit Git Version', // i18n-ignore
+    hammer: 'Build Bauen Werkzeug', rocket: 'Deploy Rakete Veröffentlichen', archive: 'Backup Archiv Sicherung', // i18n-ignore
+    undo: 'Rollback Zurück Rückgängig', gear: 'Einstellungen Zahnrad Konfiguration', sliders: 'Regler Einstellungen Optionen', // i18n-ignore
+    key: 'Schlüssel .env Zugang Passwort', lock: 'Schloss Sperren Sicherheit', unlock: 'Entsperren Offen', // i18n-ignore
+    shield: 'Firewall Schutz Sicherheit', shieldCheck: 'Zertifikat SSL Sicherheit geprüft', // i18n-ignore
+    database: 'Datenbank DB SQL', container: 'Docker Container Paket', server: 'Server Dienst', // i18n-ignore
+    terminal: 'Terminal Konsole Befehl Shell', code: 'Code Programm Skript', // i18n-ignore
+    globe: 'Web Internet Domain', network: 'Netzwerk Verbindungen', wifi: 'WLAN Verbindung Signal', cloud: 'Cloud Wolke Drive', // i18n-ignore
+    hardDrive: 'Festplatte Speicherplatz Disk', memory: 'Arbeitsspeicher RAM', cpu: 'Prozessor CPU Last', gauge: 'Auslastung Monitor Tacho', // i18n-ignore
+    clock: 'Zeit Uhr Cron Timer', user: 'Benutzer Nutzer User', users: 'Gruppe Benutzer Team', // i18n-ignore
+    trash: 'Papierkorb Löschen Aufräumen', download: 'Download Herunterladen', upload: 'Upload Hochladen', // i18n-ignore
+    search: 'Suche Suchen Finden', alert: 'Warnung Achtung Fehler', info: 'Info Information Hinweis', help: 'Hilfe Frage', // i18n-ignore
+    bell: 'Glocke Benachrichtigung Alarm', star: 'Stern Favorit', bolt: 'Blitz Schnell Aktion', // i18n-ignore
+    file: 'Datei Dokument', folder: 'Ordner Verzeichnis', link: 'Link Verknüpfung URL', home: 'Home Haus Start', edit: 'Stift Bearbeiten Editor', // i18n-ignore
+    save: 'Speichern Diskette', copy: 'Kopieren', eye: 'Ansehen Auge Anzeigen', zip: 'ZIP Packen Komprimieren', tunnel: 'Tunnel Weiterleitung Port', // i18n-ignore
+  };
+  // Englische Suchwörter (erstes Wort = Name im Tooltip, wenn die Oberfläche englisch ist)
+  const ICON_WORDS_EN = {
+    pulse: 'Status Pulse Activity', checkCircle: 'Check Health OK', check: 'Checkmark Check OK',
+    sync: 'Update Sync', layers: 'All Layers Stack', refresh: 'Reload Refresh',
+    restart: 'Restart Reboot', play: 'Start Play Run', stop: 'Stop Halt',
+    pause: 'Pause Hold', power: 'Power On/Off',
+    logs: 'Logs Log File Text', list: 'List Logs Lines', radio: 'Live Follow Waves Stream',
+    gitBranch: 'Commits Git Branch', gitCommit: 'Commit Git Version',
+    hammer: 'Build Tool', rocket: 'Deploy Rocket Publish Release', archive: 'Backup Archive',
+    undo: 'Rollback Back Undo', gear: 'Settings Gear Configuration', sliders: 'Sliders Settings Options',
+    key: 'Key .env Access Password', lock: 'Lock Security', unlock: 'Unlock Open',
+    shield: 'Firewall Shield Protection Security', shieldCheck: 'Certificate SSL Security Verified',
+    database: 'Database DB SQL', container: 'Docker Container Package', server: 'Server Service',
+    terminal: 'Terminal Console Command Shell', code: 'Code Program Script',
+    globe: 'Web Internet Domain', network: 'Network Connections', wifi: 'Wi-Fi WLAN Connection Signal', cloud: 'Cloud Drive',
+    hardDrive: 'Disk Hard Drive Storage', memory: 'Memory RAM', cpu: 'Processor CPU Load', gauge: 'Usage Monitor Gauge',
+    clock: 'Time Clock Cron Timer', user: 'User Person', users: 'Group Users Team',
+    trash: 'Trash Delete Clean Up', download: 'Download', upload: 'Upload',
+    search: 'Search Find', alert: 'Warning Alert Error', info: 'Info Information Note', help: 'Help Question',
+    bell: 'Bell Notification Alarm', star: 'Star Favorite', bolt: 'Bolt Quick Action',
+    file: 'File Document', folder: 'Folder Directory', link: 'Link Shortcut URL', home: 'Home House Start', edit: 'Pencil Edit Editor',
+    save: 'Save Disk', copy: 'Copy', eye: 'View Eye Show', zip: 'ZIP Pack Compress', tunnel: 'Tunnel Forwarding Port',
   };
   const hasIcon = name => typeof name === 'string' && Object.hasOwn(ICON_PATHS, name);
   const iconNames = () => Object.keys(ICON_WORDS).filter(hasIcon);
@@ -110,7 +133,9 @@ const Quickbar = (() => {
   const dropUnknownIcons = groups => groups.map(g => ({ ...g, items: g.items.map(function fix(it) {
     return { ...it, icon: hasIcon(it.icon) ? it.icon : '', ...(it.items ? { items: it.items.map(fix) } : {}) };
   }) }));
-  const iconTitle = name => (ICON_WORDS[name] || name).split(' ')[0];
+  const iconTitle = name => ((I18N.lang === 'en' ? ICON_WORDS_EN : ICON_WORDS)[name] || name).split(' ')[0];
+  // Suche findet deutsche und englische Wörter
+  const iconWords = name => `${name} ${ICON_WORDS[name] || ''} ${ICON_WORDS_EN[name] || ''}`;
 
   // Inhalt eines Knopfs: [Icon] Text [Pfeil bei Menüs]
   function fillButton(b, item, arrow) {
@@ -125,7 +150,7 @@ const Quickbar = (() => {
   // ---------- Daten ----------
 
   // Profil-Schlüssel der Knöpfe „Für alle Server“ – kann kein Verbindungsname sein
-  const GLOBAL = '\u0000alle';
+  const GLOBAL = '\u0000alle'; // i18n-ignore
   let profiles = {};
   let loaded = false;
   let loading = null;
@@ -185,7 +210,7 @@ const Quickbar = (() => {
     profiles[key] = { groups };
     renderQuickbar();
     try { await (key === GLOBAL ? api.snippetsSaveGlobal({ groups }) : api.snippetsSave(key, { groups })); }
-    catch (err) { showError('Befehlsknöpfe konnten nicht gespeichert werden: ' + (err.message || err)); }
+    catch (err) { showError(t('quickbar.saveFailed', { error: err.message || err })); }
   }
 
   // ---------- Ausführen ----------
@@ -204,13 +229,13 @@ const Quickbar = (() => {
       for (;;) {
         const answer = await askLocal({
           kind: 'text', title,
-          message: (error ? error + '\n\n' : '') + (inp.prompt || `Wert für „${name}“:`),
-          value, placeholder: kind.placeholder, okLabel: 'Weiter',
+          message: (error ? error + '\n\n' : '') + (inp.prompt || t('quickbar.valueFor', { name })),
+          value, placeholder: kind.placeholder, okLabel: t('common.next'),
         });
         if (answer == null) return null;
         const v = answer.trim();
-        if (!v) { error = 'Bitte etwas eingeben.'; value = ''; continue; }
-        if (!kind.test(v)) { error = 'Ungültige Eingabe. ' + kind.rule; value = v; continue; }
+        if (!v) { error = t('quickbar.enterSomething'); value = ''; continue; }
+        if (!kind.test(v)) { error = t('quickbar.invalidInput', { rule: kind.rule }); value = v; continue; }
         values[name] = { kind, v };
         break;
       }
@@ -241,7 +266,7 @@ const Quickbar = (() => {
     cmd = cmd.split(/\r?\n/).map(l => l.trim()).filter(Boolean).join(' && ');
     if (!cmd) return;
     const confirm = item.confirm || parent?.confirm;
-    const confirmText = confirm ? (typeof confirm === 'string' ? confirm : `„${title}“ wirklich ausführen?`) : null;
+    const confirmText = confirm ? (typeof confirm === 'string' ? confirm : t('quickbar.confirmRun', { title })) : null;
     runQuick(cmd, confirmText, item.live || isLive(cmd));
   }
 
@@ -272,20 +297,20 @@ const Quickbar = (() => {
       if (countButtons(groups)) bar.appendChild(el('span', 'qsep'));
       const tag = el('span', 'qscope');
       tag.innerHTML = icon(hasIcon('globe') ? 'globe' : 'server');
-      tag.title = 'Die folgenden Knöpfe gelten für alle Server';
+      tag.title = t('quickbar.globalScopeTip');
       bar.appendChild(tag);
       renderButtons(bar, GLOBAL, key, globals, connected);
     }
     const edit = el('button', 'qbtn qghost');
     edit.innerHTML = icon('edit');
-    edit.title = 'Knöpfe bearbeiten, sortieren, Vorlage, Export/Import';
+    edit.title = t('quickbar.editTip');
     edit.addEventListener('click', () => startEdit(key));
     bar.appendChild(edit);
     bar.oncontextmenu = e => {
       e.preventDefault();
       openMenu([
-        ['Leiste bearbeiten', () => startEdit(key), '', 'edit'],
-        ['Neuer Knopf …', () => newButton(key), '', 'plus'],
+        [t('quickbar.editBar'), () => startEdit(key), '', 'edit'],
+        [t('quickbar.newButtonMenu'), () => newButton(key), '', 'plus'],
       ], e.clientX, e.clientY);
     };
   }
@@ -300,26 +325,26 @@ const Quickbar = (() => {
         b.disabled = !connected;
         fillButton(b, item, item.type === 'menu');
         // Mit Icon steht der Name auch im Tooltip (bei schmaler Leiste ist nur das Icon zu sehen)
-        b.title = (hasIcon(item.icon) ? `${item.label}\n` : '') + (item.type === 'button' ? `${item.cmd}\n` : '') + (item.tip || '') + (global ? '\n(für alle Server)' : '');
+        b.title = (hasIcon(item.icon) ? `${item.label}\n` : '') + (item.type === 'button' ? `${item.cmd}\n` : '') + (item.tip || '') + (global ? '\n' + t('quickbar.forAllServers') : '');
         b.setAttribute('aria-label', item.label);
         b.addEventListener('click', e => {
           if (item.type !== 'menu') return run(item);
           const r = e.currentTarget.getBoundingClientRect();
           const entries = item.items.map(sub => [sub.label, () => run(sub, item), sub.danger || item.danger ? 'danger' : '', hasIcon(sub.icon) ? sub.icon : 'terminal']);
-          if (!entries.length) entries.push(['Leer – Einträge hinzufügen …', () => startEdit(key), '', 'plus']);
+          if (!entries.length) entries.push([t('quickbar.emptyMenu'), () => startEdit(key), '', 'plus']);
           openMenu(entries, r.left, r.bottom + 4);
         });
         b.addEventListener('contextmenu', e => {
           e.preventDefault();
           e.stopPropagation();
           openMenu([
-            ['Bearbeiten …', () => openEditor(owner, findPath(owner, item.id)), '', 'edit'],
+            [t('quickbar.editEllipsis'), () => openEditor(owner, findPath(owner, item.id)), '', 'edit'],
             global
-              ? ['Nur bei dieser Verbindung zeigen', () => moveScope(owner, key, item.id), '', 'server']
-              : ['Bei allen Servern zeigen', () => moveScope(owner, GLOBAL, item.id), '', hasIcon('globe') ? 'globe' : 'server'],
-            ['Leiste bearbeiten', () => startEdit(key), '', 'bolt'],
+              ? [t('quickbar.showLocalOnly'), () => moveScope(owner, key, item.id), '', 'server']
+              : [t('quickbar.showEverywhere'), () => moveScope(owner, GLOBAL, item.id), '', hasIcon('globe') ? 'globe' : 'server'],
+            [t('quickbar.editBar'), () => startEdit(key), '', 'bolt'],
             null,
-            ['Löschen …', () => deleteAt(owner, findPath(owner, item.id)), 'danger', 'trash'],
+            [t('quickbar.deleteEllipsis'), () => deleteAt(owner, findPath(owner, item.id)), 'danger', 'trash'],
           ], e.clientX, e.clientY);
         });
         bar.appendChild(b);
@@ -334,19 +359,19 @@ const Quickbar = (() => {
     const to = groupsOf(toKey);
     const last = to.length - 1;
     move({ key: fromKey, ...p }, last >= 0 ? { key: toKey, gi: last, index: to[last].items.length } : { key: toKey, newGroup: true, index: 0 });
-    flash(toKey === GLOBAL ? 'Knopf wird jetzt bei allen Servern angezeigt' : 'Knopf gilt jetzt nur für diese Verbindung');
+    flash(toKey === GLOBAL ? t('quickbar.movedGlobal') : t('quickbar.movedLocal'));
   }
 
   function renderEmpty(key, bar) {
-    bar.appendChild(el('span', 'qempty', 'Noch keine Befehlsknöpfe für diese Verbindung.'));
-    const add = el('button', 'qbtn', 'Knopf anlegen');
+    bar.appendChild(el('span', 'qempty', t('quickbar.emptyBar')));
+    const add = el('button', 'qbtn', t('quickbar.createButton'));
     add.insertAdjacentHTML('afterbegin', icon('plus'));
     add.addEventListener('click', () => newButton(key));
-    const tpl = el('button', 'qbtn', 'Vorlage „s3cure“ übernehmen');
+    const tpl = el('button', 'qbtn', t('quickbar.applyTemplate'));
     tpl.insertAdjacentHTML('afterbegin', icon('bolt'));
-    tpl.title = 'Die bekannten s3-Knöpfe (Status, Update, Logs, Rollback …) übernehmen';
-    tpl.addEventListener('click', () => applyGroups(key, withIds(TEMPLATES.s3cure.groups()), 'Vorlage „s3cure“ übernehmen'));
-    const imp = el('button', 'qbtn qghost', 'Importieren …');
+    tpl.title = t('quickbar.applyTemplateTip');
+    tpl.addEventListener('click', () => applyGroups(key, withIds(TEMPLATES.s3cure.groups()), t('quickbar.applyTemplate')));
+    const imp = el('button', 'qbtn qghost', t('quickbar.importEllipsis'));
     imp.addEventListener('click', () => importFile(key));
     bar.append(add, tpl, imp);
   }
@@ -377,9 +402,9 @@ const Quickbar = (() => {
   function renderEdit(key, bar) {
     bar.classList.add('editing');
     const groups = groupsOf(key);
-    bar.appendChild(el('span', 'qlabel qedit-label', 'Bearbeiten'));
+    bar.appendChild(el('span', 'qlabel qedit-label', t('quickbar.editLabel')));
     renderEditGroups(bar, key, key, groups);
-    const zone = el('div', 'qgroup qnew', groups.length ? 'Hierher ziehen = neue Gruppe' : 'Noch keine Knöpfe');
+    const zone = el('div', 'qgroup qnew', groups.length ? t('quickbar.dropNewGroup') : t('quickbar.noButtons'));
     dropTarget(zone, { key, newGroup: true }, true);
     bar.appendChild(zone);
 
@@ -387,11 +412,11 @@ const Quickbar = (() => {
     const globals = groupsOf(GLOBAL);
     const label = el('span', 'qlabel qscope-label');
     label.innerHTML = icon(hasIcon('globe') ? 'globe' : 'server');
-    label.append('Alle Server');
-    label.title = 'Diese Knöpfe erscheinen bei jeder Verbindung. Knöpfe hierher ziehen = für alle Server.';
+    label.append(t('quickbar.allServers'));
+    label.title = t('quickbar.allServersTip');
     bar.appendChild(label);
     renderEditGroups(bar, GLOBAL, key, globals);
-    const gzone = el('div', 'qgroup qnew qglobal-zone', globals.length ? 'Hierher ziehen = neue Gruppe für alle Server' : 'Hierher ziehen = für alle Server');
+    const gzone = el('div', 'qgroup qnew qglobal-zone', globals.length ? t('quickbar.dropNewGroupGlobal') : t('quickbar.dropGlobal'));
     dropTarget(gzone, { key: GLOBAL, newGroup: true }, true);
     bar.appendChild(gzone);
 
@@ -403,12 +428,12 @@ const Quickbar = (() => {
       tools.appendChild(b);
       return b;
     };
-    tool('Knopf', 'plus', () => newButton(key)).title = 'Neuen Befehlsknopf anlegen';
-    tool('Menü', 'plus', () => openEditor(key, null, { kind: 'menu' })).title = 'Neues Ausklappmenü anlegen (mehrere Befehle unter einem Knopf)';
-    tool('Vorlage', 'bolt', e => templateMenu(key, e.currentTarget)).title = 'Vorlage oder Knöpfe einer anderen Verbindung übernehmen';
-    tool('Export', 'download', () => exportFile(key)).title = 'Knöpfe dieser Verbindung als JSON-Datei speichern';
-    tool('Import', 'upload', () => importFile(key)).title = 'Knöpfe aus einer JSON-Datei übernehmen';
-    tool('Fertig', '', stopEdit, 'primary');
+    tool(t('quickbar.toolButton'), 'plus', () => newButton(key)).title = t('quickbar.toolButtonTip');
+    tool(t('quickbar.toolMenu'), 'plus', () => openEditor(key, null, { kind: 'menu' })).title = t('quickbar.toolMenuTip');
+    tool(t('quickbar.toolTemplate'), 'bolt', e => templateMenu(key, e.currentTarget)).title = t('quickbar.toolTemplateTip');
+    tool(t('quickbar.toolExport'), 'download', () => exportFile(key)).title = t('quickbar.toolExportTip');
+    tool(t('quickbar.toolImport'), 'upload', () => importFile(key)).title = t('quickbar.toolImportTip');
+    tool(t('common.done'), '', stopEdit, 'primary');
     bar.appendChild(tools);
   }
 
@@ -423,12 +448,12 @@ const Quickbar = (() => {
           const head = el('button', 'qmenu-head');
           head.type = 'button';
           fillButton(head, item, true);
-          head.title = 'Menü bearbeiten (Name, Rückfrage) – ziehen zum Verschieben';
+          head.title = t('quickbar.menuHeadTip');
           head.addEventListener('click', () => openEditor(owner, { gi, ii }));
           const list = el('div', 'qmenu-items');
           item.items.forEach((sub, ei) => {
             const c = chip('qentry', sub);
-            c.title = sub.cmd + '\nKlick: bearbeiten · ziehen: verschieben';
+            c.title = sub.cmd + '\n' + t('quickbar.chipTip');
             c.addEventListener('click', () => openEditor(owner, { gi, ii, ei }));
             c.addEventListener('dragstart', e => startDrag(e, { key: owner, gi, ii, ei }, false, c));
             list.appendChild(c);
@@ -436,7 +461,7 @@ const Quickbar = (() => {
           const plus = el('button', 'qadd');
           plus.type = 'button';
           plus.innerHTML = icon('plus');
-          plus.title = 'Eintrag zu diesem Menü hinzufügen';
+          plus.title = t('quickbar.addToMenuTip');
           plus.addEventListener('click', () => openEditor(owner, null, { kind: 'button', into: { gi, ii } }));
           list.appendChild(plus);
           dropTarget(list, { key: owner, gi, ii }, false);
@@ -445,7 +470,7 @@ const Quickbar = (() => {
           box.appendChild(m);
         } else {
           const c = chip('', item);
-          c.title = item.cmd + '\nKlick: bearbeiten · ziehen: verschieben';
+          c.title = item.cmd + '\n' + t('quickbar.chipTip');
           c.addEventListener('click', () => openEditor(owner, { gi, ii }));
           c.addEventListener('dragstart', e => startDrag(e, { key: owner, gi, ii }, false, c));
           box.appendChild(c);
@@ -541,8 +566,8 @@ const Quickbar = (() => {
     if (!path) return false;
     const item = itemAt(groupsOf(key), path);
     if (!item) return false;
-    const extra = item.type === 'menu' && item.items.length ? ` Die ${item.items.length} Einträge darin werden mitgelöscht.` : '';
-    const ok = await askLocal({ kind: 'confirm', title: item.type === 'menu' ? 'Menü löschen?' : 'Knopf löschen?', message: `„${item.label}“ wirklich löschen?${extra}`, okLabel: 'Löschen', danger: true });
+    const extra = item.type === 'menu' && item.items.length ? ' ' + t('quickbar.deleteMenuExtra', { count: item.items.length }) : '';
+    const ok = await askLocal({ kind: 'confirm', title: item.type === 'menu' ? t('quickbar.deleteMenuTitle') : t('quickbar.deleteButtonTitle'), message: t('quickbar.deleteQ', { label: item.label }) + extra, okLabel: t('common.delete'), danger: true });
     if (!ok) return false;
     const groups = clone(groupsOf(key));
     const list = path.ei == null ? groups[path.gi].items : groups[path.gi].items[path.ii].items;
@@ -563,35 +588,35 @@ const Quickbar = (() => {
     if (n) {
       mode = await choose({
         title,
-        message: `Diese Verbindung hat schon ${n === 1 ? 'einen Knopf' : `${n} Knöpfe`}. Neue Knöpfe hinten anhängen oder alle bisherigen ersetzen?`,
-        options: [{ label: 'Abbrechen' }, { label: 'Anhängen', value: 'append' }, { label: 'Alle ersetzen', value: 'replace', cls: 'danger' }],
+        message: t('quickbar.applyQ', { count: n }),
+        options: [{ label: t('common.cancel') }, { label: t('quickbar.append'), value: 'append' }, { label: t('quickbar.replaceAll'), value: 'replace', cls: 'danger' }],
       });
       if (!mode) return;
     }
     await setGroups(key, mode === 'append' ? [...clone(current), ...incoming] : incoming);
-    flash(`${countButtons(incoming)} Knöpfe übernommen`);
+    flash(t('quickbar.applied', { count: countButtons(incoming) }));
   }
 
   function templateMenu(key, btn) {
     const r = btn.getBoundingClientRect();
-    const entries = [['Vorlage „s3cure“ (s3-Befehle)', () => applyGroups(key, withIds(TEMPLATES.s3cure.groups()), 'Vorlage „s3cure“ übernehmen'), '', 'bolt']];
-    const others = Object.keys(profiles).filter(k => k !== key && k !== GLOBAL && countButtons(groupsOf(k))).sort((a, b) => a.localeCompare(b));
+    const entries = [[t('quickbar.templateEntry'), () => applyGroups(key, withIds(TEMPLATES.s3cure.groups()), t('quickbar.applyTemplate')), '', 'bolt']];
+    const others = Object.keys(profiles).filter(k => k !== key && k !== GLOBAL && countButtons(groupsOf(k))).sort((a, b) => a.localeCompare(b, I18N.locale));
     if (others.length) entries.push(null);
-    for (const k of others) entries.push([`Von „${k}“ kopieren`, () => applyGroups(key, withIds(groupsOf(k)), `Knöpfe von „${k}“ übernehmen`), '', 'server']);
+    for (const k of others) entries.push([t('quickbar.copyFrom', { name: k }), () => applyGroups(key, withIds(groupsOf(k)), t('quickbar.copyFromTitle', { name: k })), '', 'server']);
     openMenu(entries, r.left, r.bottom + 4);
   }
 
   async function exportFile(key) {
     const groups = groupsOf(key);
-    if (!countButtons(groups)) { showError('Diese Verbindung hat noch keine Knöpfe zum Exportieren.'); return; }
-    try { const file = await api.snippetsExport(key, groups); if (file) flash(`Exportiert: ${file}`); }
+    if (!countButtons(groups)) { showError(t('quickbar.nothingToExport')); return; }
+    try { const file = await api.snippetsExport(key, groups); if (file) flash(t('quickbar.exported', { file })); }
     catch (err) { showError(err); }
   }
 
   async function importFile(key) {
     let groups;
     try { groups = await api.snippetsImport(); } catch (err) { showError(err); return; }
-    if (groups) await applyGroups(key, dropUnknownIcons(groups), 'Knöpfe importieren');
+    if (groups) await applyGroups(key, dropUnknownIcons(groups), t('quickbar.importTitle'));
   }
 
   // ---------- Dialoge ----------
@@ -627,37 +652,37 @@ const Quickbar = (() => {
     modal.innerHTML = `
       <form class="dialog snip-dialog" autocomplete="off">
         <h2></h2>
-        <label>Name auf dem Knopf<input name="label" required maxlength="80" placeholder="z. B. Neustart"></label>
+        <label>${t('quickbar.labelName')}<input name="label" required maxlength="80" placeholder="${t('quickbar.labelPlaceholder')}"></label>
         <div class="snip-icons">
           <div class="snip-icons-head">
-            <span>Icon <span class="muted">(optional)</span></span>
-            <input type="search" class="snip-icon-search" placeholder="Icon suchen, z. B. Neustart" spellcheck="false">
+            <span>Icon <span class="muted">${t('common.optional')}</span></span>
+            <input type="search" class="snip-icon-search" placeholder="${t('quickbar.iconSearch')}" spellcheck="false">
           </div>
           <div class="snip-icon-grid" role="listbox" aria-label="Icon"></div>
         </div>
-        <label class="for-button">Befehl
-          <textarea name="cmd" rows="3" spellcheck="false" placeholder="z. B. sudo systemctl restart nginx"></textarea>
+        <label class="for-button">${t('quickbar.cmdLabel')}
+          <textarea name="cmd" rows="3" spellcheck="false" placeholder="${t('quickbar.cmdPlaceholder')}"></textarea>
         </label>
-        <p class="snip-help for-button">Tipp: <code>{name}</code> im Befehl fragt beim Klick nach einer Eingabe, z. B. <code>s3 rollback {commit}</code>. Mehrere Zeilen laufen nacheinander.</p>
+        <p class="snip-help for-button">${t('quickbar.cmdHelp')}</p>
         <div class="snip-inputs for-button"></div>
-        <label>Hinweis beim Darüberfahren <span class="muted">(optional)</span><input name="tip" maxlength="300"></label>
-        <label class="toggle"><input type="checkbox" name="confirmOn"><span class="track"><span class="knob"></span></span>Vorher nachfragen</label>
-        <input name="confirmText" class="snip-sub" maxlength="500" placeholder="Frage, z. B. Wirklich neu starten? (leer = Standardfrage)">
-        <label class="toggle"><input type="checkbox" name="danger"><span class="track"><span class="knob"></span></span>Rot markieren (vorsichtig benutzen)</label>
-        <label class="toggle for-button"><input type="checkbox" name="live"><span class="track"><span class="knob"></span></span>Läuft dauerhaft (z. B. Live-Log) – vor dem nächsten Knopf mit Strg+C beenden</label>
+        <label>${t('quickbar.tipLabel')} <span class="muted">${t('common.optional')}</span><input name="tip" maxlength="300"></label>
+        <label class="toggle"><input type="checkbox" name="confirmOn"><span class="track"><span class="knob"></span></span>${t('quickbar.confirmOn')}</label>
+        <input name="confirmText" class="snip-sub" maxlength="500" placeholder="${t('quickbar.confirmTextPlaceholder')}">
+        <label class="toggle"><input type="checkbox" name="danger"><span class="track"><span class="knob"></span></span>${t('quickbar.dangerLabel')}</label>
+        <label class="toggle for-button"><input type="checkbox" name="live"><span class="track"><span class="knob"></span></span>${t('quickbar.liveLabel')}</label>
         <div class="snip-scope">
-          <span>Anzeigen bei</span>
+          <span>${t('quickbar.scopeLabel')}</span>
           <div class="seg">
-            <button type="button" data-scope="local">Nur dieser Server</button>
-            <button type="button" data-scope="global">Alle Server</button>
+            <button type="button" data-scope="local">${t('quickbar.scopeLocal')}</button>
+            <button type="button" data-scope="global">${t('quickbar.allServers')}</button>
           </div>
         </div>
-        <p class="snip-help for-menu">Die Rückfrage gilt für alle Einträge im Menü. Einträge bearbeitest du direkt in der Leiste: anklicken, ziehen oder mit ＋ hinzufügen.</p>
+        <p class="snip-help for-menu">${t('quickbar.menuHelp')}</p>
         <div class="actions">
-          <button type="button" class="btn snip-delete">${icon('trash')}Löschen</button>
+          <button type="button" class="btn snip-delete">${icon('trash')}${t('common.delete')}</button>
           <span class="spacer"></span>
-          <button type="button" class="btn" data-x>Abbrechen</button>
-          <button type="submit" class="btn primary">Speichern</button>
+          <button type="button" class="btn" data-x>${t('common.cancel')}</button>
+          <button type="submit" class="btn primary">${t('common.save')}</button>
         </div>
       </form>`;
     document.body.appendChild(modal);
@@ -708,10 +733,10 @@ const Quickbar = (() => {
       b.addEventListener('click', () => selectIcon(ed, name));
       grid.appendChild(b);
     };
-    if (!q) cell('', '<span class="snip-noicon"></span>', 'Kein Icon');
-    const names = iconNames().filter(n => !q || `${n} ${ICON_WORDS[n] || ''}`.toLowerCase().includes(q));
+    if (!q) cell('', '<span class="snip-noicon"></span>', t('quickbar.noIcon'));
+    const names = iconNames().filter(n => !q || iconWords(n).toLowerCase().includes(q));
     for (const n of names) cell(n, icon(n), iconTitle(n));
-    if (q && !names.length) grid.appendChild(el('span', 'snip-icon-empty', 'Kein passendes Icon gefunden.'));
+    if (q && !names.length) grid.appendChild(el('span', 'snip-icon-empty', t('quickbar.noIconFound')));
     const sel = grid.querySelector('.sel');
     if (sel) grid.scrollTop = sel.offsetTop - grid.clientHeight / 2 + sel.offsetHeight / 2;
   }
@@ -734,20 +759,20 @@ const Quickbar = (() => {
     box.innerHTML = '';
     const names = placeholders(ed.form.cmd.value);
     if (!names.length) return;
-    box.appendChild(el('div', 'snip-inputs-head', 'Eingaben, die beim Klick abgefragt werden'));
+    box.appendChild(el('div', 'snip-inputs-head', t('quickbar.inputsHead')));
     for (const name of names) {
       const cur = ed.inputs[name] || { prompt: '', kind: 'ref', value: '' };
       const row = el('div', 'snip-input');
       row.dataset.name = name;
       const tag = el('code', '', `{${name}}`);
-      const prompt = Object.assign(el('input'), { value: cur.prompt, placeholder: `Frage, z. B. Welcher ${name}?`, maxLength: 300 });
+      const prompt = Object.assign(el('input'), { value: cur.prompt, placeholder: t('quickbar.promptPlaceholder', { name }), maxLength: 300 });
       prompt.dataset.f = 'prompt';
       const kind = el('select');
       kind.dataset.f = 'kind';
-      kind.title = 'Was eingegeben werden darf – wird vor dem Ausführen geprüft';
+      kind.title = t('quickbar.kindTip');
       for (const [k, v] of Object.entries(INPUT_KINDS)) kind.appendChild(Object.assign(el('option', '', v.label), { value: k }));
       kind.value = INPUT_KINDS[cur.kind] ? cur.kind : 'ref';
-      const value = Object.assign(el('input'), { value: cur.value, placeholder: 'Vorschlag (optional)', maxLength: 300 });
+      const value = Object.assign(el('input'), { value: cur.value, placeholder: t('quickbar.valuePlaceholder'), maxLength: 300 });
       value.dataset.f = 'value';
       row.append(tag, prompt, kind, value);
       box.appendChild(row);
@@ -769,10 +794,10 @@ const Quickbar = (() => {
     f.reset();
     f.classList.toggle('is-menu', kind === 'menu');
     ed.modal.querySelector('h2').textContent = item
-      ? (kind === 'menu' ? 'Menü bearbeiten' : inMenu ? 'Menü-Eintrag bearbeiten' : 'Knopf bearbeiten')
-      : (kind === 'menu' ? 'Neues Menü' : inMenu ? 'Neuer Menü-Eintrag' : 'Neuer Knopf');
+      ? (kind === 'menu' ? t('quickbar.editMenu') : inMenu ? t('quickbar.editMenuEntry') : t('quickbar.editButton'))
+      : (kind === 'menu' ? t('quickbar.newMenu') : inMenu ? t('quickbar.newMenuEntry') : t('quickbar.newButton'));
     f.label.value = item?.label || '';
-    f.label.placeholder = kind === 'menu' ? 'z. B. Logs' : 'z. B. Neustart';
+    f.label.placeholder = kind === 'menu' ? t('quickbar.labelPlaceholderMenu') : t('quickbar.labelPlaceholder');
     f.cmd.value = item?.cmd || '';
     f.tip.value = item?.tip || '';
     f.confirmOn.checked = !!item?.confirm;

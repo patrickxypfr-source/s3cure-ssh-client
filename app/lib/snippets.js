@@ -9,6 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { t } = require('./i18n');
 
 const FORMAT = 's3cure-befehle';
 const KINDS = ['ref', 'number', 'text'];
@@ -51,7 +52,7 @@ function cleanButton(b) {
 function cleanItem(it) {
   if (it && it.type === 'menu') {
     return {
-      id: id(it.id), type: 'menu', label: str(it.label, 80).trim() || 'Menü', icon: cleanIcon(it.icon),
+      id: id(it.id), type: 'menu', label: str(it.label, 80).trim() || t('snippets.defaultMenu'), icon: cleanIcon(it.icon),
       tip: str(it.tip, 300), confirm: cleanConfirm(it.confirm), danger: !!it.danger,
       items: (Array.isArray(it.items) ? it.items : []).slice(0, 100).map(cleanButton).filter(Boolean),
     };
@@ -77,13 +78,13 @@ function freshIds(groups) {
 // Import: akzeptiert eigenes Exportformat, { groups } oder direkt eine Liste von Gruppen
 function parseImport(text) {
   let data;
-  try { data = JSON.parse(text); } catch { throw new Error('Die Datei ist kein gültiges JSON.'); }
+  try { data = JSON.parse(text); } catch { throw new Error(t('snippets.invalidJson')); }
   let groups = Array.isArray(data) ? data : data && (data.groups || (data.profile && data.profile.groups));
-  if (!Array.isArray(groups)) throw new Error('In der Datei wurden keine Befehlsknöpfe gefunden.');
+  if (!Array.isArray(groups)) throw new Error(t('snippets.noButtons'));
   // Liste von Knöpfen statt Gruppen -> eine Gruppe daraus machen
   if (groups.length && groups.every(g => g && (g.type === 'button' || g.type === 'menu' || 'cmd' in g))) groups = [{ items: groups }];
   const clean = freshIds(cleanGroups(groups));
-  if (!clean.length) throw new Error('In der Datei wurden keine gültigen Befehlsknöpfe gefunden.');
+  if (!clean.length) throw new Error(t('snippets.noValidButtons'));
   return clean;
 }
 
@@ -202,7 +203,7 @@ function register(ipcMain, { configDir, dialog, getWin }) {
   ipcMain.handle('snippets:export', async (_e, name, groups) => {
     const safe = String(name || 'befehle').replace(/[^\p{L}\p{N}._-]+/gu, '-').replace(/^-+|-+$/g, '') || 'befehle';
     const r = await dialog.showSaveDialog(getWin(), {
-      title: 'Befehlsknöpfe exportieren',
+      title: t('snippets.exportTitle'),
       defaultPath: path.join(require('os').homedir(), 'Downloads', `befehle-${safe}.json`),
       filters: [{ name: 'JSON', extensions: ['json'] }],
     });
@@ -214,12 +215,12 @@ function register(ipcMain, { configDir, dialog, getWin }) {
 
   ipcMain.handle('snippets:import', async () => {
     const r = await dialog.showOpenDialog(getWin(), {
-      title: 'Befehlsknöpfe importieren', properties: ['openFile'],
+      title: t('snippets.importTitle'), properties: ['openFile'],
       filters: [{ name: 'JSON', extensions: ['json'] }],
     });
     if (r.canceled || !r.filePaths.length) return null;
     const stat = fs.statSync(r.filePaths[0]);
-    if (stat.size > 2 * 1024 * 1024) throw new Error('Die Datei ist zu groß für eine Befehlsliste.');
+    if (stat.size > 2 * 1024 * 1024) throw new Error(t('snippets.tooLarge'));
     return parseImport(fs.readFileSync(r.filePaths[0], 'utf8'));
   });
 
