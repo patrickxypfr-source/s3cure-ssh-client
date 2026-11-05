@@ -16,12 +16,16 @@ const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
 const crypto = require('crypto');
+const { t } = require('./i18n');
 
-const CANCEL_TEXT = 'Übertragung abgebrochen.';
+// Text beim Abbrechen (t('transfers.cancelled')). Erkannt wird er in beiden Sprachen, weil sich die
+// Sprache ändern kann und lib/ftp.js denselben Text benutzt; die Regex muss zu de/en passen.
+const cancelText = () => t('transfers.cancelled');
+const CANCEL_RE = /Übertragung abgebrochen|Transfer cancelled/; // i18n-ignore
 const posix = path.posix;
 const p = fn => new Promise((res, rej) => fn((e, r) => e ? rej(e) : res(r)));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const isCancel = err => String(err?.message || err).includes(CANCEL_TEXT);
+const isCancel = err => CANCEL_RE.test(String(err?.message || err));
 // Aufräumen auf einer toten Verbindung bekommt nie eine Antwort – nicht ewig warten
 const atMost = (promise, ms = 4000) => Promise.race([Promise.resolve(promise).catch(() => {}), sleep(ms)]);
 
@@ -140,7 +144,7 @@ async function copyFile(sftp, file, limiter, shouldStop, onBytes) {
   const dst = get ? localFile() : remoteFile(sftp);
 
   const size = await src.size(file.from);
-  if (size == null) throw Object.assign(new Error('Die Quelldatei gibt es nicht mehr.'), { code: 2 });
+  if (size == null) throw Object.assign(new Error(t('transfers.sourceGone')), { code: 2 });
   // Hat sich die Quelle seit dem ersten Versuch geändert, von vorn anfangen
   if (file.started && file.srcSize !== size) { file.started = false; file.done = 0; }
   file.srcSize = size;
@@ -179,7 +183,7 @@ async function copyFile(sftp, file, limiter, shouldStop, onBytes) {
       let got = 0;
       while (got < block.len) {
         const n = await src.read(sh, buf, got, block.len - got, block.start + got);
-        if (!n) throw new Error('Die Quelldatei ist während der Übertragung kürzer geworden.');
+        if (!n) throw new Error(t('transfers.sourceShrunk'));
         got += n;
       }
       await dst.write(dh, buf, 0, block.len, block.start);
@@ -226,7 +230,7 @@ async function copyFile(sftp, file, limiter, shouldStop, onBytes) {
   if (stopped) throw STOP;
 
   const final = await dst.size(file.to);
-  if (final !== size) throw new Error(`Größe stimmt nicht: ${final ?? 0} statt ${size} Bytes. Bitte erneut versuchen.`);
+  if (final !== size) throw new Error(t('transfers.sizeMismatch', { got: final ?? 0, size }));
 }
 
 // ---------- Warteschlange ----------
@@ -239,7 +243,8 @@ function create(getWin, { getSftp, isConnected = () => true, sftpError = e => e 
   let active = 0;
   const seen = new WeakSet(); // SFTP-Kanäle, deren Ende wir beobachten
   const dead = new WeakSet(); // … und die schon geschlossen sind (Verbindung weg)
-  const LOST = /No response from server|ECONNRESET|EPIPE|Not connected|Keine aktive Verbindung|channel|closed/i;
+  // Auch eigene Texte „Keine aktive Verbindung in diesem Tab.“ (main.js, lib/ftp.js) – deutsch und englisch
+  const LOST = /No response from server|ECONNRESET|EPIPE|Not connected|Keine aktive Verbindung|No active connection|channel|closed/i; // i18n-ignore
 
   const fileCount = job => job.list.length;
   const cleanMsg = err => String(sftpError(err)?.message || err?.message || err);
@@ -290,13 +295,13 @@ function create(getWin, { getSftp, isConnected = () => true, sftpError = e => e 
     const { resolve, reject } = job.settle;
     job.settle = null;
     if (job.state === 'done') resolve({ files: job.files });
-    else if (job.state === 'cancelled') reject(new Error(CANCEL_TEXT));
+    else if (job.state === 'cancelled') reject(new Error(cancelText()));
     else {
       let msg = job.prepError;
       if (!msg) {
         const f = job.failed[0];
         msg = job.list.length === 1 ? f.error
-          : `${job.failed.length} von ${job.list.length} Dateien konnten nicht übertragen werden (z. B. „${f.name}“: ${f.error}). In der Übertragungsliste kannst du es erneut versuchen.`;
+          : t('transfers.someFailed', { failed: job.failed.length, total: job.list.length, name: f.name, error: f.error });
       }
       reject(new Error(msg));
     }
@@ -358,7 +363,7 @@ function create(getWin, { getSftp, isConnected = () => true, sftpError = e => e 
         job.pending.unshift(file);
       } else {
         file.status = 'error';
-        file.error = err === STOP ? 'Verbindung getrennt.' : cleanMsg(err);
+        file.error = err === STOP ? t('transfers.disconnected') : cleanMsg(err);
         job.failed.push(file);
       }
     } finally {
@@ -392,7 +397,7 @@ function create(getWin, { getSftp, isConnected = () => true, sftpError = e => e 
     order.push(job.id);
 
     job.setTotal = n => { job.estimate = Math.max(0, n); update(job, true); };
-    job.check = () => { if (job.cancelled) throw new Error(CANCEL_TEXT); };
+    job.check = () => { if (job.cancelled) throw new Error(cancelText()); };
 
     // Datei anmelden. dir: 'put' (hochladen) oder 'get' (herunterladen).
     // opts.size: Größe, falls schon bekannt; opts.resume: vorhandene Teil-Datei am Ziel fortsetzen
@@ -532,8 +537,9 @@ function create(getWin, { getSftp, isConnected = () => true, sftpError = e => e 
 
   return {
     start, cancel, pause, resume, retry, move, remove, clearFinished, pauseAll, resumeAll, configure,
-    cancelTab, suspendTab, resumeTab, register, localSize, remoteSize, CANCEL_TEXT,
+    cancelTab, suspendTab, resumeTab, register, localSize, remoteSize, isCancel,
+    get CANCEL_TEXT() { return cancelText(); },
   };
 }
 
-module.exports = { create, copyFile, createLimiter, CANCEL_TEXT, STOP };
+module.exports = { create, copyFile, createLimiter, isCancel, STOP, get CANCEL_TEXT() { return cancelText(); } };

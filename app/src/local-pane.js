@@ -16,7 +16,8 @@ Object.assign(ICON_PATHS, {
 window.LocalPane = (() => {
   const L = window.localFs;
   const DRAG_TYPE = 'application/x-s3cure';
-  const FINDER = IS_MAC ? 'Finder' : 'Explorer';
+  const SHOW_IN = IS_MAC ? 'localPane.showInFinder' : 'localPane.showInExplorer';
+  const OPEN_IN = IS_MAC ? 'localPane.openInFinder' : 'localPane.openInExplorer';
   const DEFAULT_W = 42;
 
   const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } };
@@ -43,39 +44,39 @@ window.LocalPane = (() => {
     el.hidden = true;
     el.innerHTML = `
       <div class="files-bar">
-        <button class="round-btn" data-l="up" title="Übergeordneter Ordner">${icon('up')}</button>
-        <button class="round-btn" data-l="home" title="Benutzerordner">${icon('home')}</button>
-        <div class="field grow"><span class="field-icon">${icon('computer')}</span><input class="files-path lp-path" spellcheck="false" title="Pfad eingeben und Enter drücken"></div>
-        <button class="round-btn" data-l="refresh" title="Aktualisieren">${icon('refresh')}</button>
-        <button class="round-btn" data-l="close" title="Mein Computer schließen">${icon('close')}</button>
+        <button class="round-btn" data-l="up" title="${t('localPane.up')}">${icon('up')}</button>
+        <button class="round-btn" data-l="home" title="${t('localPane.home')}">${icon('home')}</button>
+        <div class="field grow"><span class="field-icon">${icon('computer')}</span><input class="files-path lp-path" spellcheck="false" title="${t('localPane.pathHint')}"></div>
+        <button class="round-btn" data-l="refresh" title="${t('localPane.refresh')}">${icon('refresh')}</button>
+        <button class="round-btn" data-l="close" title="${t('localPane.close')}">${icon('close')}</button>
       </div>
       <div class="files-actions lp-actions">
         <div class="lp-places"></div>
-        <button class="round-btn" data-l="mkdir" title="Neuer Ordner">${icon('folderPlus')}</button>
+        <button class="round-btn" data-l="mkdir" title="${t('localPane.newFolder')}">${icon('folderPlus')}</button>
       </div>
       <div class="files-list lp-list" tabindex="0">
         <table>
-          <thead><tr><th data-sort="name">Name</th><th class="size" data-sort="size">Größe</th><th class="date" data-sort="mtime">Geändert</th></tr></thead>
+          <thead><tr><th data-sort="name">${t('localPane.colName')}</th><th class="size" data-sort="size">${t('localPane.colSize')}</th><th class="date" data-sort="mtime">${t('localPane.colModified')}</th></tr></thead>
           <tbody></tbody>
         </table>
         <div class="files-empty"></div>
-        <div class="drop-hint">Loslassen zum Herunterladen</div>
+        <div class="drop-hint">${t('localPane.dropHint')}</div>
       </div>
       <div class="files-status"></div>`;
     const divider = document.createElement('div');
     divider.className = 'lp-divider';
     divider.hidden = true;
-    divider.title = 'Ziehen zum Verschieben, Doppelklick = Mitte';
+    divider.title = t('localPane.dividerHint');
     divider.innerHTML = `
-      <button class="round-btn" data-l="put" title="Auswahl hochladen – in den Server-Ordner rechts">${icon('arrowRight')}</button>
-      <button class="round-btn" data-l="get" title="Auswahl vom Server herunterladen – in den Ordner links">${icon('arrowLeft')}</button>`;
+      <button class="round-btn" data-l="put" title="${t('localPane.putSel')}">${icon('arrowRight')}</button>
+      <button class="round-btn" data-l="get" title="${t('localPane.getSel')}">${icon('arrowLeft')}</button>`;
     $('#terminals').append(el, divider);
 
     // Knopf in der Dateiansicht (rechts in der Aktionsleiste)
     const toggle = document.createElement('button');
     toggle.className = 'btn lp-toggle';
-    toggle.title = 'Daneben die Dateien auf diesem Computer zeigen – Dateien einfach hin- und herziehen';
-    toggle.innerHTML = `${icon('computer')}Mein Computer`;
+    toggle.title = t('localPane.toggleHint');
+    toggle.innerHTML = `${icon('computer')}${t('localPane.toggle')}`;
     f.el.querySelector('.files-actions').appendChild(toggle);
 
     const pref = { ...lsGet(prefKey(tab), {}), ...(tab.restore?.local || {}) }; // tab.restore: session.js
@@ -196,7 +197,7 @@ window.LocalPane = (() => {
   function renderPlaces(p) {
     const box = p.el.querySelector('.lp-places');
     box.innerHTML = '';
-    const items = [...places.places.map(x => ({ ...x, icon: x.icon })), ...places.drives.map(d => ({ ...d, icon: 'drive', title: 'Laufwerk ' + d.label }))];
+    const items = [...places.places.map(x => ({ ...x, icon: x.icon })), ...places.drives.map(d => ({ ...d, icon: 'drive', title: t('localPane.drive', { name: d.label }) }))];
     for (const it of items) {
       const b = document.createElement('button');
       b.className = 'lp-chip';
@@ -238,7 +239,7 @@ window.LocalPane = (() => {
   function visible(p) {
     const list = showHidden ? p.entries.slice() : p.entries.filter(e => !e.hidden);
     const { key, dir } = sort;
-    const byName = (a, b) => a.name.localeCompare(b.name, 'de', { sensitivity: 'base', numeric: true });
+    const byName = (a, b) => a.name.localeCompare(b.name, I18N.locale, { sensitivity: 'base', numeric: true });
     return list.sort((a, b) => (b.isDir - a.isDir) || (key === 'name' ? dir * byName(a, b) : (dir * (a[key] - b[key]) || byName(a, b))));
   }
 
@@ -268,7 +269,7 @@ window.LocalPane = (() => {
     }
     for (const c of p.el.querySelectorAll('.lp-chip')) c.classList.toggle('on', c.dataset.path === p.path);
     const empty = p.el.querySelector('.files-empty');
-    empty.textContent = p.error ? p.error : !p.loaded ? 'Lade Dateien …' : items.length ? '' : 'Dieser Ordner ist leer. Zieh Dateien vom Server hierher, um sie herunterzuladen.';
+    empty.textContent = p.error ? p.error : !p.loaded ? t('localPane.loading') : items.length ? '' : t('localPane.empty');
     empty.hidden = !empty.textContent;
     refreshSel(p);
   }
@@ -279,7 +280,7 @@ window.LocalPane = (() => {
     const items = visible(p);
     const hiddenCount = p.entries.length - items.length;
     p.el.querySelector('.files-status').textContent = p.loaded
-      ? `${items.length} Elemente${n ? ` · ${n} ausgewählt` : ''}${hiddenCount ? ` · ${hiddenCount} versteckt` : ''}${items.length > 1 ? Lasso.hint(n) : ''}`
+      ? `${t('localPane.items', { count: items.length })}${n ? ` · ${t('localPane.selected', { count: n })}` : ''}${hiddenCount ? ` · ${t('localPane.hidden', { count: hiddenCount })}` : ''}${items.length > 1 ? Lasso.hint(n) : ''}`
       : '';
     p.el.querySelector('[data-l=up]').disabled = !p.parent;
     updateButtons(p);
@@ -410,30 +411,30 @@ window.LocalPane = (() => {
     const connected = p.tab.state === 'open' && p.tab.files.loaded;
     const entries = [];
     if (sel.length) {
-      if (one) entries.push([one.isDir ? 'Öffnen' : 'Öffnen (Standardprogramm)', () => openItem(p, one), '', one.isDir ? 'folder' : 'file']);
-      if (connected) entries.push([`Hochladen nach ${serverDirName(p)}`, () => uploadSelected(p), '', 'upload']);
-      entries.push([`Im ${FINDER} zeigen`, () => L.show(sel[0].path).catch(showError), '', 'folder']);
-      if (one) entries.push(['Umbenennen', () => renameSelected(p), '', 'rename']);
-      if (one) entries.push(['Pfad kopieren', () => { navigator.clipboard.writeText(one.path); flash('Pfad kopiert'); }, '', 'copy']);
+      if (one) entries.push([one.isDir ? t('localPane.openDir') : t('localPane.openFile'), () => openItem(p, one), '', one.isDir ? 'folder' : 'file']);
+      if (connected) entries.push([t('localPane.uploadTo', { name: serverDirName(p) }), () => uploadSelected(p), '', 'upload']);
+      entries.push([t(SHOW_IN), () => L.show(sel[0].path).catch(showError), '', 'folder']);
+      if (one) entries.push([t('common.rename'), () => renameSelected(p), '', 'rename']);
+      if (one) entries.push([t('localPane.copyPath'), () => { navigator.clipboard.writeText(one.path); flash(t('localPane.pathCopied')); }, '', 'copy']);
       entries.push(null);
     }
     window.SyncTools?.addLocalMenuEntries(p.tab, sel, entries); // vergleichen (sync.js)
-    entries.push(['Neuer Ordner', () => makeDir(p), '', 'folderPlus']);
+    entries.push([t('localPane.newFolder'), () => makeDir(p), '', 'folderPlus']);
     if (!sel.length && p.path) {
-      entries.push([`Im ${FINDER} öffnen`, () => L.open(p.path).catch(showError), '', 'folder']);
-      entries.push(['Aktualisieren', () => go(p, p.path, { keep: true }), '', 'refresh']);
+      entries.push([t(OPEN_IN), () => L.open(p.path).catch(showError), '', 'folder']);
+      entries.push([t('localPane.refresh'), () => go(p, p.path, { keep: true }), '', 'refresh']);
     }
-    entries.push([showHidden ? 'Versteckte Dateien ausblenden' : 'Versteckte Dateien zeigen', toggleHidden, '', 'eye']);
+    entries.push([showHidden ? t('localPane.hideHidden') : t('localPane.showHidden'), toggleHidden, '', 'eye']);
     if (sel.length) {
       entries.push(null);
-      entries.push(['In den Papierkorb', () => trashSelected(p), 'danger', 'trash']);
+      entries.push([t('localPane.trash'), () => trashSelected(p), 'danger', 'trash']);
     }
     openMenu(entries, x, y);
   }
 
   function serverDirName(p) {
     const dir = p.tab.files.path || '';
-    return `„${dir.split('/').pop() || '/'}“`;
+    return dir.split('/').pop() || '/';
   }
 
   function toggleHidden() {
@@ -444,7 +445,7 @@ window.LocalPane = (() => {
 
   async function makeDir(p) {
     if (!p.path) return;
-    const name = await askLocal({ kind: 'text', title: 'Neuer Ordner', message: 'Name des Ordners auf diesem Computer:', placeholder: 'Neuer Ordner', okLabel: 'Anlegen' });
+    const name = await askLocal({ kind: 'text', title: t('localPane.newFolder'), message: t('localPane.newFolderMsg'), placeholder: t('localPane.newFolder'), okLabel: t('localPane.create') });
     if (!name || !name.trim()) return;
     try { await L.mkdir(p.path, name.trim()); } catch (err) { showError(err); return; }
     go(p, p.path, { select: [name.trim()] });
@@ -453,7 +454,7 @@ window.LocalPane = (() => {
   async function renameSelected(p) {
     const [it] = selectedItems(p);
     if (!it) return;
-    const name = await askLocal({ kind: 'text', title: 'Umbenennen', message: `Neuer Name für „${it.name}“:`, value: it.name, okLabel: 'Umbenennen' });
+    const name = await askLocal({ kind: 'text', title: t('common.rename'), message: t('localPane.renameMsg', { name: it.name }), value: it.name, okLabel: t('common.rename') });
     if (!name || !name.trim() || name.trim() === it.name) return;
     try { await L.rename(it.path, name.trim()); } catch (err) { showError(err); return; }
     go(p, p.path, { select: [name.trim()] });
@@ -462,16 +463,16 @@ window.LocalPane = (() => {
   async function trashSelected(p) {
     const items = selectedItems(p);
     if (!items.length) return;
-    const names = items.slice(0, 8).map(i => i.name + (i.isDir ? '/' : '')).join('\n') + (items.length > 8 ? `\n… und ${items.length - 8} weitere` : '');
+    const names = items.slice(0, 8).map(i => i.name + (i.isDir ? '/' : '')).join('\n') + (items.length > 8 ? '\n' + t('localPane.andMore', { count: items.length - 8 }) : '');
     const ok = await askLocal({
-      kind: 'confirm', title: 'In den Papierkorb legen?',
-      message: `${items.length === 1 ? 'Dieses Element' : `Diese ${items.length} Elemente`} auf diesem Computer in den Papierkorb legen? Von dort lässt es sich wiederherstellen.`,
-      detail: names, okLabel: 'In den Papierkorb', danger: true,
+      kind: 'confirm', title: t('localPane.trashTitle'),
+      message: t('localPane.trashMsg', { count: items.length }),
+      detail: names, okLabel: t('localPane.trash'), danger: true,
     });
     if (!ok) return;
     try {
       const n = await L.trash(items.map(i => i.path));
-      flash(`${n} Element${n === 1 ? '' : 'e'} in den Papierkorb gelegt`);
+      flash(t('localPane.trashed', { count: n }));
     } catch (err) { showError(err); }
     go(p, p.path);
   }
@@ -551,7 +552,7 @@ window.LocalPane = (() => {
     e.dataTransfer.effectAllowed = 'copy';
     if (!ghost) { ghost = document.createElement('div'); ghost.className = 'lp-ghost'; document.body.appendChild(ghost); }
     ghost.innerHTML = icon(items.length === 1 && !items[0].isDir ? 'file' : 'folder');
-    ghost.append(items.length === 1 ? items[0].name : `${items.length} Elemente`);
+    ghost.append(items.length === 1 ? items[0].name : t('localPane.items', { count: items.length }));
     e.dataTransfer.setDragImage(ghost, 14, 14);
   }
 
@@ -580,11 +581,12 @@ window.LocalPane = (() => {
 
   // ---------- Übertragen ----------
 
-  function summary(r, verb, first) {
+  // up: true = hochgeladen, false = heruntergeladen
+  function summary(r, up, first) {
     if (!r) return '';
-    const skipped = r.skipped ? ` · ${r.skipped} übersprungen` : '';
-    if (r.files === 1 && first && !skipped) return `${verb}: ${first}`;
-    return `${r.files} Datei${r.files === 1 ? '' : 'en'} ${verb.toLowerCase()}${skipped}`;
+    const skipped = r.skipped ? ` · ${t('localPane.skipped', { count: r.skipped })}` : '';
+    if (r.files === 1 && first && !skipped) return t(up ? 'localPane.uploadedOne' : 'localPane.downloadedOne', { name: first });
+    return t(up ? 'localPane.uploadedFiles' : 'localPane.downloadedFiles', { count: r.files }) + skipped;
   }
 
   const baseName = x => x.split(/[\\/]/).filter(Boolean).pop();
@@ -593,7 +595,7 @@ window.LocalPane = (() => {
     const f = tab.files;
     try {
       const r = await L.upload(tab.id, dir, paths);
-      flash(summary(r, 'Hochgeladen', paths.length === 1 ? baseName(paths[0]) : null));
+      flash(summary(r, true, paths.length === 1 ? baseName(paths[0]) : null));
     } catch (err) { showError(err); }
     if (tab.state !== 'open' || !f.path) return;
     // Liste still neu laden: die Auswahl des Nutzers bleibt stehen. Ist nichts
@@ -617,7 +619,7 @@ window.LocalPane = (() => {
     const name = items.length === 1 ? items[0].path.split('/').pop() : null;
     try {
       const r = await L.download(p.tab.id, dir, items);
-      flash(summary(r, 'Heruntergeladen', name));
+      flash(summary(r, false, name));
     } catch (err) { showError(err); }
     if (!p.path) return;
     const shown = p.path;
@@ -654,30 +656,29 @@ window.LocalPane = (() => {
     const info = conflictQueue.shift();
     if (!info) { conflictOpen = false; return; }
     conflictOpen = true;
-    const where = info.kind === 'upload' ? 'auf dem Server' : 'auf diesem Computer';
-    const modal = document.createElement('div');
+        const modal = document.createElement('div');
     modal.className = 'modal';
     modal.innerHTML = `
       <form class="dialog lp-conflict">
-        <h2>Datei gibt es schon</h2>
+        <h2>${t('localPane.conflictTitle')}</h2>
         <p class="choose-msg"></p>
         <div class="lp-cmp">
-          <div class="lp-cmp-col"><span class="lp-cmp-k">Vorhanden</span><b class="lp-ex-size"></b><span class="lp-ex-date"></span></div>
+          <div class="lp-cmp-col"><span class="lp-cmp-k">${t('localPane.existing')}</span><b class="lp-ex-size"></b><span class="lp-ex-date"></span></div>
           <span class="lp-cmp-arrow">${icon('arrowLeft')}</span>
-          <div class="lp-cmp-col"><span class="lp-cmp-k">Neu</span><b class="lp-new-size"></b><span class="lp-new-date"></span></div>
+          <div class="lp-cmp-col"><span class="lp-cmp-k">${t('localPane.new')}</span><b class="lp-new-size"></b><span class="lp-new-date"></span></div>
         </div>
-        <label class="toggle lp-all"><input type="checkbox"><span class="track"><span class="knob"></span></span>Für alle weiteren Dateien dieser Übertragung</label>
+        <label class="toggle lp-all"><input type="checkbox"><span class="track"><span class="knob"></span></span>${t('localPane.applyAll')}</label>
         <div class="actions">
-          <button type="button" class="btn" data-c="cancel">Übertragung abbrechen</button>
+          <button type="button" class="btn" data-c="cancel">${t('localPane.cancelTransfer')}</button>
           <span class="spacer"></span>
-          <button type="button" class="btn" data-c="skip">Überspringen</button>
-          <button type="button" class="btn" data-c="resume" hidden title="Die vorhandene Datei ist kleiner – vermutlich ein abgebrochener Versuch. Ab dort weitermachen statt neu anfangen.">Fortsetzen</button>
-          <button type="submit" class="btn danger" data-c="overwrite">Überschreiben</button>
+          <button type="button" class="btn" data-c="skip">${t('localPane.skip')}</button>
+          <button type="button" class="btn" data-c="resume" hidden title="${t('localPane.resumeHint')}">${t('localPane.resume')}</button>
+          <button type="submit" class="btn danger" data-c="overwrite">${t('localPane.overwrite')}</button>
         </div>
       </form>`;
-    modal.querySelector('.choose-msg').textContent = `„${info.name}“ gibt es im Zielordner ${where} schon. Was soll passieren?`;
+    modal.querySelector('.choose-msg').textContent = t(info.kind === 'upload' ? 'localPane.conflictUpload' : 'localPane.conflictDownload', { name: info.name });
     modal.querySelector('.choose-msg').title = info.target;
-    const newer = info.source.mtime > info.existing.mtime + 1000 ? ' (neuer)' : info.source.mtime < info.existing.mtime - 1000 ? ' (älter)' : '';
+    const newer = info.source.mtime > info.existing.mtime + 1000 ? t('localPane.newer') : info.source.mtime < info.existing.mtime - 1000 ? t('localPane.older') : '';
     modal.querySelector('.lp-ex-size').textContent = formatSize(info.existing.size);
     modal.querySelector('.lp-ex-date').textContent = formatDate(info.existing.mtime);
     modal.querySelector('.lp-new-size').textContent = formatSize(info.source.size);

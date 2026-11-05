@@ -5,6 +5,7 @@ const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
 const os = require('os');
+const { t } = require('./i18n');
 
 const MAX_PATH = 4096;
 // Dateien, die das System selbst anlegt – werden wie versteckte Dateien behandelt
@@ -15,30 +16,30 @@ const BAD_WIN_CHARS = /[<>:"|?*\x00-\x1f]/;
 function friendly(err, where) {
   const w = where ? ` (${where})` : '';
   switch (err && err.code) {
-    case 'ENOENT': return new Error('Datei oder Ordner gibt es nicht' + w + '.');
-    case 'EACCES': case 'EPERM': return new Error('Keine Berechtigung' + w + '. Unter macOS ggf. in den Systemeinstellungen → Datenschutz & Sicherheit erlauben.');
-    case 'ENOTDIR': return new Error('Das ist kein Ordner' + w + '.');
-    case 'EEXIST': return new Error('Den Namen gibt es schon' + w + '.');
-    case 'EBUSY': return new Error('Wird gerade von einem anderen Programm benutzt' + w + '.');
+    case 'ENOENT': return new Error(t('localfs.notFound', { where: w }));
+    case 'EACCES': case 'EPERM': return new Error(t('localfs.noPermission', { where: w }));
+    case 'ENOTDIR': return new Error(t('localfs.notDir', { where: w }));
+    case 'EEXIST': return new Error(t('localfs.exists', { where: w }));
+    case 'EBUSY': return new Error(t('localfs.busy', { where: w }));
     default: return err instanceof Error ? err : new Error(String(err));
   }
 }
 
 // Absoluten, normalisierten Pfad prüfen; ~ steht für den Benutzerordner
 function checkPath(p) {
-  if (typeof p !== 'string' || !p || p.length > MAX_PATH || p.includes('\0')) throw new Error('Ungültiger Pfad.');
+  if (typeof p !== 'string' || !p || p.length > MAX_PATH || p.includes('\0')) throw new Error(t('localfs.invalidPath'));
   if (p === '~') return os.homedir();
   if (p.startsWith('~/') || p.startsWith('~\\')) p = path.join(os.homedir(), p.slice(2));
-  if (!path.isAbsolute(p)) throw new Error('Bitte einen vollständigen Pfad angeben.');
+  if (!path.isAbsolute(p)) throw new Error(t('localfs.needAbsolute'));
   return path.resolve(p);
 }
 
 // Einzelner Datei- oder Ordnername (Umbenennen, Neuer Ordner)
 function checkName(name, isWin) {
   name = typeof name === 'string' ? name.trim() : '';
-  if (!name || name === '.' || name === '..' || name.length > 255) throw new Error('Ungültiger Name.');
-  if (name.includes('/') || name.includes('\\') || name.includes('\0')) throw new Error('Der Name darf keinen Schrägstrich (/ oder \\) enthalten.');
-  if (isWin && (BAD_WIN_CHARS.test(name) || /[. ]$/.test(name))) throw new Error('Unter Windows sind diese Zeichen nicht erlaubt: < > : " | ? *');
+  if (!name || name === '.' || name === '..' || name.length > 255) throw new Error(t('localfs.invalidName'));
+  if (name.includes('/') || name.includes('\\') || name.includes('\0')) throw new Error(t('localfs.noSlash'));
+  if (isWin && (BAD_WIN_CHARS.test(name) || /[. ]$/.test(name))) throw new Error(t('localfs.badWinChars'));
   return name;
 }
 
@@ -82,9 +83,9 @@ function register({ app, ipcMain, shell, platform }) {
       // Ohne eigenen Ordner liefert manches System den Benutzerordner – dann weglassen
       if (path.resolve(p) !== path.resolve(os.homedir()) && await exists(p)) places.push({ label, path: p, icon });
     };
-    await add('Schreibtisch', 'desktop', 'desktop');
-    await add('Downloads', 'downloads', 'download');
-    await add('Dokumente', 'documents', 'file');
+    await add(t('localfs.desktop'), 'desktop', 'desktop');
+    await add(t('localfs.downloads'), 'downloads', 'download');
+    await add(t('localfs.documents'), 'documents', 'file');
     let drives = [];
     if (REAL_WIN) drives = await windowsDrives();
     // Test unter macOS/Linux mit S3CURE_PLATFORM=win32: Wurzel als „Laufwerk“ zeigen
@@ -99,7 +100,7 @@ function register({ app, ipcMain, shell, platform }) {
     const abs = checkPath(p);
     if (!(await exists(abs))) throw friendly({ code: 'ENOENT' }, path.basename(abs));
     const msg = await shell.openPath(abs);
-    if (msg) throw new Error('Konnte nicht geöffnet werden: ' + msg);
+    if (msg) throw new Error(t('localfs.openFailed', { error: msg }));
   });
 
   ipcMain.handle('localfs:show', async (_e, p) => { shell.showItemInFolder(checkPath(p)); });
@@ -107,10 +108,10 @@ function register({ app, ipcMain, shell, platform }) {
   ipcMain.handle('localfs:rename', async (_e, from, newName) => {
     const src = checkPath(from);
     const name = checkName(newName, IS_WIN);
-    if (isRoot(src)) throw new Error('Das kann nicht umbenannt werden.');
+    if (isRoot(src)) throw new Error(t('localfs.cantRename'));
     const dest = path.join(path.dirname(src), name);
     // Nur Groß-/Kleinschreibung geändert (macOS/Windows) ist erlaubt
-    if (dest.toLowerCase() !== src.toLowerCase() && await exists(dest)) throw new Error(`„${name}“ gibt es in diesem Ordner schon.`);
+    if (dest.toLowerCase() !== src.toLowerCase() && await exists(dest)) throw new Error(t('localfs.nameTaken', { name }));
     try { await fsp.rename(src, dest); } catch (err) { throw friendly(err, name); }
     return dest;
   });
@@ -129,11 +130,11 @@ function register({ app, ipcMain, shell, platform }) {
     const list = paths.map(checkPath);
     const home = path.resolve(os.homedir());
     for (const p of list) {
-      if (isRoot(p) || p === home) throw new Error('Dieser Ordner kann nicht in den Papierkorb gelegt werden.');
+      if (isRoot(p) || p === home) throw new Error(t('localfs.cantTrash'));
     }
     let n = 0;
     for (const p of list) {
-      try { await shell.trashItem(p); n++; } catch (err) { throw new Error(`„${path.basename(p)}“ konnte nicht in den Papierkorb gelegt werden: ${err.message || err}`); }
+      try { await shell.trashItem(p); n++; } catch (err) { throw new Error(t('localfs.trashFailed', { name: path.basename(p), error: err.message || err })); }
     }
     return n;
   });

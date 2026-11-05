@@ -8,6 +8,7 @@ const fsp = fs.promises;
 const path = require('path');
 const crypto = require('crypto');
 const { checkPath, friendly, SYSTEM_FILES } = require('./localfs');
+const { t } = require('./i18n');
 // Fehler vom lokalen Dateisystem haben Text-Codes (ENOENT …), SFTP-Fehler Zahlen
 const cleanError = (err, sftpError) => (typeof err?.code === 'string' ? friendly(err) : sftpError(err));
 
@@ -61,7 +62,7 @@ function register({ ipcMain, getSftp, sftpError, transfers, getWin, platform }) 
     const st = await fsp.stat(local);
     const existing = fresh ? null : await remoteStat(sftp, remote);
     if (st.isDirectory()) {
-      if (existing && !existing.isDirectory()) throw new Error(`„${name}“ gibt es auf dem Server schon als Datei.`);
+      if (existing && !existing.isDirectory()) throw new Error(t('paneTransfer.remoteIsFile', { name }));
       if (!existing) await p(cb => sftp.mkdir(remote, cb)).catch(err => { throw sftpError(err, name); });
       for (const child of await fsp.readdir(local)) {
         if (SYSTEM_FILES.has(child)) continue;
@@ -70,7 +71,7 @@ function register({ ipcMain, getSftp, sftpError, transfers, getWin, platform }) 
       return;
     }
     if (existing) {
-      if (existing.isDirectory()) throw new Error(`„${name}“ gibt es auf dem Server schon als Ordner.`);
+      if (existing.isDirectory()) throw new Error(t('paneTransfer.remoteIsDir', { name }));
       const choice = await resolveConflict(job, state, {
         name, target: remote, canResume: existing.size < st.size,
         source: { size: st.size, mtime: st.mtimeMs }, existing: { size: existing.size, mtime: existing.mtime * 1000 },
@@ -90,14 +91,14 @@ function register({ ipcMain, getSftp, sftpError, transfers, getWin, platform }) 
     const st = await p(cb => sftp.stat(remote, cb)).catch(err => { throw sftpError(err, name); });
     const existing = fresh ? null : await localStat(local);
     if (st.isDirectory()) {
-      if (existing && !existing.isDirectory()) throw new Error(`„${name}“ gibt es auf diesem Computer schon als Datei.`);
+      if (existing && !existing.isDirectory()) throw new Error(t('paneTransfer.localIsFile', { name }));
       if (!existing) await fsp.mkdir(local);
       const list = await p(cb => sftp.readdir(remote, cb)).catch(err => { throw sftpError(err, name); });
       for (const it of list) await downloadOne(job, sftp, posix.join(remote, it.filename), local, state, !existing);
       return;
     }
     if (existing) {
-      if (existing.isDirectory()) throw new Error(`„${name}“ gibt es auf diesem Computer schon als Ordner.`);
+      if (existing.isDirectory()) throw new Error(t('paneTransfer.localIsDir', { name }));
       const choice = await resolveConflict(job, state, {
         name, target: local, canResume: existing.size < st.size,
         source: { size: st.size, mtime: st.mtime * 1000 }, existing: { size: existing.size, mtime: existing.mtimeMs },
@@ -108,11 +109,11 @@ function register({ ipcMain, getSftp, sftpError, transfers, getWin, platform }) 
     await job.copy('get', sftp, remote, local, name, { size: st.size });
   }
 
-  const titleFor = (names, base) => names.length === 1 ? base(names[0]) : `${names.length} Elemente`;
+  const titleFor = (names, base) => names.length === 1 ? base(names[0]) : t('paneTransfer.items', { count: names.length });
 
   // localPaths: absolute lokale Pfade, remoteDir: Zielordner auf dem Server
   ipcMain.handle('xfer:upload', async (_e, tabId, remoteDir, localPaths) => {
-    if (typeof remoteDir !== 'string' || !remoteDir.startsWith('/')) throw new Error('Ungültiger Zielordner auf dem Server.');
+    if (typeof remoteDir !== 'string' || !remoteDir.startsWith('/')) throw new Error(t('paneTransfer.badRemoteDir'));
     if (!Array.isArray(localPaths) || !localPaths.length) return { files: 0, skipped: 0 };
     const list = localPaths.map(checkPath);
     const sftp = await getSftp(tabId);
@@ -135,10 +136,10 @@ function register({ ipcMain, getSftp, sftpError, transfers, getWin, platform }) 
   ipcMain.handle('xfer:download', async (_e, tabId, localDir, items) => {
     const dir = checkPath(localDir);
     const dst = await localStat(dir);
-    if (!dst || !dst.isDirectory()) throw new Error('Den Zielordner gibt es nicht mehr.');
+    if (!dst || !dst.isDirectory()) throw new Error(t('paneTransfer.localDirGone'));
     if (!Array.isArray(items) || !items.length) return { files: 0, skipped: 0 };
     const remotes = items.map(it => String(it.path));
-    if (remotes.some(r => !r.startsWith('/'))) throw new Error('Ungültiger Pfad auf dem Server.');
+    if (remotes.some(r => !r.startsWith('/'))) throw new Error(t('paneTransfer.badRemotePath'));
     const sftp = await getSftp(tabId);
     const job = transfers.start(tabId, 'download', titleFor(remotes, posix.basename), { localDir: dir });
     const state = { all: null, skipped: 0, multi: remotes.length > 1 || !!items[0].isDir };

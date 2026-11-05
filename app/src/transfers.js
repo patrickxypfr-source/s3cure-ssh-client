@@ -23,11 +23,11 @@ const Transfers = (() => {
   box.innerHTML = `
     <div class="tq-head">
       <span class="tq-ico">${icon('transfers')}</span>
-      <div class="tq-text"><div class="tq-title">Übertragungen</div><div class="tq-sum"></div></div>
-      <button class="mini-btn" data-q="pause-all" title="Alle anhalten">${icon('pause')}</button>
-      <button class="mini-btn" data-q="resume-all" title="Alle fortsetzen">${icon('play')}</button>
-      <button class="mini-btn" data-q="clear" title="Erledigte entfernen">${icon('broom')}</button>
-      <button class="mini-btn tq-fold" data-q="fold" title="Einklappen">${icon('down')}</button>
+      <div class="tq-text"><div class="tq-title">${t('transfers.title')}</div><div class="tq-sum"></div></div>
+      <button class="mini-btn" data-q="pause-all" title="${t('transfers.pauseAll')}">${icon('pause')}</button>
+      <button class="mini-btn" data-q="resume-all" title="${t('transfers.resumeAll')}">${icon('play')}</button>
+      <button class="mini-btn" data-q="clear" title="${t('transfers.clear')}">${icon('broom')}</button>
+      <button class="mini-btn tq-fold" data-q="fold" title="${t('transfers.collapse')}">${icon('down')}</button>
     </div>
     <div class="t-bar tq-bar"><div class="t-fill"></div></div>
     <div class="tq-list"></div>`;
@@ -47,31 +47,32 @@ const Transfers = (() => {
 
   function duration(sec) {
     if (!Number.isFinite(sec) || sec <= 0) return '';
-    if (sec < 60) return `noch ${Math.max(1, Math.round(sec))} s`;
-    if (sec < 3600) return `noch ${Math.round(sec / 60)} Min.`;
+    if (sec < 60) return t('transfers.etaSec', { n: Math.max(1, Math.round(sec)) });
+    if (sec < 3600) return t('transfers.etaMin', { n: Math.round(sec / 60) });
     const h = Math.floor(sec / 3600);
     const m = Math.round((sec % 3600) / 60);
-    return `noch ${h} Std.${m ? ` ${m} Min.` : ''}`;
+    return m ? t('transfers.etaHoursMin', { h, m }) : t('transfers.etaHours', { h });
   }
   const speedText = bps => (bps > 0 ? `${formatSize(Math.round(bps))}/s` : '');
   const pctOf = i => (i.total ? Math.min(100, Math.floor(i.done * 100 / i.total)) : i.state === 'done' ? 100 : 0);
-  const sizes = i => (i.total ? `${formatSize(i.done)} von ${formatSize(i.total)}` : '');
+  const sizes = i => (i.total ? t('transfers.sizeOf', { done: formatSize(i.done), total: formatSize(i.total) }) : '');
+  const pct = n => t('transfers.percent', { pct: n });
 
   function subText(i) {
-    if (i.busy) return isFinal(i) ? (i.state === 'error' ? i.error : i.state === 'done' ? 'Fertig' : 'Abgebrochen') : (i.sub || 'Läuft …');
-    const n = i.fileCount > 1 ? ` · ${i.files} von ${i.fileCount} Dateien` : '';
+    if (i.busy) return isFinal(i) ? (i.state === 'error' ? i.error : i.state === 'done' ? t('common.done') : t('transfers.stateCancelled')) : (i.sub || t('transfers.running'));
+    const n = i.fileCount > 1 ? ` · ${t('transfers.filesOf', { files: i.files, total: i.fileCount })}` : '';
     switch (i.state) {
-      case 'preparing': return 'Wird vorbereitet …';
-      case 'queued': return `Wartet${i.total ? ` · ${sizes(i)}` : ''}`;
-      case 'pausing': return 'Wird angehalten …';
-      case 'paused': return `Angehalten · ${sizes(i)} · ${pctOf(i)} %`;
-      case 'waiting': return 'Wartet auf die Verbindung – geht nach dem Neuverbinden weiter';
-      case 'cancelling': return 'Wird abgebrochen …';
-      case 'cancelled': return 'Abgebrochen';
-      case 'done': return `Fertig${i.fileCount > 1 ? ` · ${i.files} Dateien` : ''} · ${formatSize(i.total)}`;
-      case 'error': return (i.failed > 1 ? `${i.failed} Dateien fehlgeschlagen – ` : '') + (i.error || 'Fehlgeschlagen');
+      case 'preparing': return t('transfers.preparing');
+      case 'queued': return `${t('transfers.queued')}${i.total ? ` · ${sizes(i)}` : ''}`;
+      case 'pausing': return t('transfers.pausing');
+      case 'paused': return `${t('transfers.paused')} · ${sizes(i)} · ${pct(pctOf(i))}`;
+      case 'waiting': return t('transfers.waiting');
+      case 'cancelling': return t('transfers.cancelling');
+      case 'cancelled': return t('transfers.stateCancelled');
+      case 'done': return `${t('common.done')}${i.fileCount > 1 ? ` · ${t('transfers.files', { count: i.files })}` : ''} · ${formatSize(i.total)}`;
+      case 'error': return (i.failed > 1 ? t('transfers.filesFailed', { count: i.failed }) : '') + (i.error || t('transfers.failed'));
       default: {
-        const parts = [sizes(i), `${pctOf(i)} %`, speedText(i.speed), duration(i.speed ? (i.total - i.done) / i.speed : 0)].filter(Boolean);
+        const parts = [sizes(i), pct(pctOf(i)), speedText(i.speed), duration(i.speed ? (i.total - i.done) / i.speed : 0)].filter(Boolean);
         const file = i.file && i.file !== i.title ? `${i.file} · ` : '';
         return file + parts.join(' · ') + n;
       }
@@ -83,8 +84,9 @@ const Transfers = (() => {
     const el = it.el;
     el.className = `transfer ${i.state}${i.busy ? ' busy' : ''}`;
     el.querySelector('.t-ico').innerHTML = icon(i.kind === 'upload' ? 'upload' : i.kind === 'download' ? 'download' : i.kind === 'sync' ? 'refresh' : i.icon || 'zip');
-    const verb = i.kind === 'upload' ? 'Hochladen' : i.kind === 'download' ? 'Herunterladen' : ''; // 'sync': Titel sagt es (sync.js)
-    el.querySelector('.t-title').textContent = verb ? `${verb}: ${i.title}` : i.title;
+    // 'sync': Titel sagt es (sync.js)
+    el.querySelector('.t-title').textContent = i.kind === 'upload' ? t('transfers.titleUpload', { title: i.title })
+      : i.kind === 'download' ? t('transfers.titleDownload', { title: i.title }) : i.title;
     const sub = subText(i);
     el.querySelector('.t-sub').textContent = sub;
     el.querySelector('.t-sub').title = sub;
@@ -99,7 +101,7 @@ const Transfers = (() => {
     show('retry', !i.busy && i.state === 'error' && i.failed > 0);
     const x = el.querySelector('[data-t=x]');
     x.hidden = (i.busy && !isFinal(i)) || i.state === 'cancelling';
-    x.title = isFinal(i) ? 'Aus der Liste entfernen' : 'Abbrechen';
+    x.title = isFinal(i) ? t('transfers.removeFromList') : t('common.cancel');
   }
 
   // Auftrag in der Reihenfolge der Warteschlange einsortieren
@@ -119,25 +121,25 @@ const Transfers = (() => {
     const total = open.reduce((s, i) => s + (i.total || 0), 0);
     const done = open.reduce((s, i) => s + Math.min(i.done || 0, i.total || 0), 0);
     const speed = running.reduce((s, i) => s + (i.speed || 0), 0);
-    const pct = total ? Math.floor(done * 100 / total) : 0;
+    const percent = total ? Math.floor(done * 100 / total) : 0;
     const errors = jobs.filter(i => i.state === 'error').length;
     const finished = all.filter(i => i.state === 'done' || i.state === 'cancelled').length;
     const paused = open.filter(i => i.state === 'paused' || i.state === 'pausing').length;
     let sum;
     if (open.length) {
-      sum = [`${open.length} offen`, total ? `${pct} %` : '', speedText(speed), duration(speed ? (total - done) / speed : 0), paused ? `${paused} angehalten` : '']
+      sum = [t('transfers.openCount', { count: open.length }), total ? pct(percent) : '', speedText(speed), duration(speed ? (total - done) / speed : 0), paused ? t('transfers.pausedCount', { count: paused }) : '']
         .filter(Boolean).join(' · ');
     } else {
-      sum = errors ? `Fertig – ${errors} mit Fehler` : 'Alles erledigt';
+      sum = errors ? t('transfers.doneWithErrors', { count: errors }) : t('transfers.allDone');
     }
     box.querySelector('.tq-sum').textContent = sum;
-    box.querySelector('.tq-bar .t-fill').style.width = (open.length ? pct : 100) + '%';
+    box.querySelector('.tq-bar .t-fill').style.width = (open.length ? percent : 100) + '%';
     box.classList.toggle('has-error', errors > 0 && !open.length);
     box.classList.toggle('all-done', !open.length && !errors);
     box.querySelector('[data-q=pause-all]').hidden = !open.some(i => !['paused', 'pausing', 'cancelling'].includes(i.state));
     box.querySelector('[data-q=resume-all]').hidden = !paused;
     box.querySelector('[data-q=clear]').hidden = !finished;
-    box.querySelector('[data-q=fold]').title = folded ? 'Ausklappen' : 'Einklappen';
+    box.querySelector('[data-q=fold]').title = folded ? t('transfers.expand') : t('transfers.collapse');
     autoFold(!open.length && !errors, open.length > 0);
   }
 
@@ -153,7 +155,7 @@ const Transfers = (() => {
       if (box.matches(':hover') || folded) return;
       folded = true; autoFolded = true;
       box.classList.add('folded');
-      box.querySelector('[data-q=fold]').title = 'Ausklappen';
+      box.querySelector('[data-q=fold]').title = t('transfers.expand');
     }, 3500);
   }
 
@@ -174,12 +176,12 @@ const Transfers = (() => {
         <span class="t-ico"></span>
         <div class="t-text"><div class="t-title"></div><div class="t-sub"></div><div class="t-bar"><div class="t-fill"></div></div></div>
         <div class="t-actions">
-          <button class="mini-btn t-move" data-t="up" title="Nach oben (früher übertragen)">${icon('arrowUp')}</button>
-          <button class="mini-btn t-move" data-t="down" title="Nach unten (später übertragen)">${icon('arrowDown')}</button>
-          <button class="mini-btn" data-t="pause" title="Anhalten">${icon('pause')}</button>
-          <button class="mini-btn" data-t="resume" title="Fortsetzen – macht dort weiter, wo es aufgehört hat">${icon('play')}</button>
-          <button class="mini-btn" data-t="retry" title="Erneut versuchen – nur die fehlgeschlagenen Dateien">${icon('retry')}</button>
-          <button class="mini-btn" data-t="x" title="Abbrechen">${icon('close')}</button>
+          <button class="mini-btn t-move" data-t="up" title="${t('transfers.moveUp')}">${icon('arrowUp')}</button>
+          <button class="mini-btn t-move" data-t="down" title="${t('transfers.moveDown')}">${icon('arrowDown')}</button>
+          <button class="mini-btn" data-t="pause" title="${t('transfers.pause')}">${icon('pause')}</button>
+          <button class="mini-btn" data-t="resume" title="${t('transfers.resume')}">${icon('play')}</button>
+          <button class="mini-btn" data-t="retry" title="${t('transfers.retry')}">${icon('retry')}</button>
+          <button class="mini-btn" data-t="x" title="${t('common.cancel')}">${icon('close')}</button>
         </div>`;
       const id = info.id;
       const act = (a, fn) => el.querySelector(`[data-t=${a}]`).addEventListener('click', fn);
@@ -240,20 +242,23 @@ const Transfers = (() => {
     };
   }
 
-  const isCancel = err => /Übertragung abgebrochen/.test(String(err?.message || err));
+  // Abbruch-Text aus lib/transfers.js / lib/ftp.js (t('transfers.cancelled')) – kommt als Text über IPC;
+  // in beiden Sprachen erkennen (die Sprache des Hauptprozesses kann vom Fenster abweichen)
+  const CANCEL_RE = /Übertragung abgebrochen|Transfer cancelled/; // i18n-ignore
+  const isCancel = err => { const m = String(err?.message || err); return CANCEL_RE.test(m) || m.includes(t('transfers.cancelled')); };
 
   // ---------- Einstellungen ----------
 
   const KEYS = { concurrency: 'transfers.concurrency', down: 'transfers.downKBs', up: 'transfers.upKBs' };
   if (window.registerSettingsSection) {
     registerSettingsSection({
-      id: 'transfers', title: 'Übertragungen', icon: 'transfers', order: 30,
-      description: 'Gilt für alle Up- und Downloads im Dateibrowser. Angehaltene oder abgebrochene Dateien werden dort fortgesetzt, wo sie aufgehört haben.',
+      id: 'transfers', title: t('transfers.title'), icon: 'transfers', order: 30,
+      description: t('transfers.settingsDesc'),
       defaults: { [KEYS.concurrency]: 3, [KEYS.down]: 0, [KEYS.up]: 0 },
       fields: [
-        { key: KEYS.concurrency, type: 'number', label: 'Gleichzeitige Übertragungen', hint: 'So viele Dateien laufen gleichzeitig (über alle Verbindungen).', min: 1, max: 10, unit: 'Dateien' },
-        { key: KEYS.down, type: 'number', label: 'Limit Herunterladen', hint: '0 = ohne Limit. Praktisch, damit das Internet nebenbei noch flüssig bleibt.', min: 0, max: 1000000, step: 50, unit: 'KB/s' },
-        { key: KEYS.up, type: 'number', label: 'Limit Hochladen', hint: '0 = ohne Limit.', min: 0, max: 1000000, step: 50, unit: 'KB/s' },
+        { key: KEYS.concurrency, type: 'number', label: t('transfers.concurrencyLabel'), hint: t('transfers.concurrencyHint'), min: 1, max: 10, unit: t('transfers.unitFiles') },
+        { key: KEYS.down, type: 'number', label: t('transfers.downLimit'), hint: t('transfers.downLimitHint'), min: 0, max: 1000000, step: 50, unit: 'KB/s' },
+        { key: KEYS.up, type: 'number', label: t('transfers.upLimit'), hint: t('transfers.upLimitHint'), min: 0, max: 1000000, step: 50, unit: 'KB/s' },
       ],
     });
     const push = () => api.transferConfig?.({
