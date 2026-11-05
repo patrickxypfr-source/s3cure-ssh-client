@@ -561,3 +561,6 @@ body.win #tabbar { padding-right: 150px; }
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 body.lasso-active, body.lasso-active * { user-select: none !important; cursor: default; }
+
+/* Beim Ziehen von Dateien: Übertragungsliste lässt das Ablegen durch (src/transfers.js) */
+body.dnd-active #transfers { pointer-events: none; opacity: .35; transition: opacity .15s; }

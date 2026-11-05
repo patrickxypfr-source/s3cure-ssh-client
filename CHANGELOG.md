@@ -13,12 +13,28 @@ So wird ein Abschnitt geschrieben (für Mitwirkende):
 
 ## [Unveröffentlicht]
 
+## 1.2.0 – 2026-11-05
+
 ### Neu
-- **Linux-Version** als AppImage (64 Bit) – herunterladen, ausführbar machen, starten. Automatische Updates funktionieren auch hier.
-- **„Was ist neu?“**: Nach einem Update zeigt die App einmal kurz, was sich geändert hat. Auch das Update-Fenster zeigt die Neuerungen der kommenden Version.
+- **Ordner synchronisieren:** Ordner auf dem PC und auf dem Server vergleichen und mit einem Klick angleichen – in eine oder beide Richtungen, mit Vorschau und Ausschlüssen (z. B. `node_modules`).
+- **Server-Ordner aktuell halten:** Jede Datei, die du am PC speicherst, wird automatisch hochgeladen.
+- **Im eigenen Editor bearbeiten:** Server-Dateien z. B. in VS Code öffnen – jedes Speichern lädt sie automatisch wieder hoch.
+- **Dateien vergleichen:** Unterschiede zwischen zwei Dateien farbig nebeneinander.
+- **Übertragungen pausieren und fortsetzen**, abgebrochene Übertragungen weitermachen, mehrere gleichzeitig und ein Geschwindigkeitslimit.
+- **Lesezeichen** für Ordner, Zurück/Vor und Spalten für Rechte, Besitzer und Gruppe.
+- **Sitzung wiederherstellen:** Nach einem Neustart oder Update sind deine Tabs wieder da.
+- **Backup & Umzug:** Alle Verbindungen verschlüsselt exportieren und auf einem anderen Rechner importieren – auf Wunsch automatisch über iCloud oder OneDrive abgleichen.
+- **FTP und FTPS** für Webhosting-Pakete ohne SSH.
+- **Befehlspalette** mit Cmd/Strg+K: Verbindungen, Tabs, Befehle und Aktionen per Tastatur.
+- **Bis zu vier Terminals** in einem Tab und Befehlsknöpfe, die für alle Server gelten.
+- **Übersicht:** Dienste und Docker-Container des Servers sehen, starten, stoppen und Logs ansehen.
+- **Schlüssel & Server:** bekannte Server und eigene SSH-Schlüssel verwalten, klare Warnung bei geändertem Server-Schlüssel, Agent-Weiterleitung und Verbindung über Proxy.
+- **Linux-Version** als AppImage (64 Bit), ebenfalls mit automatischen Updates.
+- **„Was ist neu?“**: Nach einem Update zeigt die App kurz, was sich geändert hat.
 
 ### Verbessert
-- Jede neue Version wird vor dem Veröffentlichen automatisch getestet (Verbinden, Terminal, Dateien, Editor).
+- Jede neue Version wird vor dem Veröffentlichen automatisch getestet.
+- Die Übertragungsliste klappt sich nach getaner Arbeit von selbst ein und verdeckt beim Ziehen von Dateien nichts mehr.
 
 ## 1.1.0 – 2026-11-04
 

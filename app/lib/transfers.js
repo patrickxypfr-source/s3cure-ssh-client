@@ -335,7 +335,7 @@ function create(getWin, { getSftp, isConnected = () => true, sftpError = e => e 
     const stop = () => job.cancelled || job.paused || job.waiting || (sftp && dead.has(sftp));
     try {
       sftp = await getSftp(job.tabId);
-      if (!seen.has(sftp)) { seen.add(sftp); sftp.once('close', () => dead.add(sftp)); }
+      if (!seen.has(sftp)) { seen.add(sftp); if (typeof sftp.once === 'function') sftp.once('close', () => dead.add(sftp)); } // FTP-Adapter hat keine Ereignisse
       await copyFile(sftp, file, limits[file.dir], stop, n => {
         job.doneBytes += n;
         measure(job);

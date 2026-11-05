@@ -138,6 +138,23 @@ const Transfers = (() => {
     box.querySelector('[data-q=resume-all]').hidden = !paused;
     box.querySelector('[data-q=clear]').hidden = !finished;
     box.querySelector('[data-q=fold]').title = folded ? 'Ausklappen' : 'Einklappen';
+    autoFold(!open.length && !errors, open.length > 0);
+  }
+
+  // Alles fertig und ohne Fehler: nach ein paar Sekunden von selbst einklappen, damit die Liste
+  // die Dateien nicht verdeckt. Kommt neue Arbeit dazu, wieder aufklappen (nur wenn wir selbst eingeklappt haben).
+  let autoTimer = null, autoFolded = false;
+  function autoFold(allDone, busy) {
+    if (busy && autoFolded) { autoFolded = false; folded = false; box.classList.remove('folded'); }
+    if (!allDone) { clearTimeout(autoTimer); autoTimer = null; return; }
+    if (folded || autoTimer) return;
+    autoTimer = setTimeout(() => {
+      autoTimer = null;
+      if (box.matches(':hover') || folded) return;
+      folded = true; autoFolded = true;
+      box.classList.add('folded');
+      box.querySelector('[data-q=fold]').title = 'Ausklappen';
+    }, 3500);
   }
 
   function remove(id) {
@@ -205,7 +222,7 @@ const Transfers = (() => {
     for (const [id, it] of [...items]) if (it.info.state === 'done' || it.info.state === 'cancelled') { it.el.remove(); items.delete(id); }
     renderHead();
   });
-  const fold = () => { folded = !folded; lsSet('transfers:folded', folded); box.classList.toggle('folded', folded); renderHead(); };
+  const fold = () => { autoFolded = false; folded = !folded; lsSet('transfers:folded', folded); box.classList.toggle('folded', folded); renderHead(); };
   box.querySelector('[data-q=fold]').addEventListener('click', fold);
   box.querySelector('.tq-text').addEventListener('click', fold);
 
@@ -247,4 +264,17 @@ const Transfers = (() => {
   }
 
   return { busy, isCancel };
+})();
+
+// Während Dateien gezogen werden, darf die schwebende Übertragungsliste nichts verdecken:
+// sie wird durchlässig (Ablegen landet in der Dateiliste darunter) und halb durchsichtig.
+(() => {
+  let depth = 0;
+  const on = () => document.body.classList.add('dnd-active');
+  const off = () => { depth = 0; document.body.classList.remove('dnd-active'); };
+  document.addEventListener('dragstart', on, true);
+  document.addEventListener('dragenter', () => { depth++; on(); }, true);
+  document.addEventListener('dragleave', () => { if (--depth <= 0) off(); }, true);
+  document.addEventListener('drop', off, true);
+  document.addEventListener('dragend', off, true);
 })();
