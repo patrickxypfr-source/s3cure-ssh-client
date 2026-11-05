@@ -14,6 +14,8 @@ How to write a section (for contributors):
 
 ## [Unreleased]
 
+## 1.5.1 – 2026-11-05
+
 ### Improved
 - **Command buttons no longer clear the terminal:** instead of wiping everything, each button (Status, Check, Logs …) adds a divider with a coloured name tag and the time – red for normal commands, green with “● LIVE” for live logs, yellow for commands that ask first (Restart, Stop …). Earlier output stays – just scroll up.
 - **Clearer messages in the terminal:** “Connection lost”, “Reconnected”, “Connection closed” and errors now have colour and a small symbol (⚠ ✓ ○ ✕).

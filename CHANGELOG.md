@@ -14,6 +14,8 @@ So wird ein Abschnitt geschrieben (für Mitwirkende):
 
 ## [Unveröffentlicht]
 
+## 1.5.1 – 2026-11-05
+
 ### Verbessert
 - **Befehlsknöpfe löschen das Terminal nicht mehr:** Statt alles zu leeren, setzt jeder Knopf (Status, Check, Logs …) eine Trennlinie mit farbigem Namensschild und Uhrzeit – rot für normale Befehle, grün mit „● LIVE“ für Live-Logs, gelb für Befehle mit Rückfrage (Restart, Stop …). Die Ausgaben davor bleiben stehen – einfach hochscrollen.
 - **Übersichtlichere Meldungen im Terminal:** „Verbindung verloren“, „Wieder verbunden“, „Verbindung beendet“ und Fehler haben jetzt Farbe und ein kleines Symbol (⚠ ✓ ○ ✕).
