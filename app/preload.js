@@ -172,6 +172,18 @@ contextBridge.exposeInMainWorld('s3conn', {
   proxyTest: (proxy, password, host, port) => ipcRenderer.invoke('proxy:test', proxy, password, host, port),
 });
 
+// Tresor für Zugangsdaten (app/lib/vault.js, Oberfläche: src/vault.js)
+contextBridge.exposeInMainWorld('s3vault', {
+  list: () => ipcRenderer.invoke('vault:list'),
+  save: entry => ipcRenderer.invoke('vault:save', entry),
+  remove: id => ipcRenderer.invoke('vault:delete', id),
+  reveal: (id, kind) => ipcRenderer.invoke('vault:reveal', id, kind),
+  copy: (id, kind) => ipcRenderer.invoke('vault:copy', id, kind),
+  unlock: opts => ipcRenderer.invoke('vault:unlock', opts),
+  setRequireUnlock: on => ipcRenderer.invoke('vault:require-unlock', on),
+  generate: opts => ipcRenderer.invoke('vault:generate', opts),
+});
+
 // Sitzung wiederherstellen (app/lib/session.js, Oberfläche: src/session.js)
 contextBridge.exposeInMainWorld('s3session', {
   take: () => ipcRenderer.invoke('session:take'),

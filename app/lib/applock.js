@@ -82,7 +82,13 @@ function createAppLock({ configDir, isMac }) {
     });
   }
 
-  return { register, status, isLocked: () => status().locked };
+  // Für den Tresor (lib/vault.js): bestätigen lassen, ohne den Sperrzustand der App zu ändern
+  async function promptTouchId(reason) {
+    if (!status().touchId) return false;
+    try { await systemPreferences.promptTouchID(reason); return true; } catch { return false; }
+  }
+
+  return { register, status, isLocked: () => status().locked, verify: checkPassword, promptTouchId };
 }
 
 module.exports = { createAppLock };

@@ -1,4 +1,5 @@
-// Zusatzfelder für gespeicherte Verbindungen: Gruppe, Farbe, Sprung-Server, Agent-Weiterleitung, Proxy, Protokoll.
+// Zusatzfelder für gespeicherte Verbindungen: Gruppe, Farbe, Sprung-Server, Agent-Weiterleitung, Proxy, Protokoll,
+// Zugangsdaten aus dem Tresor.
 // Alte Einträge ohne diese Felder funktionieren unverändert.
 const { hostProxyField } = require('./proxy');
 
@@ -16,6 +17,8 @@ function hostExtras(host) {
   // Agent-Weiterleitung und Proxy: app/lib/connection.js, app/lib/proxy.js
   all.agentForward = host.agentForward === true ? true : undefined;
   all.proxy = hostProxyField(host.proxy);
+  // Zugangsdaten aus dem Tresor (lib/vault.js): Kennung des Eintrags, leer = eigene
+  all.credential = typeof host.credential === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(host.credential) ? host.credential : undefined;
   const out = {};
   for (const k of Object.keys(all)) if (k in host) out[k] = all[k];
   // Protokoll SFTP/FTP/FTPS (lib/ftp.js) – nur wenn mitgeschickt (Host-Dialog schickt es immer)
