@@ -235,7 +235,9 @@ async function copyFile(sftp, file, limiter, shouldStop, onBytes) {
 
 // ---------- Warteschlange ----------
 
-function create(getWin, { getSftp, isConnected = () => true, sftpError = e => e } = {}) {
+// sendTab(tabId, channel, info): Meldung an das Fenster des Tabs (app/lib/windows.js);
+// ownedBy(sender, tabId): gehört der Tab dem anfragenden Fenster? (Liste, „alle anhalten“ … pro Fenster)
+function create(sendTab, { getSftp, isConnected = () => true, sftpError = e => e, ownedBy = () => true } = {}) {
   const jobs = new Map();
   const order = []; // Job-IDs in Reihenfolge der Liste
   const cfg = { concurrency: 3 };
@@ -274,10 +276,8 @@ function create(getWin, { getSftp, isConnected = () => true, sftpError = e => e 
   }
 
   function send(job) {
-    const win = getWin();
-    if (!win || win.isDestroyed()) return;
     job.lastSent = Date.now();
-    win.webContents.send('transfer:update', info(job));
+    sendTab(job.tabId, 'transfer:update', info(job));
   }
 
   // Zustand neu bestimmen, bei Bedarf melden und Aufträge abschließen
@@ -490,13 +490,15 @@ function create(getWin, { getSftp, isConnected = () => true, sftpError = e => e 
     order.splice(order.indexOf(id), 1);
   }
 
-  function clearFinished() {
-    for (const job of [...jobs.values()]) if (job.state === 'done' || job.state === 'cancelled') remove(job.id);
+  // only(job): nur Aufträge eines Fensters (mehrere Fenster, app/lib/windows.js)
+  const all = () => true;
+  function clearFinished(only = all) {
+    for (const job of [...jobs.values()]) if ((job.state === 'done' || job.state === 'cancelled') && only(job)) remove(job.id);
   }
 
-  const unfinished = () => [...jobs.values()].filter(j => !FINAL.has(j.state));
-  const pauseAll = () => unfinished().forEach(j => pause(j.id));
-  const resumeAll = () => unfinished().forEach(j => resume(j.id));
+  const unfinished = (only = all) => [...jobs.values()].filter(j => !FINAL.has(j.state) && only(j));
+  const pauseAll = only => unfinished(only).forEach(j => pause(j.id));
+  const resumeAll = only => unfinished(only).forEach(j => resume(j.id));
 
   function configure(opts = {}) {
     if (opts.concurrency != null) cfg.concurrency = Math.max(1, Math.min(10, Math.round(Number(opts.concurrency) || 3)));
@@ -528,11 +530,12 @@ function create(getWin, { getSftp, isConnected = () => true, sftpError = e => e 
     ipcMain.on('transfer:retry', (_e, id) => retry(id));
     ipcMain.on('transfer:move', (_e, id, delta) => move(id, delta));
     ipcMain.on('transfer:remove', (_e, id) => remove(id));
-    ipcMain.on('transfer:clear', () => clearFinished());
-    ipcMain.on('transfer:pause-all', () => pauseAll());
-    ipcMain.on('transfer:resume-all', () => resumeAll());
+    const mine = e => job => ownedBy(e && e.sender, job.tabId);
+    ipcMain.on('transfer:clear', e => clearFinished(mine(e)));
+    ipcMain.on('transfer:pause-all', e => pauseAll(mine(e)));
+    ipcMain.on('transfer:resume-all', e => resumeAll(mine(e)));
     ipcMain.handle('transfer:config', (_e, opts) => configure(opts));
-    ipcMain.handle('transfer:list', () => order.map(id => info(jobs.get(id))));
+    ipcMain.handle('transfer:list', e => order.map(id => jobs.get(id)).filter(mine(e)).map(info));
   }
 
   return {

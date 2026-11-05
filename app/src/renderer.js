@@ -161,9 +161,10 @@ $('#quick').addEventListener('submit', e => {
 
 // ---------- Tabs & Terminals ----------
 
-// opts.connect: false = noch nicht verbinden; opts.restore: gemerkter Zustand (session.js)
+// opts.connect: false = noch nicht verbinden; opts.restore: gemerkter Zustand (session.js);
+// opts.id: Tab aus einem anderen Fenster übernehmen – gleiche ID, Verbindung besteht schon (windows.js)
 function openTab(spec, title, view = 'terminal', opts = {}) {
-  const id = crypto.randomUUID();
+  const id = opts.id || crypto.randomUUID();
   if (window.FtpUi?.isFtpSpec(spec)) view = 'files'; // FTP: nur Dateien (ftp-ui.js)
   const el = document.createElement('div');
   el.className = 'term';
@@ -197,6 +198,7 @@ function openTab(spec, title, view = 'terminal', opts = {}) {
   window.FileNav?.attachRemote(tab); // Verlauf zurück/vor und Lesezeichen (file-nav.js)
   window.FileColumns?.attach(tab); // Spalten: sortieren, ein-/ausblenden, Breiten (file-columns.js)
   window.SyncTools?.attach(tab); // Synchronisieren, aktuell halten, extern bearbeiten (sync.js)
+  window.WindowTabs?.attach(tab); // Rechtsklick und Ziehen: in ein anderes Fenster (windows.js)
   activate(id);
   if (opts.connect !== false) connect(tab);
   return tab;
@@ -394,6 +396,13 @@ function closeTab(id, force = false) {
     return;
   }
   api.close(id);
+  disposeTab(tab);
+}
+
+// Tab aus der Oberfläche entfernen; die Verbindung schließt closeTab vorher (beim Verschieben
+// in ein anderes Fenster bleibt sie bestehen, windows.js)
+function disposeTab(tab) {
+  const id = tab.id;
   window.TermExtra?.detach(tab);
   window.LocalPane?.detach(tab);
   window.FileColumns?.detach(tab);
@@ -411,6 +420,7 @@ function closeTab(id, force = false) {
 }
 
 api.onData((id, data) => tabs.get(id)?.term.write(data));
+api.onHostsChanged?.(() => refreshHosts()); // in einem anderen Fenster geändert
 api.onClosed(id => {
   const tab = tabs.get(id);
   if (!tab) return;
@@ -430,7 +440,7 @@ function addWindowsClipboard(term, el) {
   term.attachCustomKeyEventHandler(e => {
     if (e.type !== 'keydown' || !e.ctrlKey) return true;
     const k = e.key.toLowerCase();
-    if (e.shiftKey && ['t', 'w', 'f'].includes(k)) return false;          // an die App weiterreichen
+    if (e.shiftKey && ['t', 'w', 'f', 'n'].includes(k)) return false;     // an die App weiterreichen
     if (k === 'c' && (e.shiftKey || term.hasSelection())) { e.preventDefault(); copy(); return false; }
     if (k === 'v') { e.preventDefault(); paste(); return false; }
     return true;                                                          // Strg+C ohne Markierung = Abbrechen
@@ -445,6 +455,7 @@ window.addEventListener('keydown', e => {
   const key = e.key.toLowerCase();
   if (key === 'w' && activeId) { e.preventDefault(); closeTab(activeId); }
   if (key === 't') { e.preventDefault(); $('#quick-input').focus(); }
+  if (key === 'n') { e.preventDefault(); window.WindowTabs?.newWindow(); } // neues Fenster (windows.js)
   if (key === 'f' && activeId) {
     const tab = tabs.get(activeId);
     if (tab.state !== 'open') return;

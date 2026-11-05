@@ -52,6 +52,15 @@
 
   const ready = store.get().then(v => { values = v || {}; emit(Object.keys(all())); }).catch(err => console.error(err));
 
+  // In einem anderen Fenster geändert (mehrere Fenster, app/lib/windows.js)
+  store.onChanged?.(v => {
+    const before = all();
+    values = v || {};
+    const after = all();
+    emit(Object.keys({ ...before, ...after }).filter(k => !same(before[k], after[k])));
+    if (!modal.hidden && current) renderNav();
+  });
+
   function registerSettingsSection(section) {
     if (!section || !section.id) throw new Error('registerSettingsSection: id fehlt');
     const i = sections.findIndex(s => s.id === section.id);

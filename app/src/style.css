@@ -294,6 +294,7 @@ li.connected .host-avatar { color: var(--accent); border-color: color-mix(in srg
 .tab.active { background: var(--bg); color: var(--text); border-color: var(--border); box-shadow: var(--neu-highlight); }
 .tab.active::after { content: ''; }
 .tab .title { overflow: hidden; text-overflow: ellipsis; }
+.tab.dragging-tab { opacity: .45; } /* wird in ein anderes Fenster gezogen (windows.js) */
 .tab .close {
   width: 20px; height: 20px; border: none; border-radius: 5px;
   display: flex; align-items: center; justify-content: center;

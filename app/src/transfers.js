@@ -268,7 +268,9 @@ const Transfers = (() => {
     Settings.onChange((_v, changed) => { if (changed.some(k => k.startsWith('transfers.'))) push(); });
   }
 
-  return { busy, isCancel };
+  // Tab aus einem anderen Fenster übernommen: seine Aufträge anzeigen (windows.js)
+  const refresh = () => api.transferList?.().then(all => all.forEach(upsert)).catch(() => {});
+  return { busy, isCancel, refresh };
 })();
 
 // Während Dateien gezogen werden, darf die schwebende Übertragungsliste nichts verdecken:

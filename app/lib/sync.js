@@ -207,8 +207,8 @@ async function getFile(job, sftp, remote, local) {
 
 // ---------- Registrieren ----------
 
-function register({ ipcMain, shell, getSftp, getClient, sftpError, transfers, getWin }) {
-  const send = (channel, ...args) => { const w = getWin(); if (w && !w.isDestroyed()) w.webContents.send(channel, ...args); };
+// ui: Fenster-Verwaltung (app/lib/windows.js) – Meldungen nur an das Fenster des Tabs
+function register({ ipcMain, shell, getSftp, getClient, sftpError, transfers, ui }) {
   const compares = new Map(); // compareId -> Zustand (zum Abbrechen)
   const clean = err => (typeof err?.code === 'string' ? friendly(err) : sftpError(err));
 
@@ -229,7 +229,7 @@ function register({ ipcMain, shell, getSftp, getClient, sftpError, transfers, ge
       const now = Date.now();
       if (now - last < 150 && !extra.force) return;
       last = now;
-      send('sync:progress', { compareId: id, phase, ...counts, ...extra });
+      ui.sendTab(tabId, 'sync:progress', { compareId: id, phase, ...counts, ...extra });
     };
     const state = { cancelled: false };
     compares.set(id, state);
@@ -365,7 +365,8 @@ function register({ ipcMain, shell, getSftp, getClient, sftpError, transfers, ge
     mode: w.mode, started: w.started, lastTransfer: w.lastTransfer, lastFile: w.lastFile, uploads: w.uploads,
     pending: w.pending.size, busy: w.busy, error: w.error,
   });
-  const publish = () => send('watch:status', [...watches.values()].map(publicWatch));
+  const publish = () => ui.sendList('watch:status', [...watches.values()].map(publicWatch));
+  ui.onMove(() => publish()); // Tab in ein anderes Fenster verschoben
 
   function scheduleFlush(w, delay = WATCH_DEBOUNCE) {
     clearTimeout(w.timer);

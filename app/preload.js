@@ -73,6 +73,7 @@ contextBridge.exposeInMainWorld('myssh', {
   onClosed: cb => ipcRenderer.on('ssh:closed', (_e, id) => cb(id)),
   onLost: cb => ipcRenderer.on('ssh:lost', (_e, id) => cb(id)),
   onResume: cb => ipcRenderer.on('power:resume', () => cb()),
+  onHostsChanged: cb => ipcRenderer.on('hosts:changed', () => cb()),
   onAsk: cb => ipcRenderer.on('ask', (_e, req) => cb(req)),
   answer: (reqId, value) => ipcRenderer.send('ask-answer', reqId, value),
 
@@ -116,6 +117,20 @@ contextBridge.exposeInMainWorld('s3update', {
 contextBridge.exposeInMainWorld('mysshSettings', {
   get: () => ipcRenderer.invoke('settings:get'),
   set: patch => ipcRenderer.invoke('settings:set', patch),
+  onChanged: cb => ipcRenderer.on('settings:changed', (_e, values) => cb(values)),
+});
+
+// Mehrere Fenster, Tabs verschieben (app/lib/window-tabs.js, Oberfläche: src/windows.js)
+contextBridge.exposeInMainWorld('s3windows', {
+  newWindow: () => ipcRenderer.invoke('win:new'),
+  list: () => ipcRenderer.invoke('win:list'),
+  moveBegin: tabId => ipcRenderer.invoke('win:move-begin', tabId),
+  moveAbort: tabId => ipcRenderer.invoke('win:move-abort', tabId),
+  move: (payload, target) => ipcRenderer.invoke('win:move', payload, target),
+  ready: () => ipcRenderer.invoke('win:ready'),
+  adopted: tabId => ipcRenderer.invoke('win:adopted', tabId),
+  dropTarget: () => ipcRenderer.invoke('win:drop-target'),
+  onAdopt: cb => ipcRenderer.on('win:adopt', (_e, payload) => cb(payload)),
 });
 
 // Terminal-Extras (src/term-extra.js)

@@ -15,7 +15,8 @@ const cleanError = (err, sftpError) => (typeof err?.code === 'string' ? friendly
 const posix = path.posix;
 const p = fn => new Promise((res, rej) => fn((e, r) => e ? rej(e) : res(r)));
 
-function register({ ipcMain, getSftp, sftpError, transfers, getWin, platform }) {
+// ui: Fenster-Verwaltung (app/lib/windows.js) – die Rückfrage erscheint im Fenster des Tabs
+function register({ ipcMain, getSftp, sftpError, transfers, ui, platform }) {
   const IS_WIN = platform === 'win32' || process.platform === 'win32';
   const pending = new Map(); // reqId -> resolve
 
@@ -25,20 +26,19 @@ function register({ ipcMain, getSftp, sftpError, transfers, getWin, platform }) 
     if (resolve) resolve(answer || { action: 'cancel' });
   });
 
-  function askConflict(info) {
-    const win = getWin();
-    if (!win || win.isDestroyed()) return Promise.resolve({ action: 'cancel' });
+  function askConflict(tabId, info) {
+    if (!ui.ownerWc(tabId)) return Promise.resolve({ action: 'cancel' });
     return new Promise(resolve => {
       const reqId = crypto.randomUUID();
       pending.set(reqId, resolve);
-      win.webContents.send('xfer:conflict', { reqId, ...info });
+      ui.sendTab(tabId, 'xfer:conflict', { reqId, ...info });
     });
   }
 
   // Liefert 'overwrite', 'resume' (Teil-Datei fortsetzen) oder 'skip'; bei Abbrechen wird der ganze Auftrag gestoppt
   async function resolveConflict(job, state, info) {
     if (state.all) return state.all;
-    const a = await askConflict({ jobId: job.id, kind: job.kind, multi: state.multi, ...info });
+    const a = await askConflict(job.tabId, { jobId: job.id, kind: job.kind, multi: state.multi, ...info });
     job.check();
     if (a.action === 'resume' && !info.canResume) a.action = 'overwrite';
     if (a.action !== 'overwrite' && a.action !== 'skip' && a.action !== 'resume') {

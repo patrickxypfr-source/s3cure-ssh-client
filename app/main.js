@@ -1,5 +1,5 @@
 // S3cure SSH Client – Hauptprozess: Fenster, gespeicherte Verbindungen und SSH-Sitzungen
-const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, safeStorage, Menu, powerMonitor, clipboard, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, safeStorage, Menu, MenuItem, powerMonitor, clipboard, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -7,9 +7,16 @@ const crypto = require('crypto');
 const { createTunnelManager } = require('./lib/tunnels');
 const { setupUpdateCheck } = require('./lib/update-check');
 const sftpExtra = require('./lib/sftp-extra');
+// Mehrere Fenster: Welcher Tab gehört zu welchem Fenster? Ereignisse eines Tabs gehen nur an sein
+// Fenster, Dialoge an das anfragende (app/lib/windows.js). Muss vor allen ipcMain-Aufrufen stehen.
+const windowsLib = require('./lib/windows');
+const windows = windowsLib.createWindowRegistry({ getFocused: () => BrowserWindow.getFocusedWindow() });
+windows.wrapIpc(ipcMain);
+const currentWin = () => windows.current();
 // Übertragungs-Warteschlange (Pause, Fortsetzen, parallel, Limit): app/lib/transfers.js
-const transfers = require('./lib/transfers').create(() => win, {
+const transfers = require('./lib/transfers').create(windows.sendTab, {
   getSftp: id => getSftp(id), isConnected: id => sessions.has(id) || files.isFtp(id), sftpError: (err, t) => sftpError(err, t),
+  ownedBy: (sender, tabId) => windows.owns(sender, tabId),
 });
 const snippets = require('./lib/snippets');
 const monitor = require('./lib/monitor');
@@ -36,11 +43,10 @@ const { createKnownHosts } = require('./lib/knownhosts');
 const { createProxyManager } = require('./lib/proxy');
 const DEFAULT_KEYS = ['id_ed25519', 'id_ecdsa', 'id_rsa'].map(k => path.join(os.homedir(), '.ssh', k));
 
-let win;
 const sessions = new Map(); // Tab-ID -> { client, stream }
 
 // Eigene Befehlsknöpfe (snippets.json) und Server-Übersicht
-const snippetStore = snippets.register(ipcMain, { configDir: CONFIG_DIR, dialog, getWin: () => win });
+const snippetStore = snippets.register(ipcMain, { configDir: CONFIG_DIR, dialog, getWin: currentWin });
 // Lesezeichen für Ordner (app/lib/bookmarks.js, Oberfläche: src/file-nav.js)
 const bookmarks = require('./lib/bookmarks').register({ ipcMain, configDir: CONFIG_DIR });
 monitor.register(ipcMain, sessions);
@@ -52,9 +58,17 @@ function loadHosts() {
   try { return JSON.parse(fs.readFileSync(HOSTS_FILE, 'utf8')); } catch { return {}; }
 }
 
+// Host-Liste geändert: alle Fenster laden sie neu (kurz gesammelt, Passwort wird gleich danach gespeichert)
+let hostsTimer = null;
+function hostsChanged() {
+  clearTimeout(hostsTimer);
+  hostsTimer = setTimeout(() => windows.sendAll('hosts:changed'), 150);
+}
+
 function saveHosts(hosts) {
   fs.mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
   fs.writeFileSync(HOSTS_FILE, JSON.stringify(hosts, null, 2));
+  hostsChanged();
 }
 
 // ---------- gespeicherte Passwörter ----------
@@ -81,6 +95,7 @@ function writePassword(name, password) {
   const store = loadPasswordStore();
   store[name] = safeStorage.encryptString(password).toString('base64');
   savePasswordStore(store);
+  hostsChanged(); // Schloss-Symbol in allen Fenstern
   return true;
 }
 
@@ -89,6 +104,7 @@ function removePassword(name) {
   if (!(name in store)) return;
   delete store[name];
   savePasswordStore(store);
+  hostsChanged();
 }
 
 function renamePassword(oldName, newName) {
@@ -121,21 +137,30 @@ function expandHome(p) {
 
 // ---------- Fragen an die Oberfläche (Passwort, Host-Key, …) ----------
 
-const pendingAsks = new Map();
+const pendingAsks = new Map(); // reqId -> { resolve, wcId }
 
+// Die Frage erscheint im Fenster, aus dem der Aufruf kam (z. B. „Verbinden“ in Fenster 2)
 function ask(request) {
   return new Promise(resolve => {
+    const s = windows.sender();
+    const wc = s && windows.has(s.id) && !s.isDestroyed() ? s : currentWin()?.webContents;
+    if (!wc) { resolve(null); return; }
     const reqId = crypto.randomUUID();
-    pendingAsks.set(reqId, resolve);
-    win.webContents.send('ask', { reqId, ...request });
+    pendingAsks.set(reqId, { resolve, wcId: wc.id });
+    wc.send('ask', { reqId, ...request });
   });
 }
 
 ipcMain.on('ask-answer', (_e, reqId, value) => {
-  const resolve = pendingAsks.get(reqId);
+  const p = pendingAsks.get(reqId);
   pendingAsks.delete(reqId);
-  if (resolve) resolve(value);
+  if (p) p.resolve(value);
 });
+
+// Fenster zu oder neu geladen: offene Fragen gelten als abgebrochen
+function cancelAsks(wcId) {
+  for (const [reqId, p] of pendingAsks) if (p.wcId === wcId) { pendingAsks.delete(reqId); p.resolve(null); }
+}
 
 // ---------- Host-Key-Prüfung (known_hosts, kompatibel zu OpenSSH/CLI): app/lib/knownhosts.js ----------
 
@@ -157,17 +182,19 @@ function friendlyError(err, target) {
 
 // Verbindungsaufbau, Sprung-Server, Wachhalten: app/lib/connection.js
 const passphrases = createSecretStore(path.join(CONFIG_DIR, 'passphrases.json'));
-const sendToUi = (channel, ...args) => { if (win && !win.isDestroyed()) win.webContents.send(channel, ...args); };
+// ssh:data, ssh:closed, ssh:lost (immer mit Tab-ID vorne) nur an das Fenster des Tabs
+const sendToTab = (channel, tabId, ...args) => windows.sendTab(tabId, channel, tabId, ...args);
 // Proxy (SOCKS5/HTTP-CONNECT) global oder pro Verbindung: app/lib/proxy.js
 const proxies = createProxyManager({ configDir: CONFIG_DIR, ask, secrets: createSecretStore(path.join(CONFIG_DIR, 'proxy-passwords.json')) });
 proxies.register(ipcMain);
 const connection = createConnection({
-  loadHosts, parseTarget, expandHome, ask, verifyHostKey, friendlyError, sessions, send: sendToUi, proxies,
+  loadHosts, parseTarget, expandHome, ask, verifyHostKey, friendlyError, sessions, send: sendToTab, proxies,
   passwords: { read: readPassword, write: writePassword, remove: removePassword },
   passphrases, defaultKeys: DEFAULT_KEYS,
 });
 
-ipcMain.handle('ssh:connect', (_e, tabId, spec, cols, rows) => {
+ipcMain.handle('ssh:connect', (e, tabId, spec, cols, rows) => {
+  windows.setOwner(tabId, e.sender); // dieser Tab gehört ab jetzt diesem Fenster
   closeSession(tabId, { keepTransfers: true }); // Übertragungen warten aufs Neuverbinden
   if (files.isFtpSpec(spec)) return files.connect(tabId, spec); // FTP/FTPS: nur Dateien (lib/files-adapter.js)
   return connection.openShell(tabId, spec, cols, rows).then(info => {
@@ -177,8 +204,14 @@ ipcMain.handle('ssh:connect', (_e, tabId, spec, cols, rows) => {
   });
 });
 
-function closeAllSessions() {
-  for (const id of new Set([...sessions.keys(), ...files.ftpTabIds()])) closeSession(id);
+// Nur die Verbindungen eines Fensters beenden (Fenster geschlossen oder neu geladen)
+function closeTabs(tabIds) {
+  const open = new Set([...sessions.keys(), ...files.ftpTabIds()]);
+  for (const id of tabIds) {
+    if (open.has(id)) closeSession(id); else transfers.cancelTab(id);
+    connection.forget(id);
+    files.forget(id);
+  }
 }
 
 function closeSession(tabId, { keepTransfers = false } = {}) {
@@ -192,7 +225,12 @@ function closeSession(tabId, { keepTransfers = false } = {}) {
 
 ipcMain.on('ssh:write', (_e, tabId, data) => sessions.get(tabId)?.stream.write(data));
 ipcMain.on('ssh:resize', (_e, tabId, cols, rows) => sessions.get(tabId)?.stream.setWindow(rows, cols, 0, 0));
-ipcMain.on('ssh:close', (_e, tabId) => { closeSession(tabId); connection.forget(tabId); files.forget(tabId); });
+ipcMain.on('ssh:close', (e, tabId) => {
+  if (windows.holding(tabId)) return; // wird gerade in ein anderes Fenster verschoben
+  const owner = windows.ownerId(tabId);
+  if (owner !== null && owner !== e.sender.id) return; // gehört inzwischen einem anderen Fenster
+  closeSession(tabId); connection.forget(tabId); files.forget(tabId);
+});
 
 // ---------- Dateien (SFTP) ----------
 
@@ -289,7 +327,7 @@ ipcMain.handle('sftp:delete', async (_e, tabId, remotes) => {
 ipcMain.handle('pick-upload', async (_e, kind) => {
   const properties = IS_MAC ? ['openFile', 'openDirectory', 'multiSelections', 'createDirectory']
     : kind === 'folders' ? ['openDirectory', 'multiSelections'] : ['openFile', 'multiSelections'];
-  const r = await dialog.showOpenDialog(win, { title: t('main.upload'), buttonLabel: t('main.upload'), properties });
+  const r = await dialog.showOpenDialog(currentWin(), { title: t('main.upload'), buttonLabel: t('main.upload'), properties });
   return r.canceled ? null : r.filePaths;
 });
 
@@ -336,13 +374,13 @@ ipcMain.handle('sftp:download', async (_e, tabId, items) => {
   const sftp = await getSftp(tabId);
   let targets;
   if (items.length === 1 && !items[0].isDir) {
-    const r = await dialog.showSaveDialog(win, {
+    const r = await dialog.showSaveDialog(currentWin(), {
       title: t('main.saveAs'), defaultPath: path.join(app.getPath('downloads'), posix.basename(items[0].path)),
     });
     if (r.canceled) return null;
     targets = [r.filePath];
   } else {
-    const r = await dialog.showOpenDialog(win, {
+    const r = await dialog.showOpenDialog(currentWin(), {
       title: t('main.chooseTargetFolder'), buttonLabel: t('main.saveHere'), defaultPath: app.getPath('downloads'),
       properties: ['openDirectory', 'createDirectory'],
     });
@@ -374,7 +412,7 @@ sftpExtra.register({
 
 // Geteilte Dateiansicht: lokales Dateifenster und Übertragungen dorthin (app/lib/localfs.js, app/lib/pane-transfer.js)
 require('./lib/localfs').register({ app, ipcMain, shell, platform: PLATFORM });
-require('./lib/pane-transfer').register({ ipcMain, getSftp, sftpError, transfers, getWin: () => win, platform: PLATFORM });
+require('./lib/pane-transfer').register({ ipcMain, getSftp, sftpError, transfers, ui: windows, platform: PLATFORM });
 
 // Synchronisieren, Server-Ordner aktuell halten, extern bearbeiten, Dateien vergleichen
 // (app/lib/sync.js, app/lib/ext-edit.js, app/lib/compare.js)
@@ -383,9 +421,9 @@ const getClient = tabId => {
   if (!s) throw new Error(t('main.noSession'));
   return s.client;
 };
-require('./lib/sync').register({ ipcMain, shell, getSftp, getClient, sftpError, transfers, getWin: () => win });
-require('./lib/ext-edit').register({ app, ipcMain, shell, dialog, getSftp, sftpError, transfers, getWin: () => win, configDir: CONFIG_DIR, platform: PLATFORM });
-require('./lib/compare').register({ ipcMain, dialog, getWin: () => win });
+require('./lib/sync').register({ ipcMain, shell, getSftp, getClient, sftpError, transfers, ui: windows });
+require('./lib/ext-edit').register({ app, ipcMain, shell, dialog, getSftp, sftpError, transfers, getWin: currentWin, ui: windows, configDir: CONFIG_DIR, platform: PLATFORM });
+require('./lib/compare').register({ ipcMain, dialog, getWin: currentWin });
 
 // ---------- Suche auf dem Server ----------
 // Bevorzugt `find` direkt auf dem Server (schnell). Erlaubt der Server keine Befehle,
@@ -476,7 +514,7 @@ ipcMain.handle('search:start', (_e, tabId, root, query, searchId) => {
   const state = { cancelled: false, limited: false, count: 0, stop: null, error: null };
   searches.set(tabId, state);
   const send = (channel, ...args) => {
-    if (searches.get(tabId) === state && win && !win.isDestroyed()) win.webContents.send(channel, tabId, ...args);
+    if (searches.get(tabId) === state) windows.sendTab(tabId, channel, tabId, ...args);
   };
 
   let buffer = [];
@@ -539,7 +577,7 @@ require('./lib/keyring').register(ipcMain, {
   clipboard, shell, keys, extraFiles: () => Object.values(loadHosts()).map(h => expandHome(h.key)).filter(Boolean),
 });
 ipcMain.handle('pick-key', async () => {
-  const r = await dialog.showOpenDialog(win, {
+  const r = await dialog.showOpenDialog(currentWin(), {
     title: t('main.pickKey'), defaultPath: path.join(os.homedir(), '.ssh'),
     properties: ['openFile', 'showHiddenFiles'],
   });
@@ -549,21 +587,27 @@ ipcMain.handle('pick-key', async () => {
 // ---------- Tunnel & Update-Hinweis (eigene Dateien in lib/) ----------
 
 const tunnels = createTunnelManager({
-  ipcMain, shell, getWin: () => win, getSession: id => sessions.get(id), loadHosts, saveHosts,
+  ipcMain, shell, sendTab: windows.sendTab, getSession: id => sessions.get(id), loadHosts, saveHosts,
 });
 const updateCheck = setupUpdateCheck({ ipcMain, shell, app, configDir: CONFIG_DIR });
 // Automatisches Update (Knopf „Update“ unten links, Update-Fenster mit Fortschritt)
 require('./lib/updater').setupUpdater({
-  ipcMain, app, platform: PLATFORM, getMainWin: () => win, latestRelease: updateCheck.latestRelease,
+  ipcMain, app, platform: PLATFORM, getMainWin: currentWin, latestRelease: updateCheck.latestRelease,
   preload: path.join(__dirname, 'preload.js'),
 });
 
 // ---------- App-Sperre (app/lib/applock.js) ----------
 
 const appLock = createAppLock({ configDir: CONFIG_DIR, isMac: IS_MAC });
+// Gesperrt startet nur das erste Fenster (mit src/lock.html), die übrigen gemerkten Fenster
+// öffnen sich erst nach dem Entsperren
+const unlockQueue = [];
 appLock.register(ipcMain, {
   onUnlocked: () => {
-    if (win && !win.isDestroyed() && win.webContents.getURL().endsWith('lock.html')) win.loadFile(path.join(__dirname, 'src', 'index.html'));
+    for (const e of windows.list()) {
+      if (e.wc.getURL().endsWith('lock.html')) e.win.loadFile(path.join(__dirname, 'src', 'index.html'));
+    }
+    for (const key of unlockQueue.splice(0)) createWindow({ key });
   },
 });
 
@@ -574,14 +618,30 @@ function titleBarColors() {
   return { color: dark ? '#0f0f11' : '#f7f7f8', symbolColor: dark ? '#ededef' : '#18181b', height: 40 };
 }
 
-// Offene Tabs und Fenster beim nächsten Start wiederherstellen (app/lib/session.js)
-const session = require('./lib/session').register({ ipcMain, configDir: CONFIG_DIR });
+// Offene Fenster mit ihren Tabs beim nächsten Start wiederherstellen (app/lib/session.js)
+const windowKeys = new Map(); // webContents-ID -> Schlüssel in session.json
+const session = require('./lib/session').register({ ipcMain, configDir: CONFIG_DIR, keyOf: wc => wc && windowKeys.get(wc.id) });
+let quitting = false;
+app.on('before-quit', () => { quitting = true; });
 
-function createWindow() {
-  win = new BrowserWindow({
-    // Mindestgröße: Werkzeugleiste und Dateibrowser passen auch mit aufgeklappter Seitenleiste (siehe src/layout.js)
-    width: 1100, height: 700, minWidth: 720, minHeight: 460,
-    ...session.windowOptions(screen, { width: 720, height: 460 }), // zuletzt benutzte Größe/Position
+// Mindestgröße: Werkzeugleiste und Dateibrowser passen auch mit aufgeklappter Seitenleiste (siehe src/layout.js)
+const MIN_SIZE = { width: 720, height: 460 };
+
+// key: gemerktes Fenster wiederherstellen; near: neues Fenster versetzt daneben;
+// at: Bildschirmpunkt (Tab aus der Leiste gezogen); adopt: Tab, der dorthin umzieht (app/lib/window-tabs.js)
+function createWindow({ key = null, near = null, at = null, adopt = null } = {}) {
+  const k = key || session.store.newKey();
+  let bounds = session.windowOptions(screen, MIN_SIZE, k); // zuletzt benutzte Größe/Position
+  if (!key && near && !near.isDestroyed()) {
+    const nb = near.getNormalBounds();
+    const area = screen.getDisplayMatching(nb).workArea;
+    bounds = at
+      ? { x: Math.round(Math.max(area.x, at.x - 160)), y: Math.round(Math.max(area.y, at.y - 20)), width: nb.width, height: nb.height }
+      : windowsLib.cascade(nb, area);
+  }
+  const w = new BrowserWindow({
+    width: 1100, height: 700, minWidth: MIN_SIZE.width, minHeight: MIN_SIZE.height,
+    ...bounds,
     title: 'S3cure SSH Client',
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#0f0f11' : '#f7f7f8',
     // macOS: Ampelknöpfe im Fenster; Windows und Linux: eigene Titelleiste mit Fensterknöpfen oben rechts
@@ -592,38 +652,93 @@ function createWindow() {
     ...(PLATFORM === 'linux' ? { icon: path.join(__dirname, 'src', 'logo.png') } : {}),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
+  const wcId = w.webContents.id;
+  windows.add(w);
+  windowKeys.set(wcId, k);
+  if (adopt) windowTabs.expect(wcId, adopt);
+  session.track(w, k);
   // App-Sperre an: erst src/lock.html, nach dem Entsperren die Oberfläche
-  win.loadFile(path.join(__dirname, 'src', appLock.isLocked() ? 'lock.html' : 'index.html'));
+  w.loadFile(path.join(__dirname, 'src', appLock.isLocked() ? 'lock.html' : 'index.html'));
   // Links aus dem Terminal im normalen Browser öffnen, nicht in der App
-  win.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
-  session.track(win);
-  win.on('closed', () => { closeAllSessions(); win = null; });
-  // Fenster wird neu geladen (z. B. nach dem Umstellen der Sprache): Die Oberfläche vergisst
-  // ihre Tabs – also auch hier alle Verbindungen, Tunnel und Übertragungen sauber beenden.
-  win.webContents.on('did-start-navigation', (...args) => {
-    const d = args[0] && typeof args[0] === 'object' && 'isMainFrame' in args[0] ? args[0] : { isMainFrame: args[3], isSameDocument: args[2] };
-    if (d.isMainFrame && !d.isSameDocument) closeAllSessions();
+  w.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
+  // Fenster zu: nur seine Verbindungen, Tunnel und Übertragungen beenden.
+  // Eines von mehreren Fenstern geschlossen -> vergessen; beim Beenden oder letzten Fenster bleibt es gemerkt.
+  w.on('closed', () => {
+    const tabIds = windows.remove(wcId);
+    windowKeys.delete(wcId);
+    cancelAsks(wcId);
+    windowTabs.forget(wcId);
+    closeTabs(tabIds);
+    if (!quitting && windows.list().length > 0) session.store.remove(k);
   });
+  // Fenster wird neu geladen (z. B. nach dem Umstellen der Sprache): Die Oberfläche vergisst
+  // ihre Tabs – also auch hier die Verbindungen, Tunnel und Übertragungen dieses Fensters beenden.
+  w.webContents.on('did-start-navigation', (...args) => {
+    const d = args[0] && typeof args[0] === 'object' && 'isMainFrame' in args[0] ? args[0] : { isMainFrame: args[3], isSameDocument: args[2] };
+    if (!d.isMainFrame || d.isSameDocument) return;
+    cancelAsks(wcId);
+    closeTabs(windows.clearTabs(wcId));
+  });
+  return w;
+}
+
+// „Neues Fenster“ (Cmd/Strg+N, Menü, Dock, Befehlspalette). Kurz hintereinander nur einmal
+// (auf dem Mac kommt das Tastenkürzel über das Menü und die Oberfläche).
+let lastNewWindow = 0;
+function newWindow() {
+  if (appLock.isLocked() || Date.now() - lastNewWindow < 400) return null;
+  lastNewWindow = Date.now();
+  return createWindow({ near: currentWin() });
+}
+
+// Tabs zwischen Fenstern verschieben, Fensterliste für Menüs (app/lib/window-tabs.js)
+const windowTabs = require('./lib/window-tabs').register({
+  ipcMain, screen, windows, createWindow, newWindow,
+  windowInfo: wc => session.store.get(windowKeys.get(wc.id)),
+});
+
+// Start: alle gemerkten Fenster (mit „Sitzung wiederherstellen“), sonst eines
+function openStartWindows() {
+  const saved = session.store.windows();
+  const restoreOn = settingsStore.load()['session.restore'] !== false;
+  const list = restoreOn ? saved : saved.slice(0, 1);
+  session.store.keep(list.map(w => w.key));
+  if (!list.length) { createWindow(); return; }
+  const [first, ...rest] = list;
+  createWindow({ key: first.key });
+  if (appLock.isLocked()) unlockQueue.push(...rest.map(w => w.key));
+  else for (const w of rest) createWindow({ key: w.key });
+}
+
+// macOS: „Neues Fenster“ im Ablage-Menü und im Dock-Menü
+function setupMacMenus() {
+  if (process.platform !== 'darwin') return;
+  const menu = Menu.getApplicationMenu();
+  const fileMenu = menu && menu.items.find(i => i.role === 'filemenu' || i.role === 'fileMenu');
+  if (fileMenu && fileMenu.submenu) {
+    fileMenu.submenu.insert(0, new MenuItem({ label: t('windows.newWindow'), accelerator: 'Cmd+N', click: () => newWindow() }));
+    fileMenu.submenu.insert(1, new MenuItem({ type: 'separator' }));
+    Menu.setApplicationMenu(menu);
+  }
+  if (app.dock) app.dock.setMenu(Menu.buildFromTemplate([{ label: t('windows.newWindow'), click: () => newWindow() }]));
 }
 
 // Einstellungen und Terminal-Extras (eigene Dateien in lib/)
-const settingsStore = require('./lib/settings').register({ app, ipcMain, nativeTheme, configDir: CONFIG_DIR });
-// Sprache gewechselt: Fenster neu laden (Verbindungen werden geschlossen, die Sitzung stellt die Tabs wieder her)
+const settingsStore = require('./lib/settings').register({ app, ipcMain, nativeTheme, configDir: CONFIG_DIR, sendOthers: windows.sendOthers });
+// Sprache gewechselt: alle Fenster neu laden (ihre Verbindungen werden geschlossen, die Sitzung stellt die Tabs wieder her)
 ipcMain.handle('i18n:reload', () => {
-  if (!win || win.isDestroyed()) return;
-  for (const id of [...sessions.keys()]) closeSession(id);
-  win.webContents.reload();
+  for (const e of windows.list()) e.wc.reload();
 });
 
 // Backup & Umzug (app/lib/backup.js)
 const backupApi = require('./lib/backup').register({
-  ipcMain, dialog, app, getWin: () => win, configDir: CONFIG_DIR, loadHosts, saveHosts, settingsStore, snippetStore, passphrases,
+  ipcMain, dialog, app, getWin: currentWin, configDir: CONFIG_DIR, loadHosts, saveHosts, settingsStore, snippetStore, passphrases,
   passwords: { names: () => Object.keys(loadPasswordStore()), read: readPassword, write: writePassword, remove: removePassword },
 });
 // Abgleich über einen Cloud-Ordner (app/lib/cloud-sync.js)
-const cloudSync = require('./lib/cloud-sync').register({ ipcMain, dialog, getWin: () => win, send: sendToUi, configDir: CONFIG_DIR, data: backupApi.data, platform: PLATFORM });
+const cloudSync = require('./lib/cloud-sync').register({ ipcMain, dialog, getWin: currentWin, send: windows.sendAll, configDir: CONFIG_DIR, data: backupApi.data, platform: PLATFORM });
 app.whenReady().then(() => cloudSync.start());
-require('./lib/term-extra').register({ app, ipcMain, dialog, shell, sessions, getWin: () => win, platform: PLATFORM });
+require('./lib/term-extra').register({ app, ipcMain, dialog, shell, sessions, getWin: currentWin, sendTab: windows.sendTab, platform: PLATFORM });
 
 app.setName('S3cure SSH Client');
 // macOS: Beim Start außerhalb von „Programme“ (z. B. aus Downloads oder der DMG) anbieten,
@@ -662,10 +777,21 @@ async function offerMoveToApplications() {
 app.whenReady().then(async () => {
   // Windows/Linux: keine Menüleiste (Kopieren/Einfügen in Feldern geht trotzdem)
   if (!IS_MAC) Menu.setApplicationMenu(null);
+  setupMacMenus();
   if (await offerMoveToApplications()) return; // App wird gerade verschoben und neu gestartet
-  createWindow();
+  openStartWindows();
   // Nach dem Aufwachen: tote Verbindungen sofort erkennen und neu verbinden
-  powerMonitor.on('resume', () => { connection.probeAll(); sendToUi('power:resume'); });
-  nativeTheme.on('updated', () => { if (!IS_MAC && win && !win.isDestroyed()) win.setTitleBarOverlay(titleBarColors()); });
+  powerMonitor.on('resume', () => { connection.probeAll(); windows.sendAll('power:resume'); });
+  nativeTheme.on('updated', () => {
+    if (IS_MAC) return;
+    for (const e of windows.list()) e.win.setTitleBarOverlay(titleBarColors());
+  });
 });
-app.on('window-all-closed', () => app.quit());
+// Windows/Linux: letztes Fenster zu = App beenden. macOS: Die App bleibt wie üblich im Dock;
+// ein Klick aufs Dock-Symbol öffnet das zuletzt geschlossene Fenster wieder (mit seinen Tabs).
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+app.on('activate', () => {
+  if (!app.isReady() || windows.list().length) return;
+  const last = settingsStore.load()['session.restore'] !== false ? session.store.windows().pop() : null;
+  createWindow(last ? { key: last.key } : {});
+});
